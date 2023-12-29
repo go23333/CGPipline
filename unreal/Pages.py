@@ -92,9 +92,7 @@ class StaticMeshImporter(QtWidgets.QWidget):
         self.__init_ui()
     def __init_ui(self):
 
-
         layMain = QtWidgets.QVBoxLayout()   #定义主布局
-
         menubar = W.CommonMenuBar()  #定义菜单栏
         layMain.setMenuBar(menubar)
 
@@ -155,16 +153,37 @@ class LightTools(QtWidgets.QWidget):
         layMain.setMenuBar(menubar)
         # 添加一些按钮
         pbAutoID = MPushButton("自动ID(包括植物)")
+        pbAutoID.clicked.connect(self.autoID)
         pbPoolSize = MPushButton("无限纹理流送池")
+        pbPoolSize.clicked.connect(self.poolSize)
         pbPopEmmissive = MPushButton("弹出自发光材质")
+        pbPopEmmissive.clicked.connect(self.popEmmissive)
         pbOpenImportCameraUI = MPushButton("打开相机导入窗口")
-        wNearClip = W.SpinBoxWithLabel("近裁剪面:",0,1,6,1000.0,0.00001,0.00001,0.00001)
+        pbOpenImportCameraUI.clicked.connect(self.openImportCameraUI)
+        self.wNearClip = W.SpinBoxWithLabel("近裁剪面:",0,1,6,1000.0,0.00001,0.00001,0.00001)
+        self.wNearClip.setOnValueChanged(self.nearClip)
         layMain.addWidget(pbAutoID)
         layMain.addWidget(pbPoolSize)
         layMain.addWidget(pbPopEmmissive)
         layMain.addWidget(pbOpenImportCameraUI)
-        layMain.addWidget(wNearClip,alignment=QtCore.Qt.AlignTop)
+        layMain.addWidget(self.wNearClip,alignment=QtCore.Qt.AlignTop)
         self.setLayout(layMain)
+    def autoID(self):
+        UU.autoID()
+        pass
+    def poolSize(self):
+        UU.poolSize()
+        pass
+    def popEmmissive(self):
+        UU.popEmmissive()
+        pass
+    def openImportCameraUI(self):
+        UU.openImportCameraUI()
+        pass
+    def nearClip(self):
+        value = self.wNearClip.getValue()
+        UU.nearClip(value)
+        pass
 
 
 # 地编工具
@@ -180,15 +199,21 @@ class LevelDesignTool(QtWidgets.QWidget):
         layMain.setMenuBar(menubar)
         # 添加一些按钮
         pbOpenSelectedFoliage = MPushButton(text="打开选中植物窗口")
+        pbOpenSelectedFoliage.clicked.connect(self.openSelectedFoliage)
         pbConvertFoliageToStaticMesh = MPushButton(text="转换植物为静态网格体")
+        pbConvertFoliageToStaticMesh.clicked.connect(self.convertFoliageToStaticMesh)
         pbEnalbeFullPercisionUV = MPushButton(text="开启全精度UV")
+        pbEnalbeFullPercisionUV.clicked.connect(self.enableFullPercisionUV)
         pbSimpleLight = MPushButton(text="简单光照")
+        pbSimpleLight.clicked.connect(self.simpleLight)
         pbSelectSimilarActor = MPushButton(text="选择相似Actor")
+        pbSelectSimilarActor.clicked.connect(self.selectSimilarActor)
 
         layBreakBlueprint = QtWidgets.QHBoxLayout()
-        cboxDeleteOriginalBlueprint = MCheckBox(text="删除原来蓝图")
+        self.cboxDeleteOriginalBlueprint = MCheckBox(text="删除原来蓝图")
         pbBreakBlueprint = MPushButton(text="执行蓝图拆分")
-        layBreakBlueprint.addWidget(cboxDeleteOriginalBlueprint)
+        pbBreakBlueprint.clicked.connect(self.breakBlueprint)
+        layBreakBlueprint.addWidget(self.cboxDeleteOriginalBlueprint)
         layBreakBlueprint.addWidget(pbBreakBlueprint)
 
 
@@ -200,8 +225,18 @@ class LevelDesignTool(QtWidgets.QWidget):
         layMain.addWidget(MDivider("蓝图拆分工具"),alignment=QtCore.Qt.AlignTop)
         layMain.addLayout(layBreakBlueprint)
         self.setLayout(layMain)
-
-
+    def openSelectedFoliage(self):
+        UU.openSelectedFoliage()
+    def convertFoliageToStaticMesh(self):
+        UU.FoliageToSMActor()
+    def enableFullPercisionUV(self):
+        UU.enableFullPercisionUV()
+    def simpleLight(self):
+        UU.simpleLight()
+    def selectSimilarActor(self):
+        UU.selectSimilarActor()
+    def breakBlueprint(self):
+        UU.breakBlueprint(self.cboxDeleteOriginalBlueprint.isChecked())
 
 if __name__ == "__main__":
     pass

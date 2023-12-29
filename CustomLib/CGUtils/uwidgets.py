@@ -138,15 +138,20 @@ class SpinBoxWithLabel(QtWidgets.QWidget):
         elif layout==1:
             layMain = QtWidgets.QVBoxLayout()
         if valueType==0:
-            spinBox = MSpinBox()
+            self.spinBox = MSpinBox()
         elif valueType==1:
-            spinBox = MDoubleSpinBox()
-        spinBox.setMaximum(maxValue)   
-        spinBox.setMinimum(minValue) 
-        spinBox.setDecimals(decimals)
-        spinBox.setSingleStep(step)
-        spinBox.setValue(value)
+            self.spinBox = MDoubleSpinBox()
+
+        self.spinBox.setMaximum(maxValue)   
+        self.spinBox.setMinimum(minValue) 
+        self.spinBox.setDecimals(decimals)
+        self.spinBox.setSingleStep(step)
+        self.spinBox.setValue(value)
         layMain.addWidget(MLabel(Text))
-        layMain.addWidget(spinBox)
+        layMain.addWidget(self.spinBox)
 
         self.setLayout(layMain)
+    def getValue(self):
+        return (self.spinBox.value())
+    def setOnValueChanged(self,fun):
+        self.spinBox.valueChanged.connect(fun)

@@ -15,25 +15,26 @@ import sys
 from importlib import reload
 
 #import my modules
-import uUnreal as UT
-reload(UT)
-import CGUtils.uCommon as UU
+import uUnreal as UU
 reload(UU)
-import Pages as Pages
+import CGUtils.uCommon as UC
+reload(UC)
+import Pages
 reload(Pages)
 
 
 
 
 def test():
+    # UU.autoID()
     global urnealApp
-    urnealApp = UU.getApplication()
+    urnealApp = UC.getApplication()
     
     global mywindow
-    mywindow = Pages.LevelDesignTool()
+    mywindow = Pages.CameraImporter()
     dayu_theme.apply(mywindow)
     mywindow.show()
-    UT.appendWindowToUnreal(int(mywindow.winId()))
+    UU.appendWindowToUnreal(int(mywindow.winId()))
     
    
 
