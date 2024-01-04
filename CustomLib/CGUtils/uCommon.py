@@ -7,9 +7,18 @@
 import functools
 import os
 import sys
-
+from enum import Enum,auto
 from Qt import QtCore, QtWidgets
 import time
+
+#定义一些结构
+class FilmBackPreset():
+    Film = "16:9 Film"
+    DigitalFilm = "16:9 Digital Film"
+    DSLR = "16:9 DSLR"
+    Super8mm = "Super 8mm"
+    Super16mm = "Super 16mm"
+
 
 #template worker
 class MWorker(QtCore.QThread):
@@ -20,17 +29,35 @@ class MWorker(QtCore.QThread):
         time.sleep(4)
 
 
-# 定义一些装饰器
-def log_function_call(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        result = func(*args, **kwargs)
-        print(f"调用函数: {func.__name__} 使用参数: {args}, {kwargs},返回值为{result}")
-        return result
-    return wrapper
-
 
 # some function
+def applyMacro(parten,parseresult):
+    for key in parseresult:
+        parten = parten.replace(f"${key}",parseresult[key])
+    return parten
+
+def parseCameraName(name):
+    parseResult = {}
+    nameSlpitList = name.split("_")
+    if len(nameSlpitList) < 5:
+        return False # 如果名称不合法返回假
+    parseResult["ep"] = name.split("_")[0]
+    parseResult["sc"] = name.split("_")[1]
+    parseResult["number"] = name.split("_")[2]
+    parseResult["frameStart"] = name.split("_")[3]
+    parseResult["frameEnd"] = name.split("_")[4]
+    parseResult["fullName"] = name.split(".")[0]
+    return parseResult
+
+CameraPathMacros = [
+    "$ep",
+    "$sc",
+    "$number",
+    "$frameStart",
+    "$frameEnd",
+    "$fullName",
+]
+
 def getApplication()->QtWidgets.QApplication:
     Application = QtWidgets.QApplication.instance()
     if not Application:
@@ -66,7 +93,7 @@ def getSizeStr(size):
         if size < 1024:
             reslut =f"{round(size,2)} {unit}"
             return reslut
-@log_function_call
+
 def getFilesDataFrompath(path,extension=None):
     files = getfilesFromPath(path,extension)
     Datas = []
@@ -89,7 +116,7 @@ def getFilesDataFrompath(path,extension=None):
 def normalizePath(path):
     return(os.path.normpath(path))
 
-    
+
 
 
 if __name__ == "__main__":

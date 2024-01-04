@@ -24,17 +24,23 @@ reload(Pages)
 
 
 
-
+import unreal
 def test():
+    data = UC.getFilesDataFrompath("Y:\DBCS\EP001\Animation\Cam\sc003","fbx")[0]
+    print(data)
+    UU.importCameras([data])
+
+
+
     # UU.autoID()
-    global urnealApp
-    urnealApp = UC.getApplication()
+    # global urnealApp
+    # urnealApp = UC.getApplication()
     
-    global mywindow
-    mywindow = Pages.CameraImporter()
-    dayu_theme.apply(mywindow)
-    mywindow.show()
-    UU.appendWindowToUnreal(int(mywindow.winId()))
+    # global mywindow
+    # mywindow = Pages.CameraImporter()
+    # dayu_theme.apply(mywindow)
+    # mywindow.show()
+    # UU.appendWindowToUnreal(int(mywindow.winId()))
     
    
 

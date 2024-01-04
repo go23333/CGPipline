@@ -6,12 +6,16 @@
 ##################################################################
 
 import configparser
-
+import CGUtils.uCommon as UC
 
 class GlobalConfig():
     def __init__(self) -> None:
         self.config = configparser.ConfigParser()
         self.configFilePaht = ""
+        # paramater Camera Import
+        self.CameraImportPathPatten = "/Game/Shots/Sequence/$ep/$sc/$ep_$sc_$number_Sequence"
+        self.CameraimportUniformScale = 1
+
     def loadConfigFromFile(self):
         pass
     def saveConfigFIle(self):
