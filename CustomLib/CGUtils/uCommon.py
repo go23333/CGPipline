@@ -7,9 +7,11 @@
 import functools
 import os
 import sys
-from enum import Enum,auto
-from Qt import QtCore, QtWidgets
 import time
+from enum import Enum, auto
+
+from Qt import QtCore, QtWidgets
+
 
 #定义一些结构
 class FilmBackPreset():
@@ -115,8 +117,6 @@ def getFilesDataFrompath(path,extension=None):
 
 def normalizePath(path):
     return(os.path.normpath(path))
-
-
 
 
 if __name__ == "__main__":

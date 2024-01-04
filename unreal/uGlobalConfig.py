@@ -13,9 +13,9 @@ class GlobalConfig():
         self.config = configparser.ConfigParser()
         self.configFilePaht = ""
         # paramater Camera Import
-        self.CameraImportPathPatten = "/Game/Shots/Sequence/$ep/$sc/$ep_$sc_$number_Sequence"
+        self.CameraImportPathPatten = "/Game/Shots/Sequence/$ep/$sc/$ep_$sc_$number"
         self.CameraimportUniformScale = 1
-
+        self.CameraimportAspectRatio = 1.777778
     def loadConfigFromFile(self):
         pass
     def saveConfigFIle(self):

@@ -5,11 +5,13 @@
 # Email  : 978654313@qq.com
 ##################################################################
 import time
-import unreal
-from importlib import reload 
-
+from importlib import reload
+from functools import wraps
 
 import CGUtils.uCommon as UC
+
+import unreal
+
 reload(UC)
 import uGlobalConfig as UG
 reload(UG)
@@ -50,86 +52,51 @@ class WarpLevelSequence(WarpBaseAsset):
         importSettings.set_editor_property("reduce_keys",False)
         importSettings.set_editor_property("replace_transform_track",True)
         return importSettings
-    def importSpawnableCamera(self,fbxPath:str,CameraName:str):
+    def setPlayBackStart(self,value:int):
+        self.asset.set_playback_start(value)
+    def setPlayBackEnd(self,value:int):
+        self.asset.set_playback_end(value)
+    def importCamera(self,fbxPath:str):
         LSBL = unreal.LevelSequenceEditorBlueprintLibrary()
         LSBL.open_level_sequence(self.asset)
-
         tools = unreal.SequencerTools() 
+        originProxyAndCamera = self.getBindingProxyAndObject(unreal.CineCameraActor)
+        if originProxyAndCamera:
+            bindingProxy = originProxyAndCamera[0]
+        else:
+            bindingProxy,TempCinCameraActor=levelSequenceEditorSubsystem.create_camera(True)
         importFbxSettings = self.getFBXImportSettings(False)
-        bindingProxy,CinCameraActor=levelSequenceEditorSubsystem.create_camera(True)
-        wrapCinCamera = WrapCineCameraActor(CinCameraActor)
-        wrapCinCamera.setLabel(CameraName)
-
         world = unrealEditorSybsystem.get_editor_world()
         if world == None:
             unrealLogError("导入摄像机","获取当前世界失败")
-        else:
-            tools.import_level_sequence_fbx(world,self.asset,[bindingProxy],importFbxSettings,fbxPath)
+            return False
+        tools.import_level_sequence_fbx(world,self.asset,[bindingProxy],importFbxSettings,fbxPath)
         LSBL.close_level_sequence()
-
-    def addCameraCutTrack(self,ID):
-        cameraCutTrack = self.asset.add_master_track(unreal.MovieSceneCameraCutTrack)
-        cameraCutScetion = cameraCutTrack.add_section()
-        cameraCutScetion:unreal.MovieSceneCameraCutSection
-        cameraCutScetion.set_camera_binding_id(ID)
-        cameraCutScetion.set_start_frame(self.frameStart - 50)
-        cameraCutScetion.set_end_frame(self.frameEnd + 50)
     def setLock(self,Lock:bool):
         LSBL = unreal.LevelSequenceEditorBlueprintLibrary()
         LSBL.open_level_sequence(self.asset)
         LSBL.set_lock_level_sequence(Lock)
         LSBL.close_level_sequence()
         unrealLog("锁定/解锁关卡序列",f"序列{self.asset.get_name()}的锁定状态设置为{Lock}")
-    def deleteOldCameraBindings(self):
+    def getBindingProxyAndObject(self,objectType):
         '''
-        删除已经存在在关卡序列上的相机
+        获取绑定在关卡序列上的首个objectType类型的BindingProxys和对象
         '''
-        #获取Trac并删除cameraCutTrack
-        # for track in self.asset.get_tracks():
-        #     if type(track) == unreal.MovieSceneCameraCutTrack:
-        #         for section in track.get_sections():
-        #             track.remove_section(section)
-        #         self.asset.remove_track(track)
-        
-        cameraActor = self.getBindingCamera()
-
-        bindings = unreal.MovieSceneSequenceExtensions.get_bindings(self.asset)
-        for binding in bindings:
-
-            for obj in binding.bound_objects:
-                if type(obj) == unreal.CineCameraActor:
-                    binding.binding_proxy.remove()
-                elif type(obj) == unreal.CineCameraComponent:
-                    binding.binding_proxy.remove()
-                elif type(obj) == unreal.MovieSceneCameraCutTrack:
-                    binding.binding_proxy.remove()
-
-    def getBindingCamera(self):
-        '''
-        获取绑定在关卡序列上的首个相机包裹
-        '''
-        spawnables = self.asset.get_spawnables()
-        for spawnable in spawnables:
-            obj = spawnable.get_object_template()
-            if type(obj) == unreal.CineCameraActor:
-                unrealLog("获取序列上的相机Actor",f"从{self.asset.get_name()}上获取到相机{obj.get_name()}")
-                return(WrapCineCameraActor(obj))
-        unrealLogWarning("获取序列上的相机Actor",f"序列{self.asset.get_name()}上不存在相机")
+        bindingProxys  = self.asset.get_bindings()
+        for bindingProxy in bindingProxys:
+            obj = bindingProxy.get_object_template()
+            if type(obj) == objectType:
+                return(bindingProxy,obj)
         return False
-    def setPlaybackRange(self):
-        self.asset.set_playback_start(int(self.frameStart))
-        self.asset.set_playback_end(int(self.frameEnd)+1)
     @classmethod
-    def create(cls,assetPath:str,deleteExist:bool=True):
-        if unreal.EditorAssetLibrary.does_asset_exist(assetPath) and deleteExist:
+    def create(cls,assetPath:str,override:bool=True):
+        print(assetPath)
+        if unreal.EditorAssetLibrary.does_asset_exist(assetPath) and override:
             unrealLogWarning("序列创建",f"序列{assetPath}已经存在需要删除")
             unreal.EditorAssetLibrary.delete_asset(assetPath)
             unrealLogWarning("序列创建",f"序列{assetPath}已经删除")
-        if unreal.EditorAssetLibrary.does_asset_exist(assetPath) and not deleteExist:
-            warpLevelSequence = WarpLevelSequence(unreal.EditorAssetLibrary.load_asset(assetPath)) #包裹现有的相机
-            warpLevelSequence.setLock(False)             #解锁相机
-            warpLevelSequence.deleteOldCameraBindings()  #删除序列上原有的相机
-            return warpLevelSequence
+        elif unreal.EditorAssetLibrary.does_asset_exist(assetPath) and not override:
+            return (WarpLevelSequence(unreal.EditorAssetLibrary.load_asset(assetPath)))
         return(WarpLevelSequence(createGerericAsset(assetPath,False,unreal.LevelSequence,unreal.LevelSequenceFactoryNew())))
 class WarpStaticMesh(WarpBaseAsset):
     def __init__(self,asset:unreal.StaticMesh) -> None:
@@ -172,14 +139,15 @@ class WrapActor():
 class WrapCineCameraActor(WrapActor):
     def __init__(self,actor:unreal.CineCameraActor):
         super().__init__(actor)
+        self.actor:unreal.CineCameraActor 
+        self.component = self.actor.camera_component
         self.component:unreal.CineCameraComponent
-        self.actor:unreal.CineCameraActor
     def setFilmback(self,preset:str):
         self.component.set_filmback_preset_by_name(preset)
     def setFocusMethod(self,method:unreal.CameraFocusMethod):
-        Currentfocussettings = self.component.focus_settings
-        Currentfocussettings.focus_method = method
-        self.component.focus_settings = Currentfocussettings
+        self.component.focus_settings.focus_method = method
+    def setAspectRatio(self,value:float):
+        self.component.crop_settings.aspect_ratio = value
     @classmethod
     def spawn(cls,location:unreal.Vector,rotation:unreal.Rotator):
         return(WrapCineCameraActor(editorActorSubsystem.spawn_actor_from_class(unreal.CineCameraActor,location,rotation)))
@@ -439,15 +407,24 @@ def importCameras(datas:dict):
         path = data["path"]
         parsedName = UC.parseCameraName(name)
         if parsedName:
-            assetPath = UC.applyMacro(UG.globalConfig.CameraImportPathPatten,parsedName)
-            wrapLevelSeq = WarpLevelSequence.create(assetPath,True)
-            wrapLevelSeq.setFrameRate(25)
-            wrapLevelSeq.importSpawnableCamera(path,parsedName["fullName"])
-            # wrapLevelSeq.setPlaybackRange()
-            # wrapCameraActor = WrapCineCameraActor(wrapLevelSeq.getBindingCameraActor())
-            # wrapCameraActor.setFilmback(UC.FilmBackPreset.DSLR)
-            # wrapCameraActor.setFocusMethod(unreal.CameraFocusMethod.DISABLE)
-            # wrapLevelSeq.setLock(True)
-            # wrapLevelSeq.saveAsset()
+            assetPath = UC.applyMacro(UG.globalConfig.CameraImportPathPatten,parsedName) # 应用宏替换
+            print(assetPath)
+            wrapLevelSeq = WarpLevelSequence.create(assetPath,False)                     # 创建关卡序列
+            wrapLevelSeq.setFrameRate(25)                                                # 设置帧率
+            wrapLevelSeq.setPlayBackStart(int(parsedName["frameStart"]))
+            wrapLevelSeq.setPlayBackEnd(int(parsedName["frameEnd"]))
+            wrapLevelSeq.importCamera(path)                                              # 导入相机
+            templist = wrapLevelSeq.getBindingProxyAndObject(unreal.CineCameraActor)
+            if not templist:
+                unrealLogError("相机导入","从wrapLevelSeq上获取相机失败,相机属性设置失败")
+                return False
+            templist[0].set_name(name)                                                   # 重命名相机
+            wrapCamera = WrapCineCameraActor(templist[1])
+            wrapCamera.setFilmback(UC.FilmBackPreset.DSLR)
+            wrapCamera.setFocusMethod(unreal.CameraFocusMethod.DISABLE)
+            wrapCamera.setAspectRatio(UG.globalConfig.CameraimportAspectRatio)
+
+            wrapLevelSeq.setLock(True)                                                    # 锁定序列
+            wrapLevelSeq.saveAsset()                                                      # 保存序列
         else:
             unrealLogError("相机导入",f"无法解析相机名称{name}")
