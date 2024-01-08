@@ -24,14 +24,13 @@ reload(Pages)
 
 
 
-import unreal
 def test():
     UU.autoID()
     global urnealApp
     urnealApp = UC.getApplication()
     
     global mywindow
-    mywindow = Pages.Settings()
+    mywindow = Pages.StaticMeshImporter()
     dayu_theme.apply(mywindow)
     mywindow.show()
     UU.appendWindowToUnreal(int(mywindow.winId()))

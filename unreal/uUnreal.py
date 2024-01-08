@@ -28,35 +28,25 @@ unrealEditorSybsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem
 
 # 定义一些包裹类
 
-class WarpBaseAsset():
+class WrapBaseAsset():
     def __init__(self,asset) -> None:
         self.asset = asset
     def saveAsset(self,onlyIfIsDirty = True):
         unreal.EditorAssetLibrary.save_loaded_asset(self.asset,onlyIfIsDirty)
 
 
-class WarpLevelSequence(WarpBaseAsset):
+class WarpLevelSequence(WrapBaseAsset):
     def __init__(self,asset:unreal.LevelSequence) -> None:
         super().__init__(asset)
         self.asset:unreal.LevelSequence
     def setFrameRate(self,frameRate):
         frameRate = unreal.FrameRate(frameRate,1)
         self.asset.set_display_rate(frameRate)
-    def getFBXImportSettings(self,CreateCamera:bool):
-        importSettings = unreal.MovieSceneUserImportFBXSettings()
-        importSettings.set_editor_property("convert_scene_unit",True)
-        importSettings.set_editor_property("create_cameras",CreateCamera)
-        importSettings.set_editor_property("force_front_x_axis",False)
-        importSettings.set_editor_property("import_uniform_scale",UG.globalConfig.CameraimportUniformScale)
-        importSettings.set_editor_property("match_by_name_only",False)
-        importSettings.set_editor_property("reduce_keys",False)
-        importSettings.set_editor_property("replace_transform_track",True)
-        return importSettings
     def setPlayBackStart(self,value:int):
         self.asset.set_playback_start(value)
     def setPlayBackEnd(self,value:int):
         self.asset.set_playback_end(value)
-    def importCamera(self,fbxPath:str):
+    def importCamera(self,fbxPath:str,UniforScale:int):
         LSBL = unreal.LevelSequenceEditorBlueprintLibrary()
         LSBL.open_level_sequence(self.asset)
         tools = unreal.SequencerTools() 
@@ -65,12 +55,21 @@ class WarpLevelSequence(WarpBaseAsset):
             bindingProxy = originProxyAndCamera[0]
         else:
             bindingProxy,TempCinCameraActor=levelSequenceEditorSubsystem.create_camera(True)
-        importFbxSettings = self.getFBXImportSettings(False)
+
+        importSettings = unreal.MovieSceneUserImportFBXSettings()
+        importSettings.set_editor_property("convert_scene_unit",True)
+        importSettings.set_editor_property("create_cameras",False)
+        importSettings.set_editor_property("force_front_x_axis",False)
+        importSettings.set_editor_property("match_by_name_only",False)
+        importSettings.set_editor_property("import_uniform_scale",UniforScale)
+        importSettings.set_editor_property("reduce_keys",False)
+        importSettings.set_editor_property("replace_transform_track",True)
+        
         world = unrealEditorSybsystem.get_editor_world()
         if world == None:
             unrealLogError("导入摄像机","获取当前世界失败")
             return False
-        tools.import_level_sequence_fbx(world,self.asset,[bindingProxy],importFbxSettings,fbxPath)
+        tools.import_level_sequence_fbx(world,self.asset,[bindingProxy],importSettings,fbxPath)
         LSBL.close_level_sequence()
     def setLock(self,Lock:bool):
         LSBL = unreal.LevelSequenceEditorBlueprintLibrary()
@@ -98,7 +97,8 @@ class WarpLevelSequence(WarpBaseAsset):
         elif unreal.EditorAssetLibrary.does_asset_exist(assetPath) and not override:
             return (WarpLevelSequence(unreal.EditorAssetLibrary.load_asset(assetPath)))
         return(WarpLevelSequence(createGerericAsset(assetPath,False,unreal.LevelSequence,unreal.LevelSequenceFactoryNew())))
-class WarpStaticMesh(WarpBaseAsset):
+
+class WrapStaticMesh(WrapBaseAsset):
     def __init__(self,asset:unreal.StaticMesh) -> None:
         super().__init__(asset)
         self.asset:unreal.StaticMesh
@@ -110,6 +110,71 @@ class WarpStaticMesh(WarpBaseAsset):
         buildSettings = self.getCurrentBuildSettings()
         buildSettings.use_full_precision_u_vs = True
         self.setCurrentBuildSettings(buildSettings)
+    def setMaterialBySloatName(self,sloatName:str,Material:unreal.MaterialInterface):
+        index = self.asset.get_material_index(sloatName)
+        self.asset.set_material(index,Material)
+    @classmethod
+    def importFromFbx(cls,sourcePath:str,destinationPath,scale:int):
+        # 构建导入选项
+        options = unreal.FbxImportUI()
+        options.import_mesh = True
+        options.import_textures = False
+        options.import_materials = False
+        options.import_as_skeletal=False
+        options.static_mesh_import_data.import_translation = unreal.Vector(0.0,0.0,0.0)
+        options.static_mesh_import_data.import_rotation = unreal.Rotator(0.0,0.0,0.0)
+        options.static_mesh_import_data.import_uniform_scale = scale
+        options.static_mesh_import_data.combine_meshes = True
+        options.static_mesh_import_data.generate_lightmap_u_vs = False
+        options.static_mesh_import_data.auto_generate_collision  = True
+        # 构建导入任务
+        task = buildImportTask(sourcePath,destinationPath,options)
+        unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
+        return(WrapStaticMesh(task.get_objects()[0]))
+
+class WrapTexture(WrapBaseAsset):
+    def __init__(self,asset:unreal.Texture) -> None:
+        super().__init__(asset)
+        self.asset:unreal.Texture
+    def setVTEnable(self,enable:bool):
+        self.asset.set_editor_property("virtual_texture_streaming",enable)
+        return (self.asset.virtual_texture_streaming)
+    def setAsColor(self):
+        self.asset.compression_settings = unreal.TextureCompressionSettings.TC_DEFAULT
+        self.asset.srgb = True
+    def setAsLinerColor(self):
+        self.asset.compression_settings = unreal.TextureCompressionSettings.TC_MASKS
+        self.asset.srgb = False
+    def setAsNormal(self):
+        self.asset.compression_settings = unreal.TextureCompressionSettings.TC_NORMALMAP
+        self.asset.srgb = False
+    @classmethod
+    def importTexture(cls,sourcePath:str,destinationPath:str):
+        task = buildImportTask(sourcePath,destinationPath)
+        unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
+        return(WrapTexture(task.get_objects()[0]))
+
+class WrapMaterial(WrapBaseAsset):
+    def __init__(self,asset:unreal.Material) -> None:
+        super().__init__(asset)
+        self.asset:unreal.Material
+
+class WrapMaterialInstance(WrapBaseAsset):
+    def __init__(self,asset:unreal.MaterialInstance) -> None:
+        super().__init__(asset)
+        self.asset:unreal.MaterialInstance
+    def setScalarParameter(self,name:str,value:float):
+        unreal.MaterialEditingLibrary.set_material_instance_scalar_parameter_value(self.asset,name,value)
+    def setTextureParameter(self,name:str,value:unreal.Texture):
+        unreal.MaterialEditingLibrary.set_material_instance_texture_parameter_value(self.asset,name,value)
+    def setVectorParameter(self,name:str,value:unreal.LinearColor):
+        unreal.MaterialEditingLibrary.set_material_instance_vector_parameter_value(self.asset,name,value)
+    def setParent(self,parent:unreal.Material):
+        unreal.MaterialEditingLibrary.set_material_instance_parent(self.asset,parent)
+    @classmethod
+    def create(cls,desPath:str):
+        return WrapMaterialInstance(createGerericAsset(desPath,False,unreal.MaterialInstanceConstant,unreal.MaterialInstanceConstantFactoryNew()))
+
 
 class WrapActor():
     def __init__(self,actor:unreal.Actor):
@@ -229,8 +294,8 @@ class WrapStaticMeshActor(WrapActor):
         super().__init__(actor)
         self.actor:unreal.StaticMeshActor
         self.component:unreal.StaticMeshComponent
-    def getStaticmesh(self)->WarpStaticMesh:
-        return WarpStaticMesh(self.component.static_mesh)
+    def getStaticmesh(self)->WrapStaticMesh:
+        return WrapStaticMesh(self.component.static_mesh)
     def setStaticMesh(self,inStaticMesh:unreal.StaticMesh):
         self.component.static_mesh =inStaticMesh
     def setMaterialByName(self,material:unreal.MaterialInterface,name:str):
@@ -255,6 +320,24 @@ def createGerericAsset(assetPath:str,uniqueName:bool,assetClass:unreal.Streamabl
             factory=assetFactory
         )
     return unreal.load_asset(assetPath)
+
+def duplicate_asset(Spath,Dpath):
+    if unreal.EditorAssetLibrary.does_asset_exist(Dpath):
+        return False
+    unreal.EditorAssetLibrary.duplicate_asset(Spath,Dpath)
+    unreal.EditorAssetLibrary.save_asset(Dpath,True)
+
+
+def buildImportTask(filePath:str,destinationPath:str,options = None):
+    task = unreal.AssetImportTask()
+    task.automated = True
+    task.destination_name = ""
+    task.destination_path = destinationPath
+    task.filename = filePath
+    task.replace_existing = True
+    task.save = True
+    task.options = options
+    return task
 
 def unrealLog(category:str,text:str):
     logstring = f"[{category}] {time.asctime(time.localtime(time.time()))}:{text}"
@@ -400,20 +483,19 @@ def nearClip(value:float):
 def saveAll():
     unreal.EditorAssetLibrary.save_directory("/Game/")
 
-def importCameras(datas:dict):
+def importCameras(datas:list):
     saveAll()          # 保存所有资产,防止导入过程中崩溃
     for data in datas: # 遍历所有传入的资产数据
         name = data["name"]
         path = data["path"]
         parsedName = UC.parseCameraName(name)
         if parsedName:
-            assetPath = UC.applyMacro(UG.globalConfig.CameraImportPathPatten,parsedName) # 应用宏替换
-            print(assetPath)
+            assetPath = UC.applyMacro(UG.unrealConfig.CameraImportPathPatten,parsedName) # 应用宏替换
             wrapLevelSeq = WarpLevelSequence.create(assetPath,False)                     # 创建关卡序列
             wrapLevelSeq.setFrameRate(25)                                                # 设置帧率
             wrapLevelSeq.setPlayBackStart(int(parsedName["frameStart"]))
             wrapLevelSeq.setPlayBackEnd(int(parsedName["frameEnd"]))
-            wrapLevelSeq.importCamera(path)                                              # 导入相机
+            wrapLevelSeq.importCamera(path,UG.unrealConfig.CameraimportUniformScale)                                              # 导入相机
             templist = wrapLevelSeq.getBindingProxyAndObject(unreal.CineCameraActor)
             if not templist:
                 unrealLogError("相机导入","从wrapLevelSeq上获取相机失败,相机属性设置失败")
@@ -422,9 +504,70 @@ def importCameras(datas:dict):
             wrapCamera = WrapCineCameraActor(templist[1])
             wrapCamera.setFilmback(UC.FilmBackPreset.DSLR)
             wrapCamera.setFocusMethod(unreal.CameraFocusMethod.DISABLE)
-            wrapCamera.setAspectRatio(UG.globalConfig.CameraimportAspectRatio)
+            wrapCamera.setAspectRatio(UG.unrealConfig.CameraimportAspectRatio)
 
             wrapLevelSeq.setLock(True)                                                    # 锁定序列
             wrapLevelSeq.saveAsset()                                                      # 保存序列
         else:
             unrealLogError("相机导入",f"无法解析相机名称{name}")
+
+
+def textureImport(texturePaths:list):
+    wrapTex = WrapTexture.importTexture( texturePaths[0],UG.unrealConfig.TextureImportPathPatten)
+    if not (wrapTex.setVTEnable(UG.unrealConfig.TextureEnableVT) and UG.unrealConfig.TextureEnableVT):
+        UC.ConvertTexture.resizerTextures(texturePaths)
+        wrapTex = WrapTexture.importTexture(texturePaths[0],UG.unrealConfig.TextureImportPathPatten)
+    return wrapTex
+
+
+def importStaticmeshs(datas:list,sceneName=None):
+    saveAll()          # 保存所有资产,防止导入过程中崩溃
+    duplicate_asset(UG.unrealConfig.SceneDefaultMaterial,UG.unrealConfig.LocalSceneDefaultMaterial)
+    wrapMaterial = WrapMaterial(unreal.load_asset(UG.unrealConfig.LocalSceneDefaultMaterial))
+    for data in datas: # 遍历所有传入的资产数据
+        name = data["name"]
+        path = data["path"]
+        parseReslut = UC.parseStaticMeshName(name,sceneName)
+        destinationPath = UC.applyMacro(UG.unrealConfig.StaticMeshImportPathPatten,parseReslut)
+        wrapSM = WrapStaticMesh.importFromFbx(path,destinationPath,1) #导入静态网格体
+        JsonPath = path.replace('.fbx','.json')
+        Json_file = UC.ReadJsonFile(JsonPath)
+        MaterialInfoList = UC.analyseJson(Json_file)
+        for MaterialInfo in MaterialInfoList:
+            # 判断是否创建材质
+            if not MaterialInfo['CreateMaterial']:
+                continue
+            wrapMaterialIns = WrapMaterialInstance.create(UG.unrealConfig.MaterialInstancePath + MaterialInfo["Materialname"])
+            wrapMaterialIns.setParent(wrapMaterial.asset)
+            TexturePath = MaterialInfo['TexturePath']
+            if TexturePath['diffuse_color'] != None:
+                wrapBaseColor = textureImport(TexturePath['diffuse_color'])
+                wrapBaseColor.setAsColor()
+                wrapBaseColor.saveAsset()
+                wrapMaterialIns.setTextureParameter("BaseColor_Map",wrapBaseColor.asset)
+
+            if TexturePath['refl_roughness'] == None:
+                ARMSPath = TexturePath['refl_metalness']
+            else:
+                ARMSPath = TexturePath['refl_roughness']
+            WrapARMS = textureImport(ARMSPath)
+            WrapARMS.setAsLinerColor()
+            WrapARMS.saveAsset()
+            wrapMaterialIns.setTextureParameter("ARMS_Map",WrapARMS.asset)
+            
+            
+            if TexturePath['bump_input'] != None:
+                wrapNormal = textureImport(TexturePath['bump_input'])
+                wrapNormal.setAsNormal()
+                wrapNormal.saveAsset()
+                wrapMaterialIns.setTextureParameter("Normal_Map",wrapNormal.asset)
+
+            if TexturePath['emission_color'] != None:
+                WrapEmissive = textureImport(TexturePath['emission_color'])
+                WrapEmissive.setAsColor()
+                WrapEmissive.saveAsset()
+                wrapMaterialIns.setTextureParameter("Emmissive_Map",wrapNormal.asset)
+                wrapMaterialIns.setScalarParameter("自发光强度",1.0)
+            wrapMaterialIns.saveAsset()
+            wrapSM.setMaterialBySloatName(MaterialInfo["Materialname"],wrapMaterialIns.asset)
+        wrapSM.saveAsset()

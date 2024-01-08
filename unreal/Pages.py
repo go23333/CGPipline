@@ -277,7 +277,7 @@ class StaticMeshImporter(QtWidgets.QWidget):
             for data in self.wCamera.datas:
                 if not data["imported"]:
                     waitImportedQueue.append(data)
-        print (waitImportedQueue)
+        UU.importStaticmeshs(waitImportedQueue)
 
 
 #灯光常用工具
@@ -384,18 +384,22 @@ class Settings(QtWidgets.QWidget):
     def __init__(self):
         super(Settings,self).__init__(parent=None)
         self.setWindowTitle("全局设置")
-        self.resize(600,400)
+        self.resize(500,400)
         self.__init_ui()
-        self.loadConfig()
+        self.__loadConfig()
     def __init_ui(self):
-        layMain = QtWidgets.QVBoxLayout()  #定义Q主布局
-        layMain.setSpacing(5)
+        layMain = QtWidgets.QVBoxLayout()
+
         menubar = CommonMenuBar()  #定义菜单栏
         layMain.setMenuBar(menubar)
+
+        # 相机设置
+        layCameraImportSettings = QtWidgets.QVBoxLayout()  #定义Q主布局
+        layCameraImportSettings.setSpacing(5)
         # input
         layMacroInput = QtWidgets.QHBoxLayout()
         self.leMacroInput = MLineEdit()
-        self.leMacroInput.textChanged.connect(self.applyMacro)
+        self.leMacroInput.textChanged.connect(self.applyMacroCamera)
 
         layMacroInput.addWidget(MLabel("宏输入:"))
         layMacroInput.addWidget(self.leMacroInput)
@@ -409,21 +413,53 @@ class Settings(QtWidgets.QWidget):
         layMacroOutput.addWidget(MLabel("宏输出:"))
         layMacroOutput.addWidget(self.leMacroOutput)
         # NOTE add to main layout
-        layMain.addWidget(MLabel("相机导入路径宏设置:").h4(),alignment=QtCore.Qt.AlignTop)
-        layMain.addWidget(MLabel("示例相机名称:Ep000_sc003_001_001_131_cam"),alignment=QtCore.Qt.AlignTop)
-        layMain.addLayout(layMacroInput)
-        layMain.addWidget(MLabel(f"当前可以使用的宏有:{CurrentMacro}"))
-        layMain.addLayout(layMacroOutput)
+        layCameraImportSettings.addWidget(MLabel("相机导入路径宏设置:").h4(),alignment=QtCore.Qt.AlignTop)
+        layCameraImportSettings.addWidget(MLabel("示例相机名称:Ep000_sc003_001_001_131_cam"),alignment=QtCore.Qt.AlignTop)
+        layCameraImportSettings.addLayout(layMacroInput)
+        layCameraImportSettings.addWidget(MLabel(f"当前可以使用的宏有:{CurrentMacro}"))
+        layCameraImportSettings.addLayout(layMacroOutput)
+        # 静态网格体设置
+        layMeshImportSettings = QtWidgets.QVBoxLayout()  #定义Q主布局
+        layMeshImportSettings.setSpacing(5)
+        # input
+        layMeshMacroInput = QtWidgets.QHBoxLayout()
+        self.leMeshMacroInput = MLineEdit()
+        #self.leMeshMacroInput.textChanged.connect(self.applyMacro)
+
+        layMeshMacroInput.addWidget(MLabel("宏输入:"))
+        layMeshMacroInput.addWidget(self.leMeshMacroInput)
+        CurrentMeshMacroTip = ""
+
+        # NOTE output
+        layMeshMacroOutput = QtWidgets.QHBoxLayout()
+        self.leMeshMacroOutput = MLineEdit()
+        self.leMeshMacroOutput.setEnabled(False)
+        layMeshMacroOutput.addWidget(MLabel("宏输出:"))
+        layMeshMacroOutput.addWidget(self.leMeshMacroOutput)
+
+        # 是否使用场景名称
+        self.useSceneName = MCheckBox("使用场景名称")
+        # NOTE add to main layout
+        layMeshImportSettings.addWidget(MLabel("静态网格体路径设置:").h4(),alignment=QtCore.Qt.AlignTop)
+        layMeshImportSettings.addWidget(MLabel("示例模型名称:TestMesh,示例场景名称:TestScene"),alignment=QtCore.Qt.AlignTop)
+        layMeshImportSettings.addLayout(layMeshMacroInput)
+        layMeshImportSettings.addWidget(MLabel(f"当前可以使用的宏有:{CurrentMeshMacroTip}"))
+        layMeshImportSettings.addLayout(layMeshMacroOutput)
+        layMeshImportSettings.addWidget(self.useSceneName,alignment=QtCore.Qt.AlignRight)
+
+
+
+        layMain.addLayout(layCameraImportSettings)
+        layMain.addLayout(layMeshImportSettings)
         layMain.addSpacerItem(QtWidgets.QSpacerItem(20,20,QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Expanding))
         self.setLayout(layMain)
-    def loadConfig(self):
-        self.leMacroInput.setText(UG.globalConfig.CameraImportPathPatten)
-    def applyMacro(self):
+    def __loadConfig(self):
+        self.leMacroInput.setText(UG.unrealConfig.CameraImportPathPatten)
+    def applyMacroCamera(self):
         parseResult = UC.parseCameraName("Ep000_sc003_001_001_131_cam")
         if parseResult:
             result = UC.applyMacro(self.leMacroInput.text(),parseResult)
             self.leMacroOutput.setText(UC.normalizePath(result))
-
 if __name__ == "__main__":
     pass
 
