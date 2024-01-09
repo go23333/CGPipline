@@ -3,12 +3,13 @@
 # Author : zcx
 # Date   : 2023.12
 # Email  : 978654313@qq.com
+# version: 3.9.7
 ##################################################################
 import time
 from importlib import reload
 from functools import wraps
 
-import CGUtils.uCommon as UC
+import uCommon as UC
 
 import unreal
 

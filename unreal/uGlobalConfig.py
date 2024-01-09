@@ -3,10 +3,11 @@
 # Author : zcx
 # Date   : 2023.12
 # Email  : 978654313@qq.com
+# version: 3.9.7
 ##################################################################
 
 import configparser
-import CGUtils.uCommon as UC
+import uCommon as UC
 
 class unrealConfig():
     configFilePath = ""
@@ -23,8 +24,6 @@ class unrealConfig():
     MaterialInstancePath = "/Game/Assets/Scene/Material/"
     LocalSceneDefaultMaterial = "/Game/Assets/Scene/Common/Material/M_BG_ARM"
     SceneDefaultMaterial = "/ZynnPlugin/Assets/Material/M_BG_ARM"
-
-
 
 
 

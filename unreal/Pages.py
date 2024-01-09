@@ -3,6 +3,7 @@
 # Author : zcx
 # Date   : 2023.12
 # Email  : 978654313@qq.com
+# version: 3.9.7
 ##################################################################
 # 导入第三方库
 from Qt import QtWidgets,QtCore
@@ -20,18 +21,14 @@ from dayu_widgets.loading import MLoadingWrapper
 from dayu_widgets.menu import MMenu
 from dayu_widgets.message import MMessage
 from dayu_widgets.spin_box import MDoubleSpinBox, MSpinBox
-from dayu_widgets.item_view import MListView
 from Qt import QtCore, QtWidgets
 import functools
-import os
 from importlib import reload
 #导入自定义库
 import uUnreal as UU
 reload(UU)
-import CGUtils.uCommon as UC
+import uCommon as UC
 reload(UC)
-import CGUtils.uTemplates as UT
-reload(UT)
 import uGlobalConfig as UG
 reload (UG)
 
@@ -42,7 +39,7 @@ reload (UG)
 
 class FetchCameraDataWorker(QtCore.QThread):
     def __init__(self,parent=None):
-        super(FetchCameraDataWorker,self).__init__(parent)
+        super().__init__(parent)
         self.OnFinished = None
         self.ScanPath = None
     def run(self):
@@ -54,7 +51,7 @@ class FetchCameraDataWorker(QtCore.QThread):
 # 定义一些通用的Widget
 class folderSelectGroup(QtWidgets.QHBoxLayout):
     def __init__(self,title):
-        super(folderSelectGroup,self).__init__(None)
+        super().__init__(None)
         self.addWidget(MLabel(title), 0)
         btnBrowserFolder = MClickBrowserFolderToolButton()
         self.leFolderPath = MLineEdit()
@@ -70,7 +67,7 @@ class folderSelectGroup(QtWidgets.QHBoxLayout):
 
 class DateTableView(QtWidgets.QWidget):
     def __init__(self,HeaderData):
-        super(DateTableView,self).__init__(parent=None)
+        super().__init__(parent=None)
         self.dataModle = MTableModel() #数据模型
         self.dataModle.set_header_list(HeaderData) #设置数据模型表头
         self.datas = [] #数据列表
@@ -120,7 +117,7 @@ class DateTableView(QtWidgets.QWidget):
 
 class CommonMenuBar(QtWidgets.QMenuBar):
     def __init__(self,parent=None):
-        super(CommonMenuBar,self).__init__(parent)
+        super().__init__(parent)
         menuEdit = self.addMenu("编辑")
         aSetting = menuEdit.addAction("设置")
         menuHelp = self.addMenu("帮助")
@@ -144,7 +141,7 @@ class SpinBoxWithLabel(QtWidgets.QWidget):
         Returns:
         None
         """
-        super(SpinBoxWithLabel,self).__init__(parent=None)
+        super().__init__(parent=None)
         if layout==0:
             layMain = QtWidgets.QHBoxLayout()
         elif layout==1:
@@ -173,8 +170,8 @@ class SpinBoxWithLabel(QtWidgets.QWidget):
 # # CameraImporter UI
 class CameraImporter(QtWidgets.QWidget):
     def __init__(self,parent=None):
-        super(CameraImporter,self).__init__(parent)
-        self.setWindowTitle("相机导入")
+        super().__init__(parent)
+        self.setWindowTitle(u"相机导入")
         self.resize(600,400)
         self.__init_ui()
     def __init_ui(self):
@@ -183,19 +180,19 @@ class CameraImporter(QtWidgets.QWidget):
         menubar = CommonMenuBar()  #定义菜单栏
         layMain.setMenuBar(menubar)
         
-        self.folderSelectGroup = folderSelectGroup("相机路径:") #定义路径选择组
+        self.folderSelectGroup = folderSelectGroup(u"相机路径:") #定义路径选择组
 
-        self.wCamera = DateTableView(UT.CameraHeader)  #定义相机数据表格
+        self.wCamera = DateTableView(UC.CameraHeader)  #定义相机数据表格
 
         context_menu = self.wCamera.MakeContexMenu()   # 获取相机表格的上下文菜单并自定义
-        maImportSelectedItems = context_menu.addAction("导入选中项目")
+        maImportSelectedItems = context_menu.addAction(u"导入选中项目")
         maImportSelectedItems.triggered.connect(
             functools.partial(self.importCameras,True)
             )
         self.folderSelectGroup.setOnTextChanged(self.wCamera.fetchCamera)        # 文字框改变时刷新
 
         layImport = QtWidgets.QHBoxLayout()  #用于防止导入按钮的布局
-        btnImport = MPushButton("导入相机")
+        btnImport = MPushButton(u"导入相机")
         btnImport.clicked.connect(
             functools.partial(self.importCameras,False)
             )
@@ -223,10 +220,12 @@ class CameraImporter(QtWidgets.QWidget):
                     waitImportedQueue.append(data)
         UU.importCameras(waitImportedQueue)
 
+
+
 # Staticmesh Importer UI
 class StaticMeshImporter(QtWidgets.QWidget):
     def __init__(self,parent=None):
-        super(StaticMeshImporter,self).__init__(parent)
+        super().__init__(parent)
         self.setWindowTitle("静态网格体导入")
         self.resize(600,400)
         self.__init_ui()
@@ -238,7 +237,7 @@ class StaticMeshImporter(QtWidgets.QWidget):
 
         self.folderSelectGroup = folderSelectGroup("网格体文件路径:") #定义路径选择组
 
-        self.wCamera = DateTableView(UT.CameraHeader)  #定义相机数据表格
+        self.wCamera = DateTableView(UC.CameraHeader)  #定义相机数据表格
 
         context_menu = self.wCamera.MakeContexMenu()   # 获取相机表格的上下文菜单并自定义
         maImportSelectedItems = context_menu.addAction("导入选中项目")
@@ -283,7 +282,7 @@ class StaticMeshImporter(QtWidgets.QWidget):
 #灯光常用工具
 class LightTools(QtWidgets.QWidget):
     def __init__(self,parent=None):
-        super(LightTools,self).__init__(parent)
+        super().__init__(parent)
         self.setWindowTitle("灯光工具")
         self.resize(300,400)
         self.__init_ui()
@@ -329,7 +328,7 @@ class LightTools(QtWidgets.QWidget):
 # 地编工具
 class LevelDesignTool(QtWidgets.QWidget):
     def __init__(self,parent=None):
-        super(LevelDesignTool,self).__init__(parent)
+        super().__init__(parent)
         self.setWindowTitle("地编工具")
         self.resize(300,400)
         self.__init_ui()
@@ -382,7 +381,7 @@ class LevelDesignTool(QtWidgets.QWidget):
 
 class Settings(QtWidgets.QWidget):
     def __init__(self):
-        super(Settings,self).__init__(parent=None)
+        super().__init__(parent=None)
         self.setWindowTitle("全局设置")
         self.resize(500,400)
         self.__init_ui()
@@ -460,6 +459,11 @@ class Settings(QtWidgets.QWidget):
         if parseResult:
             result = UC.applyMacro(self.leMacroInput.text(),parseResult)
             self.leMacroOutput.setText(UC.normalizePath(result))
+
+
+
+
+
 if __name__ == "__main__":
     pass
 

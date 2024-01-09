@@ -349,7 +349,7 @@ def analyseJson(jsondata):
                         break
                 #如果不是ARMS贴图
                 if 'ARMS' not in str(value) and not materialinfoDict['UseForChar']:
-                    NewinfoOb = UT.ConvertTexture(materialinfoDict['TexturePath'],2048)
+                    NewinfoOb = ConvertTexture(materialinfoDict['TexturePath'],2048)
                     Newinfo = NewinfoOb.ConvertMTextureToARMS()
                     if Newinfo != False :
                         materialinfoDict['TexturePath'] = Newinfo
@@ -438,6 +438,34 @@ def getFilesDataFrompath(path,extension=None):
 def normalizePath(path):
     return(os.path.normpath(path))
 
+
+CameraHeader = [
+    {
+        "label": "文件名称",
+        "key": "name",
+        "checkable": False,
+        "searchable": True,
+    },
+    {
+        "label": "修改日期",
+        "key": "modifyTime",
+        "checkable": False,
+        "searchable": False,
+
+    },
+        {
+        "label": "文件大小",
+        "key": "size",
+        "checkable": False,
+        "searchable": False,
+    },
+    {
+        "label": "路径",
+        "key": "path",
+        "checkable": False,
+        "searchable": False,
+    },
+]
 
 if __name__ == "__main__":
     files = getfilesFromPath(r"D:\UnrealPiplineTemp","fbx")

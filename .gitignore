@@ -1,3 +1,5 @@
-
 *.pyc
 .*/
+*.c
+build
+__pycache__
