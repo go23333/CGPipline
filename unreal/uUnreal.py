@@ -298,7 +298,7 @@ class WrapStaticMeshActor(WrapActor):
     def getStaticmesh(self)->WrapStaticMesh:
         return WrapStaticMesh(self.component.static_mesh)
     def setStaticMesh(self,inStaticMesh:unreal.StaticMesh):
-        self.component.static_mesh =inStaticMesh
+        self.component.set_static_mesh(inStaticMesh)
     def setMaterialByName(self,material:unreal.MaterialInterface,name:str):
         self.component.set_material_by_name(name,material)
     def setMaterialByIndex(self,material:unreal.MaterialInterface,index:int):
@@ -428,7 +428,8 @@ def breakBlueprint(deleteOrigin:bool):
         staticMeshComponents = slActor.get_components_by_class(unreal.StaticMeshComponent)
         for staticMeshComponent in staticMeshComponents:
             staticMeshComponent:unreal.StaticMeshComponent
-            newStaticMeshActor = WrapStaticMeshActor(editorActorSubsystem.spawn_actor_from_class(unreal.StaticMeshActor,staticMeshComponent.get_actor_location()))
+            newStaticMeshActor = WrapStaticMeshActor(editorActorSubsystem.spawn_actor_from_class(unreal.StaticMeshActor,staticMeshComponent.get_world_location(),staticMeshComponent.get_world_rotation()))
+            newStaticMeshActor.setScale(staticMeshComponent.get_world_scale())
             newStaticMeshActor.appendToFolder(breakFolderName)
             newStaticMeshActor.setStaticMesh(staticMeshComponent.static_mesh)
             for materialStruct in staticMeshComponent.static_mesh.static_materials:
@@ -440,7 +441,8 @@ def breakBlueprint(deleteOrigin:bool):
             ChildActorComponent:unreal.ChildActorComponent
             originStaticMeshActor = ChildActorComponent.child_actor
             originStaticMeshActor:unreal.StaticMeshActor
-            newStaticMeshActor = WrapStaticMeshActor(editorActorSubsystem.spawn_actor_from_class(unreal.StaticMeshActor,staticMeshComponent.get_actor_location()))
+            newStaticMeshActor = WrapStaticMeshActor(editorActorSubsystem.spawn_actor_from_class(unreal.StaticMeshActor,staticMeshComponent.get_world_location(),staticMeshComponent.get_world_rotation()))
+            newStaticMeshActor.setScale(staticMeshComponent.get_world_scale())
             newStaticMeshActor.appendToFolder(breakFolderName)
             newStaticMeshActor.setStaticMesh(originStaticMeshActor.static_mesh_component.static_mesh)   
             for materialStruct in originStaticMeshActor.static_mesh_component.static_mesh.static_materials:
@@ -515,6 +517,8 @@ def importCameras(datas:list):
 
 def textureImport(texturePaths:list):
     wrapTex = WrapTexture.importTexture( texturePaths[0],UG.unrealConfig.TextureImportPathPatten)
+    if len(texturePaths) == 1:
+        return wrapTex
     if not (wrapTex.setVTEnable(UG.unrealConfig.TextureEnableVT) and UG.unrealConfig.TextureEnableVT):
         UC.ConvertTexture.resizerTextures(texturePaths)
         wrapTex = WrapTexture.importTexture(texturePaths[0],UG.unrealConfig.TextureImportPathPatten)
@@ -544,6 +548,7 @@ def importStaticmeshs(datas:list,sceneName=None):
             if TexturePath['diffuse_color'] != None:
                 wrapBaseColor = textureImport(TexturePath['diffuse_color'])
                 wrapBaseColor.setAsColor()
+                wrapBaseColor.setVTEnable(True)
                 wrapBaseColor.saveAsset()
                 wrapMaterialIns.setTextureParameter("BaseColor_Map",wrapBaseColor.asset)
 
@@ -553,6 +558,7 @@ def importStaticmeshs(datas:list,sceneName=None):
                 ARMSPath = TexturePath['refl_roughness']
             WrapARMS = textureImport(ARMSPath)
             WrapARMS.setAsLinerColor()
+            WrapARMS.setVTEnable(True)
             WrapARMS.saveAsset()
             wrapMaterialIns.setTextureParameter("ARMS_Map",WrapARMS.asset)
             
@@ -560,12 +566,14 @@ def importStaticmeshs(datas:list,sceneName=None):
             if TexturePath['bump_input'] != None:
                 wrapNormal = textureImport(TexturePath['bump_input'])
                 wrapNormal.setAsNormal()
+                wrapNormal.setVTEnable(True)
                 wrapNormal.saveAsset()
                 wrapMaterialIns.setTextureParameter("Normal_Map",wrapNormal.asset)
 
             if TexturePath['emission_color'] != None:
                 WrapEmissive = textureImport(TexturePath['emission_color'])
                 WrapEmissive.setAsColor()
+                WrapEmissive.setVTEnable(True)
                 WrapEmissive.saveAsset()
                 wrapMaterialIns.setTextureParameter("Emmissive_Map",wrapNormal.asset)
                 wrapMaterialIns.setScalarParameter("自发光强度",1.0)

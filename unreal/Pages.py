@@ -75,9 +75,9 @@ class DateTableView(QtWidgets.QWidget):
 
         self.tvMain = MTableView(size=dayu_theme.medium, show_row_count=True) #表格控件
 
-        ModelSort = MSortFilterModel()
-        ModelSort.setSourceModel(self.dataModle)
-        self.tvMain.setModel(ModelSort)
+        self.ModelSort = MSortFilterModel()
+        self.ModelSort.setSourceModel(self.dataModle)
+        self.tvMain.setModel(self.ModelSort)
         self.tvMain.header_view.setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.tvMain.header_view.setDefaultAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.ViewWrapper = MLoadingWrapper(widget=self.tvMain,loading=False)
@@ -102,11 +102,14 @@ class DateTableView(QtWidgets.QWidget):
     def onFinished(self,datas):
         self.datas = datas
         self.dataModle.set_data_list(datas)
-    def getSelectedRows(self):
-        selectedRows = set()
+    def getSelectNames(self):
+        selectedNames = set()
+        currentRow = -1
         for item in self.tvMain.selectedIndexes():
-            selectedRows.add(item.row())
-        return(list(selectedRows))
+            if item.row() != currentRow:
+                currentRow = item.row()
+                selectedNames.add(item.data())
+        return(list(selectedNames))
     def MakeContexMenu(self):
         self.ContexMenu =  MMenu(parent=self.tvMain)  #表格控件的上下文菜单
         self.tvMain.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -211,9 +214,10 @@ class CameraImporter(QtWidgets.QWidget):
     def importCameras(self,selected):
         waitImportedQueue = []
         if selected:
-            for row in self.wCamera.getSelectedRows():
-                waitImportedQueue.append(self.wCamera.datas[row])
-            pass
+            for name in self.wCamera.getSelectNames():
+                for data in self.wCamera.datas:
+                    if data["name"] == name:
+                        waitImportedQueue.append(data)
         else:
             for data in self.wCamera.datas:
                 if not data["imported"]:
@@ -269,9 +273,10 @@ class StaticMeshImporter(QtWidgets.QWidget):
     def importCameras(self,selected):
         waitImportedQueue = []
         if selected:
-            for row in self.wCamera.getSelectedRows():
-                waitImportedQueue.append(self.wCamera.datas[row])
-            pass
+            for name in self.wCamera.getSelectNames():
+                for data in self.wCamera.datas:
+                    if data["name"] == name:
+                        waitImportedQueue.append(data)
         else:
             for data in self.wCamera.datas:
                 if not data["imported"]:
