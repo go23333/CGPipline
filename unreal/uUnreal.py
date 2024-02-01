@@ -441,8 +441,8 @@ def breakBlueprint(deleteOrigin:bool):
             ChildActorComponent:unreal.ChildActorComponent
             originStaticMeshActor = ChildActorComponent.child_actor
             originStaticMeshActor:unreal.StaticMeshActor
-            newStaticMeshActor = WrapStaticMeshActor(editorActorSubsystem.spawn_actor_from_class(unreal.StaticMeshActor,staticMeshComponent.get_world_location(),staticMeshComponent.get_world_rotation()))
-            newStaticMeshActor.setScale(staticMeshComponent.get_world_scale())
+            newStaticMeshActor = WrapStaticMeshActor(editorActorSubsystem.spawn_actor_from_class(unreal.StaticMeshActor,ChildActorComponent.get_world_location(),ChildActorComponent.get_world_rotation()))
+            newStaticMeshActor.setScale(ChildActorComponent.get_world_scale())
             newStaticMeshActor.appendToFolder(breakFolderName)
             newStaticMeshActor.setStaticMesh(originStaticMeshActor.static_mesh_component.static_mesh)   
             for materialStruct in originStaticMeshActor.static_mesh_component.static_mesh.static_materials:
