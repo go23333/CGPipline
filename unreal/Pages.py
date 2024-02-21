@@ -21,7 +21,6 @@ from dayu_widgets.loading import MLoadingWrapper
 from dayu_widgets.menu import MMenu
 from dayu_widgets.message import MMessage
 from dayu_widgets.spin_box import MDoubleSpinBox, MSpinBox
-from Qt import QtCore, QtWidgets
 import functools
 from importlib import reload
 #导入自定义库
