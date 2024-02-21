@@ -1,3 +1,10 @@
+#-*- coding:utf-8 -*-
+##################################################################
+# Author : zcx
+# Date   : 2024.2
+# Email  : 978654313@qq.com
+# version: 3.10.13
+##################################################################
 import bpy
 
 import json
@@ -27,40 +34,48 @@ def createMaterialNode(materila,data):
     links = materila.node_tree.links
     links.new(bsdf.outputs[0], node_output.inputs[0])
 
-    if data["type"] == "pbr":
-        if data["baseColor"] != None:
-            baseColorNode = nodes.new(type="ShaderNodeTexImage")
-            image = bpy.data.images.load(data["baseColor"])
-            if data["baseColorUDIM"]:
-                image.source = "TILED"
-            baseColorNode.image = image
-            links.new(baseColorNode.outputs[0],bsdf.inputs[0])
+    useUDIM = data["fUDIM"]
 
-        if data["roughness"] != None:
-            roughnessNode = nodes.new(type="ShaderNodeTexImage")
-            image = bpy.data.images.load(data["roughness"])
-            if data["roughnessUDIM"]:
-                image.source = "TILED"
-            roughnessNode.image = image
-            links.new(roughnessNode.outputs[0],bsdf.inputs[2])
-        if data["normal"] != None:
-            normalNode = nodes.new(type="ShaderNodeTexImage")
-            image = bpy.data.images.load(data["normal"])
-            if data["normalUDIM"]:
-                image.source = "TILED"
-            normalNode.image = image
-            normalMapNode = nodes.new(type="ShaderNodeNormalMap")
-            links.new(normalNode.outputs[0],normalMapNode.inputs[1])
-            links.new(normalMapNode.outputs[0],bsdf.inputs[5])
-        if data["metallic"] != None:
-            metallicNode = nodes.new(type="ShaderNodeTexImage")
-            image = bpy.data.images.load(data["metallic"])
-            if data["metallicUDIM"]:
-                image.source = "TILED"
-            metallicNode.image = image
-            links.new(metallicNode.outputs[0],bsdf.inputs[1])
-    else:
-        pass
+    if data["baseColorPath"] != None:
+        baseColorNode = nodes.new(type="ShaderNodeTexImage")
+        image = bpy.data.images.load(data["baseColorPath"])
+        if useUDIM:
+            image.source = "TILED"
+        baseColorNode.image = image
+        links.new(baseColorNode.outputs[0],bsdf.inputs[0])
+
+    if data["roughnessPath"] != None:
+        roughnessNode = nodes.new(type="ShaderNodeTexImage")
+        image = bpy.data.images.load(data["roughnessPath"])
+        image.colorspace_settings.name = 'Non-Color'
+        if useUDIM:
+            image.source = "TILED"
+        roughnessNode.image = image
+        splitXYZNode = nodes.new(type="ShaderNodeSeparateXYZ")
+        links.new(roughnessNode.outputs[0],splitXYZNode.inputs[0])
+        links.new(splitXYZNode.outputs[1],bsdf.inputs[2])
+   
+    if data["normalPath"] != None:
+        normalNode = nodes.new(type="ShaderNodeTexImage")
+        image = bpy.data.images.load(data["normalPath"])
+        image.colorspace_settings.name = 'Non-Color'
+        if useUDIM:
+            image.source = "TILED"
+        normalNode.image = image
+        normalMapNode = nodes.new(type="ShaderNodeNormalMap")
+        links.new(normalNode.outputs[0],normalMapNode.inputs[1])
+        links.new(normalMapNode.outputs[0],bsdf.inputs[5])
+    
+    if data["metallicPath"] != None:
+        metallicNode = nodes.new(type="ShaderNodeTexImage")
+        image = bpy.data.images.load(data["metallicPath"])
+        image.colorspace_settings.name = 'Non-Color'
+        if useUDIM:
+            image.source = "TILED"
+        metallicNode.image = image
+        splitXYZNode = nodes.new(type="ShaderNodeSeparateXYZ")
+        links.new(metallicNode.outputs[0],splitXYZNode.inputs[0])
+        links.new(splitXYZNode.outputs[2],bsdf.inputs[1])
 
 def read_some_data(context, filepath, use_some_setting):
 

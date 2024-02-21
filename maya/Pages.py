@@ -41,6 +41,7 @@ class exportPipline(MayaQWidgetDockableMixin,QtWidgets.QWidget):
 
         layFilename = QtWidgets.QHBoxLayout()
         self.leFileName = MLineEdit()
+        self.leFileName.setText(UM.getFileName())
         layFilename.addWidget(MLabel(u"导出文件名称:"))
         layFilename.addWidget(self.leFileName)
 
@@ -66,7 +67,7 @@ class exportPipline(MayaQWidgetDockableMixin,QtWidgets.QWidget):
         fullName = self.getFullPath()
         if not fullName:
             return False
-        (flag,message) = UM.checkSelectMeshs(fullName)
+        (flag,message) = UM.exportPipline(fullName)
         if flag:
             MMessage.info(parent=self,text=message)
 

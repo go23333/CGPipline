@@ -11,6 +11,7 @@ import pymel.core as pm
 
 import json
 
+import os
 
 class PBRMaterialTemplate():
     def __init__(self):
@@ -28,19 +29,7 @@ class PBRMaterialTemplate():
 
         self.normalPath = None
         self.normalTiling = (1,1)
-    def setBaseColor(self,path,tiling = (1,1)):
-        self.baseColorPath = path
-        self.baseColorTiling = tiling
-    def setRoughness(self,path,tiling = (1,1)):
-        self.roughnessPath = path
-        self.roughnessTiling = tiling
-    def setMetallic(self,path,tiling = (1,1)):
-        self.metallicPath = path
-        self.metallicTiling = tiling
-    def setNormal(self,path,tiling = (1,1)):
-        self.normalPath = path
-        self.normalTiling = tiling
-    def convertToJson(self):
+    def getDataDict(self):
         data = {}
 
         data["materialName"] = self.materialName
@@ -55,9 +44,9 @@ class PBRMaterialTemplate():
         data["metallicPath"] = self.metallicPath
         data["metallicTiling"] = self.metallicTiling
 
-        data["normalPath"] = self
-        data["normalTiling"] = (1,1)
-        return(json.dumps(data))
+        data["normalPath"] = self.normalPath
+        data["normalTiling"] = self.normalTiling
+        return(data)
 
 
 
@@ -94,39 +83,58 @@ def getMaterialsOfMesh(mesh):
         materials.extend(mats)
     return materials
 
+
+def recurveInputs(node):
+    inputNodes = [node]
+    for subNode in node.inputs():
+        inputNodes.append(subNode)
+        inputNodes.extend(recurveInputs(subNode))
+    return list(set(inputNodes))
+
+
 #获取一个材质节点对应属性上的贴图,UDIM和重复度
 def getMaterialAttr(material,attrName):
-    fileNode =  material.attr(attrName).inputs()
-    if fileNode == []:
-        return (None,False,1)
-    fileNode = fileNode[0]
-    if fileNode.nodeType() == "file":
-        texturePath = fileNode.attr("fileTextureName").get()
-        udim = fileNode.attr("uvTilingMode").get()
-        tilingNode = fileNode.attr("uvCoord").inputs()
-        if tilingNode == []:
-            tiling = 1;
-        else:
-            tiling = tilingNode[0].attr("repeatU").get()
-    else:
-        texturePath = fileNode.attr("tex0").get()
+    rootNodes =  material.attr(attrName).inputs()#获取材质对应属性名称下的第一个节点
+    if rootNodes == []:
+        return (None,False,1)#如果该属性下未连接节点返回
+    rootNode = rootNodes[0]
+    if rootNode.nodeType() == "RedshiftNormalMap":  #如果根节点为法线节点:
+        texturePath =  rootNode.attr("tex0").get()
+        
         if ".<UDIM>." in texturePath:
             udim = True
-            texturePath.replace(".<UDIM>.",".1001.")
+            texturePath = texturePath.replace(".<UDIM>.",".1001.")
         else:
             udim = False
+        tilingNode = rootNode.attr("uvCoord").inputs()
+        if tilingNode == []:
+            tiling = (1,1)
+        else:
+            tiling = (tilingNode[0].attr("repeatU").get(),tilingNode[0].attr("repeatV").get())
+    else:                                                                     #如果根节点为其他节点
+        fileNodes = filterNode(recurveInputs(rootNode),"file")             #遍历根节点下所有的节点
+        if fileNodes == []:
+            return (None,False,1)                                             #如果该属性下未连接节点返回
+        if len(fileNodes) > 1:
+            return False                                                      #如果含有多个文件节点则返回假                                   
+        fileNode = fileNodes[0]
+        texturePath = fileNode.attr("fileTextureName").get()
+        if fileNode.attr("uvTilingMode").get() == 0:
+            udim = False
+        else:
+            udim = True
         tilingNode = fileNode.attr("uvCoord").inputs()
         if tilingNode == []:
-            tiling = 1;
+            tiling = (1,1)
         else:
-            tiling = tilingNode[0].attr("repeatU").get()
+            tiling = (tilingNode[0].attr("repeatU").get(),tilingNode[0].attr("repeatV").get())
     return (texturePath,udim,tiling)
 
 
-def checkSelectMeshs(fullName):
-    acceptAbleMaterialType = ["RedshiftMaterial","RedshiftArchitectural"]
-    acceptAbleTexturelType = ["file","RedshiftNormalMap"]
+def exportPipline(fullName):
     slObjects = pm.ls(selection = True)
+    if slObjects == []:
+        return(False,"当前未选择任何物体")
     meshs = []
     for obj in slObjects:
         meshs.extend(filterNode(recurveNode(obj),'mesh'))
@@ -134,34 +142,47 @@ def checkSelectMeshs(fullName):
     for mesh in meshs:
         materials.extend(getMaterialsOfMesh(mesh))
     materials = list(set(materials))
-    datas = []
+    materialDatas = []
+
     for material in materials:
-        if material.nodeType() not in acceptAbleMaterialType:
-            return(False,u"材质球{0}的类型不是可接受的类型,请检查".format(material.name()))
-        for input in material.inputs():
-            if input.nodeType() not in acceptAbleTexturelType:
-                return(False,u"材质球{0}含有不可接受的贴图类型请检查".format(material.name()))
-        data = {}
         if material.nodeType() == "RedshiftMaterial":
-            data["materialName"] = material.name()
-            data["type"] = "pbr"
-            data["baseColor"],data["baseColorUDIM"],data["baseColorTiling"] = getMaterialAttr(material,"diffuse_color")
-            data["roughness"],data["roughnessUDIM"],data["roughnessTiling"] = getMaterialAttr(material,"refl_roughness")
-            data["normal"],data["normalUDIM"],data["normalTiling"] = getMaterialAttr(material,"bump_input")
-            data["metallic"],data["metallicUDIM"],data["metallicTiling"] = getMaterialAttr(material,"refl_metalness")
-        elif material.nodeType() == "RedshiftArchitectural":
-            data["materialName"] = "None"
-            data["type"] = "ssss"
-            pass
-        datas.append(data)
-        del data
-    print(datas)
+            wrapMaterial = PBRMaterialTemplate()
+            wrapMaterial.materialName = material.name()
 
-    
+            attrs = getMaterialAttr(material,"diffuse_color")
+            if not attrs :
+                 return (False,"材质{0}不符合标准,请检查".format(material.name()))
+            wrapMaterial.fUDIM = attrs[1]   
+            wrapMaterial.baseColorPath = attrs[0]
+            wrapMaterial.baseColorTiling = attrs[2]
+            
+            attrs = getMaterialAttr(material,"bump_input")
+            print(attrs)
+            if not attrs :
+                 return (False,"材质{0}不符合标准,请检查".format(material.name()))
+            wrapMaterial.normalPath = attrs[0]
+            wrapMaterial.normalTiling = attrs[2]
 
+            attrs = getMaterialAttr(material,"refl_roughness")
+            if not attrs :
+                 return (False,"材质{0}不符合标准,请检查".format(material.name()))
+            wrapMaterial.roughnessPath = attrs[0]
+            wrapMaterial.roughnessTiling = attrs[2]
 
-
+            attrs = getMaterialAttr(material,"refl_metalness")
+            if not attrs :
+                 return (False,"材质{0}不符合标准,请检查".format(material.name()))
+            wrapMaterial.metallicPath = attrs[0]
+            wrapMaterial.metallicTiling = attrs[2]
+            materialDatas.append(wrapMaterial.getDataDict())
+    print(materialDatas)
     pm.mel.FBXExport(f=fullName + ".fbx",s=1)
     with open(fullName + ".json",'w+') as f:
-        f.write(json.dumps(datas))
-    return (True,u"成功")
+        f.write(json.dumps(materialDatas))
+    return (True,u"导出成功")
+
+
+
+def getFileName():
+    current_file_path = pm.system.sceneName()
+    return(os.path.basename(current_file_path).split(".")[0])
