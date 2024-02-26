@@ -6,9 +6,12 @@
 # version: 3.10.13
 ##################################################################
 import bpy
+from bpy_extras.io_utils import ImportHelper
+from bpy.props import StringProperty, BoolProperty, EnumProperty
+from bpy.types import Operator
+
 
 import json
-
 
 def getAllMaterials():
     materials = []
@@ -33,31 +36,12 @@ def createMaterialNode(materila,data):
     # 连接漫反射节点到材质输出节点
     links = materila.node_tree.links
     links.new(bsdf.outputs[0], node_output.inputs[0])
-
     useUDIM = data["fUDIM"]
 
-    if data["baseColorPath"] != None:
-        baseColorNode = nodes.new(type="ShaderNodeTexImage")
-        image = bpy.data.images.load(data["baseColorPath"])
-        if useUDIM:
-            image.source = "TILED"
-        baseColorNode.image = image
-        links.new(baseColorNode.outputs[0],bsdf.inputs[0])
-
-    if data["roughnessPath"] != None:
-        roughnessNode = nodes.new(type="ShaderNodeTexImage")
-        image = bpy.data.images.load(data["roughnessPath"])
-        image.colorspace_settings.name = 'Non-Color'
-        if useUDIM:
-            image.source = "TILED"
-        roughnessNode.image = image
-        splitXYZNode = nodes.new(type="ShaderNodeSeparateXYZ")
-        links.new(roughnessNode.outputs[0],splitXYZNode.inputs[0])
-        links.new(splitXYZNode.outputs[1],bsdf.inputs[2])
-   
     if data["normalPath"] != None:
         normalNode = nodes.new(type="ShaderNodeTexImage")
-        image = bpy.data.images.load(data["normalPath"])
+        bpy.ops.image.open(filepath=data["normalPath"], relative_path=True, show_multiview=False)
+        image = bpy.data.images.load(data["normalPath"],check_existing=True)
         image.colorspace_settings.name = 'Non-Color'
         if useUDIM:
             image.source = "TILED"
@@ -65,17 +49,156 @@ def createMaterialNode(materila,data):
         normalMapNode = nodes.new(type="ShaderNodeNormalMap")
         links.new(normalNode.outputs[0],normalMapNode.inputs[1])
         links.new(normalMapNode.outputs[0],bsdf.inputs[5])
-    
-    if data["metallicPath"] != None:
-        metallicNode = nodes.new(type="ShaderNodeTexImage")
-        image = bpy.data.images.load(data["metallicPath"])
-        image.colorspace_settings.name = 'Non-Color'
-        if useUDIM:
-            image.source = "TILED"
-        metallicNode.image = image
-        splitXYZNode = nodes.new(type="ShaderNodeSeparateXYZ")
-        links.new(metallicNode.outputs[0],splitXYZNode.inputs[0])
-        links.new(splitXYZNode.outputs[2],bsdf.inputs[1])
+
+
+        texCoordNode = nodes.new(type="ShaderNodeTexCoord")
+        mapNode = nodes.new(type="ShaderNodeMapping")
+        mapNode.inputs[3].default_value[0] = data["normalTiling"][0]
+        mapNode.inputs[3].default_value[1] = data["normalTiling"][1]
+        links.new(texCoordNode.outputs[2],mapNode.inputs[0])
+        links.new(mapNode.outputs[0],normalNode.inputs[0])
+
+    # 当类型为PBR模式时
+    if data["type"] == "PBR":
+        if data["baseColorPath"] != None:
+            baseColorNode = nodes.new(type="ShaderNodeTexImage")
+            bpy.ops.image.open(filepath=data["baseColorPath"], relative_path=True, show_multiview=False)
+            image = bpy.data.images.load(data["baseColorPath"],check_existing=True)
+            if useUDIM:
+                image.source = "TILED"
+            baseColorNode.image = image
+            links.new(baseColorNode.outputs[0],bsdf.inputs[0])
+
+
+            texCoordNode = nodes.new(type="ShaderNodeTexCoord")
+            mapNode = nodes.new(type="ShaderNodeMapping")
+            mapNode.inputs[3].default_value[0] = data["baseColorTiling"][0]
+            mapNode.inputs[3].default_value[1] = data["baseColorTiling"][1]
+            links.new(texCoordNode.outputs[2],mapNode.inputs[0])
+            links.new(mapNode.outputs[0],baseColorNode.inputs[0])
+
+
+        if data["roughnessPath"] != None:
+            roughnessNode = nodes.new(type="ShaderNodeTexImage")
+            bpy.ops.image.open(filepath=data["roughnessPath"], relative_path=True, show_multiview=False)
+            image = bpy.data.images.load(data["roughnessPath"],check_existing=True)
+            image.colorspace_settings.name = 'Non-Color'
+            if useUDIM:
+                image.source = "TILED"
+            roughnessNode.image = image
+            splitXYZNode = nodes.new(type="ShaderNodeSeparateXYZ")
+            links.new(roughnessNode.outputs[0],splitXYZNode.inputs[0])
+            links.new(splitXYZNode.outputs[1],bsdf.inputs[2])
+            
+
+            texCoordNode = nodes.new(type="ShaderNodeTexCoord")
+            mapNode = nodes.new(type="ShaderNodeMapping")
+            mapNode.inputs[3].default_value[0] = data["roughnessTiling"][0]
+            mapNode.inputs[3].default_value[1] = data["roughnessTiling"][1]
+            links.new(texCoordNode.outputs[2],mapNode.inputs[0])
+            links.new(mapNode.outputs[0],roughnessNode.inputs[0])
+
+        
+        if data["metallicPath"] != None:
+            metallicNode = nodes.new(type="ShaderNodeTexImage")
+            bpy.ops.image.open(filepath=data["metallicPath"], relative_path=True, show_multiview=False)
+            image = bpy.data.images.load(data["metallicPath"],check_existing=True)
+            image.colorspace_settings.name = 'Non-Color'
+            if useUDIM:
+                image.source = "TILED"
+            metallicNode.image = image
+            splitXYZNode = nodes.new(type="ShaderNodeSeparateXYZ")
+            links.new(metallicNode.outputs[0],splitXYZNode.inputs[0])
+            links.new(splitXYZNode.outputs[2],bsdf.inputs[1])
+
+
+            texCoordNode = nodes.new(type="ShaderNodeTexCoord")
+            mapNode = nodes.new(type="ShaderNodeMapping")
+            mapNode.inputs[3].default_value[0] = data["metallicTiling"][0]
+            mapNode.inputs[3].default_value[1] = data["metallicTiling"][1]
+            links.new(texCoordNode.outputs[2],mapNode.inputs[0])
+            links.new(mapNode.outputs[0],metallicNode.inputs[0])
+
+    # 当类型为传统模式时
+    elif data["type"] == "legacy":
+        if data["diffusePath"] != None:
+            diffuseNode = nodes.new(type="ShaderNodeTexImage")
+            bpy.ops.image.open(filepath=data["diffusePath"], relative_path=True, show_multiview=False)
+            image = bpy.data.images.load(data["diffusePath"],check_existing=True)
+            if useUDIM:
+                image.source = "TILED"
+            diffuseNode.image = image
+            links.new(diffuseNode.outputs[0],bsdf.inputs[0])
+
+
+            texCoordNode = nodes.new(type="ShaderNodeTexCoord")
+            mapNode = nodes.new(type="ShaderNodeMapping")
+            mapNode.inputs[3].default_value[0] = data["diffuseTiling"][0]
+            mapNode.inputs[3].default_value[1] = data["diffuseTiling"][1]
+            links.new(texCoordNode.outputs[2],mapNode.inputs[0])
+            links.new(mapNode.outputs[0],diffuseNode.inputs[0])
+
+        if data["glossinessPath"] != None:
+            glossinessNode = nodes.new(type = "ShaderNodeTexImage")
+            bpy.ops.image.open(filepath=data["glossinessPath"], relative_path=True, show_multiview=False)
+            image = bpy.data.images.load(data["glossinessPath"],check_existing=True)
+            image.colorspace_settings.name = 'Non-Color'
+            if useUDIM:
+                image.source = "TILED"
+            glossinessNode.image = image
+            invertColorNode = nodes.new(type = "ShaderNodeInvert")
+            links.new(glossinessNode.outputs[0],invertColorNode.inputs[1])
+            links.new(invertColorNode.outputs[0],bsdf.inputs[2])
+
+
+            texCoordNode = nodes.new(type="ShaderNodeTexCoord")
+            mapNode = nodes.new(type="ShaderNodeMapping")
+            mapNode.inputs[3].default_value[0] = data["glossinessTiling"][0]
+            mapNode.inputs[3].default_value[1] = data["glossinessTiling"][1]
+            links.new(texCoordNode.outputs[2],mapNode.inputs[0])
+            links.new(mapNode.outputs[0],glossinessNode.inputs[0])
+
+
+        if data["f0Path"] != None:
+            f0Node = nodes.new(type = "ShaderNodeTexImage")
+            image = bpy.data.images.load(data["f0Path"],check_existing=True)
+            image.colorspace_settings.name = 'Non-Color'
+            if useUDIM:
+                image.source = "TILED"
+            f0Node.image = image
+            links.new(f0Node.outputs[0],bsdf.inputs[1])
+
+
+            texCoordNode = nodes.new(type="ShaderNodeTexCoord")
+            mapNode = nodes.new(type="ShaderNodeMapping")
+            mapNode.inputs[3].default_value[0] = data["f0Tiling"][0]
+            mapNode.inputs[3].default_value[1] = data["f0Tiling"][1]
+            links.new(texCoordNode.outputs[2],mapNode.inputs[0])
+            links.new(mapNode.outputs[0],f0Node.inputs[0])
+
+
+        if data["reflectColorPath"] != None:
+            reflectColorNode = nodes.new(type = "ShaderNodeTexImage")
+            image = bpy.data.images.load(data["reflectColorPath"],check_existing=True)
+            if useUDIM:
+                image.source = "TILED"
+            reflectColorNode.image = image
+
+            texCoordNode = nodes.new(type="ShaderNodeTexCoord")
+            mapNode = nodes.new(type="ShaderNodeMapping")
+            mapNode.inputs[3].default_value[0] = data["reflectColorTiling"][0]
+            mapNode.inputs[3].default_value[1] = data["reflectColorTiling"][1]
+            links.new(texCoordNode.outputs[2],mapNode.inputs[0])
+            links.new(mapNode.outputs[0],reflectColorNode.inputs[0])
+
+        
+        if data["f0Path"] != None and data["reflectColorPath"] != None:
+            colorMixNode = nodes.new(type = "ShaderNodeMixRGB")
+            links.new(f0Node.outputs[0],colorMixNode.inputs[0])
+            links.new(diffuseNode.outputs[0],colorMixNode.inputs[1])
+            links.new(reflectColorNode.outputs[0],colorMixNode.inputs[2])
+            links.new(colorMixNode.outputs[0],bsdf.inputs[0])
+
 
 def read_some_data(context, filepath, use_some_setting):
 
@@ -93,12 +216,6 @@ def read_some_data(context, filepath, use_some_setting):
                 createMaterialNode(material,data)
     return {'FINISHED'}
 
-
-# ImportHelper is a helper class, defines filename and
-# invoke() function which calls the file selector.
-from bpy_extras.io_utils import ImportHelper
-from bpy.props import StringProperty, BoolProperty, EnumProperty
-from bpy.types import Operator
 
 
 class ImportSomeData(Operator, ImportHelper):
@@ -155,8 +272,8 @@ def unregister():
 
 if __name__ == "__main__":
     register()
-
     # test call
     bpy.ops.import_test.some_data('INVOKE_DEFAULT')
+
 
 

@@ -34,6 +34,7 @@ class exportPipline(MayaQWidgetDockableMixin,QtWidgets.QWidget):
         layExportPath = QtWidgets.QHBoxLayout()
         pbSelectExprotPath = MClickBrowserFolderToolButton()
         self.leExportPath = MLineEdit()
+        self.leExportPath.setText(UM.getRootPath())
         pbSelectExprotPath.sig_folder_changed.connect(self.leExportPath.setText)
         layExportPath.addWidget(MLabel(u"导出路径:"))
         layExportPath.addWidget(self.leExportPath)

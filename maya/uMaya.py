@@ -13,11 +13,27 @@ import json
 
 import os
 
-class PBRMaterialTemplate():
+
+class materialTemplate(object):
     def __init__(self):
         self.materialName = None
         self.fUDIM = False
 
+        self.normalPath = None
+        self.normalTiling = (1,1)
+    def getDataDict(self):
+        data = {}
+        data["materialName"] = self.materialName
+        data["fUDIM"] = self.fUDIM
+
+        data["normalPath"] = self.normalPath
+        data["normalTiling"] = self.normalTiling
+        return data
+
+class PBRMaterialTemplate(materialTemplate):
+    def __init__(self):
+        super(PBRMaterialTemplate,self).__init__()
+        self.type = "PBR"
         self.baseColorPath = None
         self.baseColorTiling = (1,1)
         
@@ -27,14 +43,10 @@ class PBRMaterialTemplate():
         self.metallicPath = None
         self.metallicTiling = (1,1)
 
-        self.normalPath = None
-        self.normalTiling = (1,1)
+
     def getDataDict(self):
-        data = {}
-
-        data["materialName"] = self.materialName
-        data["fUDIM"] = self.fUDIM
-
+        data = super(PBRMaterialTemplate,self).getDataDict()
+        data["type"] = self.type
         data["baseColorPath"] = self.baseColorPath
         data["baseColorTiling"] = self.baseColorTiling
         
@@ -44,11 +56,38 @@ class PBRMaterialTemplate():
         data["metallicPath"] = self.metallicPath
         data["metallicTiling"] = self.metallicTiling
 
-        data["normalPath"] = self.normalPath
-        data["normalTiling"] = self.normalTiling
+
         return(data)
 
+class legacyMaterialTemplate(materialTemplate):
+    def __init__(self):
+        super(legacyMaterialTemplate,self).__init__()
+        self.type = "legacy"
 
+        self.f0Path = None
+        self.f0Tiling = (1,1)
+
+        self.diffusePath = None
+        self.diffuseTiling = (1,1)
+
+        self.reflectColorPath = None
+        self.reflectColorTiling = (1,1)
+
+
+        self.glossinessPath = None
+        self.glossinessTiling = (1,1)
+    def getDataDict(self):
+        data = super(legacyMaterialTemplate,self).getDataDict()
+        data["type"] = self.type
+        data["f0Path"] = self.f0Path
+        data["f0Tiling"] = self.f0Tiling
+        data["diffusePath"] = self.diffusePath
+        data["diffuseTiling"] = self.diffuseTiling
+        data["reflectColorPath"] = self.reflectColorPath
+        data["reflectColorTiling"] = self.reflectColorTiling
+        data["glossinessPath"] = self.glossinessPath
+        data["glossinessTiling"] = self.glossinessTiling
+        return data
 
 
 #递归一个节点返回他的所有字节点
@@ -145,9 +184,20 @@ def exportPipline(fullName):
     materialDatas = []
 
     for material in materials:
+        realMaterialName = material.name()
+        # 考虑混合材质的情况
+        if material.nodeType() == "RedshiftMaterialBlender":
+            subMaterials = []
+            subMaterials.extend(material.inputs(type="RedshiftMaterial"))
+            subMaterials.extend(material.inputs(type = "RedshiftArchitectural"))
+            maxTextureNodeCount = 0
+            for subMaterial in subMaterials:
+                if len(subMaterial.inputs(type = "file")) > maxTextureNodeCount:
+                    maxTextureNodeCount = len(subMaterial.inputs(type = "file"))
+                    material = subMaterial
         if material.nodeType() == "RedshiftMaterial":
             wrapMaterial = PBRMaterialTemplate()
-            wrapMaterial.materialName = material.name()
+            wrapMaterial.materialName = realMaterialName
 
             attrs = getMaterialAttr(material,"diffuse_color")
             if not attrs :
@@ -174,8 +224,47 @@ def exportPipline(fullName):
                  return (False,"材质{0}不符合标准,请检查".format(material.name()))
             wrapMaterial.metallicPath = attrs[0]
             wrapMaterial.metallicTiling = attrs[2]
-            materialDatas.append(wrapMaterial.getDataDict())
-    print(materialDatas)
+            
+        elif material.nodeType() == "RedshiftArchitectural":
+            wrapMaterial = legacyMaterialTemplate()
+            wrapMaterial.materialName = realMaterialName
+
+            attrs = getMaterialAttr(material,"brdf_0_degree_refl")
+            if not attrs :
+                 return (False,"材质{0}不符合标准,请检查".format(material.name()))
+            wrapMaterial.fUDIM = attrs[1]   
+            wrapMaterial.f0Path = attrs[0]
+            wrapMaterial.f0Tiling = attrs[2]
+
+
+            attrs = getMaterialAttr(material,"diffuse")
+            if not attrs :
+                 return (False,"材质{0}不符合标准,请检查".format(material.name()))
+            wrapMaterial.diffusePath = attrs[0]
+            wrapMaterial.diffuseTiling = attrs[2]
+
+
+            attrs = getMaterialAttr(material,"bump_input")
+            if not attrs :
+                 return (False,"材质{0}不符合标准,请检查".format(material.name()))
+            wrapMaterial.normalPath = attrs[0]
+            wrapMaterial.normalTiling = attrs[2]
+
+            
+            attrs = getMaterialAttr(material,"refl_color")
+            if not attrs :
+                 return (False,"材质{0}不符合标准,请检查".format(material.name()))
+            wrapMaterial.reflectColorPath = attrs[0]
+            wrapMaterial.reflectColorTiling = attrs[2]
+
+            attrs = getMaterialAttr(material,"refl_gloss")
+            if not attrs :
+                 return (False,"材质{0}不符合标准,请检查".format(material.name()))
+            wrapMaterial.glossinessPath = attrs[0]
+            wrapMaterial.glossinessTiling = attrs[2]
+        else:
+            pass
+        materialDatas.append(wrapMaterial.getDataDict())
     pm.mel.FBXExport(f=fullName + ".fbx",s=1)
     with open(fullName + ".json",'w+') as f:
         f.write(json.dumps(materialDatas))
@@ -186,3 +275,6 @@ def exportPipline(fullName):
 def getFileName():
     current_file_path = pm.system.sceneName()
     return(os.path.basename(current_file_path).split(".")[0])
+def getRootPath():
+    current_file_path = pm.system.sceneName()
+    return(os.path.dirname(current_file_path))
