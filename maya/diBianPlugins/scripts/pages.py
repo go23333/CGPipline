@@ -3,9 +3,7 @@
 # Author : zcx
 # Date   : 2024.2
 # Email  : 978654313@qq.com
-# version: 2.7.18
 ##################################################################
-
 
 from Qt import QtWidgets,QtCore
 from dayu_widgets import dayu_theme
@@ -19,7 +17,6 @@ from imp import reload
 
 import uMaya as UM
 reload(UM)
-
 
 class exportPipline(MayaQWidgetDockableMixin,QtWidgets.QWidget):
     def __init__(self):
@@ -75,5 +72,3 @@ class exportPipline(MayaQWidgetDockableMixin,QtWidgets.QWidget):
         else:
             MMessage.error(parent=self,text=message)
     
-
-

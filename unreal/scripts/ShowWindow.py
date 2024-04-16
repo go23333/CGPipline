@@ -41,8 +41,6 @@ def showLevelDesignTool():
     UU.appendWindowToUnreal(int(mywindow.winId()))
 
 
-
-
 def showLightTools():
     mywindow = Pages.LightTools()
     dayu_theme.apply(mywindow)

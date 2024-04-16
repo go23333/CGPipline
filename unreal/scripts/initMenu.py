@@ -66,8 +66,21 @@ entry.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", "import Sh
 script_menu.add_menu_entry("Test Section",entry)
 
 
-menus.refresh_all_widgets()
 
+entry = unreal.ToolMenuEntry(
+            name="ProjectInit",
+            type=unreal.MultiBlockType.MENU_ENTRY,
+            insert_position=unreal.ToolMenuInsert(
+                "", unreal.ToolMenuInsertType.FIRST)
+        )
+entry.set_label("项目初始化工具")
+entry.set_tool_tip("初始化项目")
+entry.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", "from songshunjie import ChuShiHua \nChuShiHua.start()")
+script_menu.add_menu_entry("Test Section",entry)
+
+
+
+menus.refresh_all_widgets()
 import uCommon as UC
 global Application
 Application = UC.getApplication()

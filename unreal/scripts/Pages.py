@@ -35,7 +35,6 @@ reload (UG)
 #定义一些共享的widget
 
 
-
 class FetchCameraDataWorker(QtCore.QThread):
     def __init__(self,parent=None):
         super().__init__(parent)

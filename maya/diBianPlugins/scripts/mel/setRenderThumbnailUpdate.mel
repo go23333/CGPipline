@@ -1,0 +1,16 @@
+global proc setRenderThumbnailUpdate(){
+
+if(`renderThumbnailUpdate -q`!=1){
+renderThumbnailUpdate 1;
+
+print "贴图刷新已开启\n";
+}
+else{
+renderThumbnailUpdate 0;
+
+print "贴图刷新已禁止\n";
+}
+}
+
+setRenderThumbnailUpdate;
+

@@ -7,7 +7,7 @@
 ##################################################################
 import time
 from importlib import reload
-from functools import wraps
+
 
 import uCommon as UC
 
@@ -55,7 +55,7 @@ class WarpLevelSequence(WrapBaseAsset):
         if originProxyAndCamera:
             bindingProxy = originProxyAndCamera[0]
         else:
-            bindingProxy,TempCinCameraActor=levelSequenceEditorSubsystem.create_camera(True)
+            bindingProxy,_=levelSequenceEditorSubsystem.create_camera(True)
 
         importSettings = unreal.MovieSceneUserImportFBXSettings()
         importSettings.set_editor_property("convert_scene_unit",True)
@@ -475,10 +475,12 @@ def poolSize(value=0):
 
 def popEmmissive():
     
+
     pass
 
 def openImportCameraUI():
-    pass
+    import ShowWindow
+    ShowWindow.showCameraImporter()
 
 def nearClip(value:float):
     unreal.SystemLibrary.execute_console_command(unrealEditorSybsystem.get_editor_world(),f'r.SetNearClipPlane {value}')

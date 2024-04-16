@@ -3,3 +3,5 @@
 *.c
 build
 __pycache__
+/unreal/vendor
+/maya/diBianPlugins/vendor

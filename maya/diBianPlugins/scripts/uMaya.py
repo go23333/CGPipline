@@ -3,16 +3,12 @@
 # Author : zcx
 # Date   : 2024.2
 # Email  : 978654313@qq.com
-# version: 2.7.18
 ##################################################################
-
-
 import pymel.core as pm
 
 import json
 
 import os
-
 
 class materialTemplate(object):
     def __init__(self):
