@@ -495,12 +495,12 @@ def importCameras(datas:list):
         path = data["path"]
         parsedName = UC.parseCameraName(name)
         if parsedName:
-            assetPath = UC.applyMacro(UG.unrealConfig.CameraImportPathPatten,parsedName) # 应用宏替换
+            assetPath = UC.applyMacro(UG.globalConfig.get().CameraImportPathPatten,parsedName) # 应用宏替换
             wrapLevelSeq = WarpLevelSequence.create(assetPath,False)                     # 创建关卡序列
             wrapLevelSeq.setFrameRate(25)                                                # 设置帧率
             wrapLevelSeq.setPlayBackStart(int(parsedName["frameStart"]))
             wrapLevelSeq.setPlayBackEnd(int(parsedName["frameEnd"]))
-            wrapLevelSeq.importCamera(path,UG.unrealConfig.CameraimportUniformScale)                                              # 导入相机
+            wrapLevelSeq.importCamera(path,UG.globalConfig.get().CameraimportUniformScale)                                              # 导入相机
             templist = wrapLevelSeq.getBindingProxyAndObject(unreal.CineCameraActor)
             if not templist:
                 unrealLogError("相机导入","从wrapLevelSeq上获取相机失败,相机属性设置失败")
@@ -509,7 +509,7 @@ def importCameras(datas:list):
             wrapCamera = WrapCineCameraActor(templist[1])
             wrapCamera.setFilmback(UC.FilmBackPreset.DSLR)
             wrapCamera.setFocusMethod(unreal.CameraFocusMethod.DISABLE)
-            wrapCamera.setAspectRatio(UG.unrealConfig.CameraimportAspectRatio)
+            wrapCamera.setAspectRatio(UG.globalConfig.get().CameraimportAspectRatio)
 
             wrapLevelSeq.setLock(True)                                                    # 锁定序列
             wrapLevelSeq.saveAsset()                                                      # 保存序列
@@ -518,24 +518,24 @@ def importCameras(datas:list):
 
 
 def textureImport(texturePaths:list):
-    wrapTex = WrapTexture.importTexture( texturePaths[0],UG.unrealConfig.TextureImportPathPatten)
+    wrapTex = WrapTexture.importTexture( texturePaths[0],UG.globalConfig.get().TextureImportPathPatten)
     if len(texturePaths) == 1:
         return wrapTex
-    if not (wrapTex.setVTEnable(UG.unrealConfig.TextureEnableVT) and UG.unrealConfig.TextureEnableVT):
+    if not (wrapTex.setVTEnable(UG.globalConfig.get().TextureEnableVT) and UG.globalConfig.get().TextureEnableVT):
         UC.ConvertTexture.resizerTextures(texturePaths)
-        wrapTex = WrapTexture.importTexture(texturePaths[0],UG.unrealConfig.TextureImportPathPatten)
+        wrapTex = WrapTexture.importTexture(texturePaths[0],UG.globalConfig.get().TextureImportPathPatten)
     return wrapTex
 
 
 def importStaticmeshs(datas:list,sceneName=None):
     saveAll()          # 保存所有资产,防止导入过程中崩溃
-    duplicate_asset(UG.unrealConfig.SceneDefaultMaterial,UG.unrealConfig.LocalSceneDefaultMaterial)
-    wrapMaterial = WrapMaterial(unreal.load_asset(UG.unrealConfig.LocalSceneDefaultMaterial))
+    duplicate_asset(UG.globalConfig.get().SceneDefaultMaterial,UG.globalConfig.get().LocalSceneDefaultMaterial)
+    wrapMaterial = WrapMaterial(unreal.load_asset(UG.globalConfig.get().LocalSceneDefaultMaterial))
     for data in datas: # 遍历所有传入的资产数据
         name = data["name"]
         path = data["path"]
         parseReslut = UC.parseStaticMeshName(name,sceneName)
-        destinationPath = UC.applyMacro(UG.unrealConfig.StaticMeshImportPathPatten,parseReslut)
+        destinationPath = UC.applyMacro(UG.globalConfig.get().StaticMeshImportPathPatten,parseReslut)
         wrapSM = WrapStaticMesh.importFromFbx(path,destinationPath,1) #导入静态网格体
         JsonPath = path.replace('.fbx','.json')
         Json_file = UC.ReadJsonFile(JsonPath)
@@ -544,7 +544,7 @@ def importStaticmeshs(datas:list,sceneName=None):
             # 判断是否创建材质
             if not MaterialInfo['CreateMaterial']:
                 continue
-            wrapMaterialIns = WrapMaterialInstance.create(UG.unrealConfig.MaterialInstancePath + MaterialInfo["Materialname"])
+            wrapMaterialIns = WrapMaterialInstance.create(UG.globalConfig.get().MaterialInstancePath + MaterialInfo["Materialname"])
             wrapMaterialIns.setParent(wrapMaterial.asset)
             TexturePath = MaterialInfo['TexturePath']
             if TexturePath['diffuse_color'] != None:
@@ -582,3 +582,11 @@ def importStaticmeshs(datas:list,sceneName=None):
             wrapMaterialIns.saveAsset()
             wrapSM.setMaterialBySloatName(MaterialInfo["Materialname"],wrapMaterialIns.asset)
         wrapSM.saveAsset()
+
+
+
+if __name__ == "__main__":
+    toLevl = unreal.load_asset("/Game/HLSL/HLSL_Map.HLSL_Map")
+    subLevel = unreal.load_asset("/Game/HLSL/NewWorld.NewWorld")
+    world = toLevl.get_world()
+    unreal.EditorLevelUtils().add_level_to_world(world,"/Game/HLSL/NewWorld.NewWorld",unreal.LevelStreamingAlwaysLoaded)

@@ -20,7 +20,7 @@ from dayu_widgets.line_edit import MClickBrowserFolderToolButton, MLineEdit
 from dayu_widgets.loading import MLoadingWrapper
 from dayu_widgets.menu import MMenu
 from dayu_widgets.message import MMessage
-from dayu_widgets.spin_box import MDoubleSpinBox, MSpinBox
+from dayu_widgets.spin_box import MDoubleSpinBox, MSpinBox 
 import functools
 from importlib import reload
 #导入自定义库
@@ -30,6 +30,7 @@ import uCommon as UC
 reload(UC)
 import uGlobalConfig as UG
 reload (UG)
+import ShowWindow as SW
 
 
 #定义一些共享的widget
@@ -121,6 +122,7 @@ class CommonMenuBar(QtWidgets.QMenuBar):
         super().__init__(parent)
         menuEdit = self.addMenu("编辑")
         aSetting = menuEdit.addAction("设置")
+        aSetting.triggered.connect(SW.showSettings) 
         menuHelp = self.addMenu("帮助")
         aHelp = menuHelp.addAction("打开帮助页面")
 
@@ -400,11 +402,11 @@ class Settings(QtWidgets.QWidget):
         layCameraImportSettings.setSpacing(5)
         # input
         layMacroInput = QtWidgets.QHBoxLayout()
-        self.leMacroInput = MLineEdit()
-        self.leMacroInput.textChanged.connect(self.applyMacroCamera)
+        self.leCameraInputMacro = MLineEdit()
+        self.leCameraInputMacro.textChanged.connect(self.applyMacroCamera)
 
         layMacroInput.addWidget(MLabel("宏输入:"))
-        layMacroInput.addWidget(self.leMacroInput)
+        layMacroInput.addWidget(self.leCameraInputMacro)
         CurrentMacro = ""
         for macro in UC.CameraPathMacros:
             CurrentMacro = CurrentMacro + " | " + macro
@@ -414,12 +416,27 @@ class Settings(QtWidgets.QWidget):
         self.leMacroOutput.setEnabled(False)
         layMacroOutput.addWidget(MLabel("宏输出:"))
         layMacroOutput.addWidget(self.leMacroOutput)
+
+
+
+        
+        
+        self.sbCameraRatio = MDoubleSpinBox()
+        self.sbCameraRatio.setDecimals(6)
+
+
+        layCameraAspectRatio = QtWidgets.QHBoxLayout()
+        layCameraAspectRatio.addWidget(MLabel("相机纵横比:"))
+        layCameraAspectRatio.addWidget(self.sbCameraRatio)
+
+
         # NOTE add to main layout
         layCameraImportSettings.addWidget(MLabel("相机导入路径宏设置:").h4(),alignment=QtCore.Qt.AlignTop)
         layCameraImportSettings.addWidget(MLabel("示例相机名称:Ep000_sc003_001_001_131_cam"),alignment=QtCore.Qt.AlignTop)
         layCameraImportSettings.addLayout(layMacroInput)
         layCameraImportSettings.addWidget(MLabel(f"当前可以使用的宏有:{CurrentMacro}"))
         layCameraImportSettings.addLayout(layMacroOutput)
+        layCameraImportSettings.addLayout(layCameraAspectRatio)
         # 静态网格体设置
         layMeshImportSettings = QtWidgets.QVBoxLayout()  #定义Q主布局
         layMeshImportSettings.setSpacing(5)
@@ -449,18 +466,33 @@ class Settings(QtWidgets.QWidget):
         layMeshImportSettings.addLayout(layMeshMacroOutput)
         layMeshImportSettings.addWidget(self.useSceneName,alignment=QtCore.Qt.AlignRight)
 
+        layoutbuttons = QtWidgets.QHBoxLayout()
+        pbSaveConfig = MPushButton("保存设置")
+        pbSaveConfig.clicked.connect(self.saveConfig)
+        layoutbuttons.addWidget(pbSaveConfig,alignment=QtCore.Qt.AlignRight)
 
 
         layMain.addLayout(layCameraImportSettings)
         layMain.addLayout(layMeshImportSettings)
         layMain.addSpacerItem(QtWidgets.QSpacerItem(20,20,QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Expanding))
+        layMain.addLayout(layoutbuttons)
+
         self.setLayout(layMain)
     def __loadConfig(self):
-        self.leMacroInput.setText(UG.unrealConfig.CameraImportPathPatten)
+        self.leCameraInputMacro.setText(UG.globalConfig.get().CameraImportPathPatten)
+        self.sbCameraRatio.setValue(UG.globalConfig.get().CameraimportAspectRatio)
+
+
+    def saveConfig(self):
+        UG.globalConfig.get().CameraImportPathPatten = self.leCameraInputMacro.text()
+        UG.globalConfig.get().CameraimportAspectRatio = self.sbCameraRatio.value()
+        
+        UG.globalConfig.get().saveConfig()
+        pass
     def applyMacroCamera(self):
         parseResult = UC.parseCameraName("Ep000_sc003_001_001_131_cam")
         if parseResult:
-            result = UC.applyMacro(self.leMacroInput.text(),parseResult)
+            result = UC.applyMacro(self.leCameraInputMacro.text(),parseResult)
             self.leMacroOutput.setText(UC.normalizePath(result))
 
 
@@ -468,6 +500,10 @@ class Settings(QtWidgets.QWidget):
 
 
 if __name__ == "__main__":
-    pass
+    global mywindow
+    mywindow = Settings()
+    dayu_theme.apply(mywindow)
+    mywindow.show()
+    UU.appendWindowToUnreal(int(mywindow.winId()))
 
 
