@@ -1,15 +1,9 @@
 #coding=utf-8
-#导入标准模块
-from imp import reload
-
-#导入自定义模块
-import lib.mayaLibrary as ML
 import maya.cmds as cmds
 
-reload(ML)
-import lib.pathLibrary as PL
-
-reload(PL)
+#导入自定义模块
+import mayaTools.core.mayaLibrary as ML
+import mayaTools.core.pathLibrary as PL
 
 class abcExportToolUI:
     def __init__(self):
@@ -93,6 +87,6 @@ class abcExportToolUI:
         PL.writejson(sortedMaterials,jsonPath)
 
 
-def abcExportToolMain():
+def showUI():
     UI = abcExportToolUI()#实例化UI
     UI.show()#显示UI

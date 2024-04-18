@@ -1,16 +1,11 @@
 #coding=utf-8
-#auther=zcx
-#data=20230522
-from imp import reload
 
-import lib.mayaLibrary as ML
 import pymel.core as pm
-
-reload(ML)
-import lib.pathLibrary as PL
 import maya.cmds as cmds
+#导入自定义模块
+import mayaTools.core.mayaLibrary as ML
+import mayaTools.core.pathLibrary as PL
 
-reload(PL)
 
 class gpuCacheToolUI:
     def __init__(self):
@@ -118,7 +113,7 @@ class gpuCacheToolUI:
 
 
 
-def gpuCacheToolMain():
+def showUI():
     UI = gpuCacheToolUI()#实例化UI
 
 

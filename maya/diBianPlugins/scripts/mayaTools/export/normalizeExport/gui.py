@@ -6,23 +6,22 @@
 ##################################################################
 
 from Qt import QtWidgets,QtCore
-from dayu_widgets import dayu_theme
 from dayu_widgets.message import MMessage
 from dayu_widgets.label import MLabel
 from dayu_widgets.line_edit import MClickBrowserFolderToolButton,MLineEdit
 from dayu_widgets.push_button import MPushButton
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 import os
-from imp import reload
 
-import uMaya as UM
-reload(UM)
+
+#custom modules
+import mayaTools.core.uMaya as UM
 
 class exportPipline(MayaQWidgetDockableMixin,QtWidgets.QWidget):
     def __init__(self):
         super(exportPipline,self).__init__()
         self.resize(400,300)
-        self.setWindowTitle(u"规范化工具")
+        self.setWindowTitle(u"规范化导出工具")
         self.__init_ui()
     def __init_ui(self):
         layMain = QtWidgets.QVBoxLayout()
@@ -71,4 +70,14 @@ class exportPipline(MayaQWidgetDockableMixin,QtWidgets.QWidget):
 
         else:
             MMessage.error(parent=self,text=message)
+
+def showUI():
+    global txExportPage
+    txExportPage = exportPipline()
+    txExportPage.show(dockable=True)
+
     
+if __name__ == "__main__":
+    global txExportPage
+    txExportPage = exportPipline()
+    txExportPage.show(dockable=True)

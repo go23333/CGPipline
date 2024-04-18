@@ -1,25 +1,12 @@
 #coding=utf-8
-# MayaTools_v0.1 author ZCX
-# v0.2修复创建RSMesh后无法将Lambert1指定上的错误
-# v0.3增加有重命名物体时的提示，添加选择项目的功能
-# v0.4防止导出的代理重名导致替换之前导出,防止因为重名导致无法连接代理
-# v0.5增加导出导入功能
-# v0.6修复一些BUG
-# 20220725 增加可以生成简模并设置为代理的功能
-
 import os
 import time
-from imp import reload
 
 import maya.cmds as cmds
+
 #导入自定义模块
-import lib.mayaLibrary as ML
-
-reload(ML)
-
-import lib.callThirdpart as CT
-reload(CT)
-
+import mayaTools.core.mayaLibrary as ML
+import mayaTools.core.pathLibrary as PL
 
 tempFilePath = r'D:/reduceTempMesh.obj'
 resFilePath = r'D:/Results/reduceTempMesh1.obj'
@@ -478,7 +465,7 @@ class UIMAIN:
         print('-------------------------------------------------------------------------------')
 
 
-def UIMain():
+def showUI():
     ui = UIMAIN()
     ui.Show()
 

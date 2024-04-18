@@ -1,19 +1,11 @@
-#coding=utf-8
-#auther=zcx
-#data=20220721
-
-from imp import reload
-
-#导入自定义模块
-import lib.mayaLibrary as ML
-#导入标准模块
+#-*- coding:utf-8 -*-
 import maya.cmds as cmds
 
-reload(ML)
-import lib.pathLibrary as PL
 
-reload(PL)
 
+#导入自定义模块
+import mayaTools.core.mayaLibrary as ML
+import mayaTools.core.pathLibrary as PL
 
 class xgentoolsUI:
     def __init__(self):
@@ -86,6 +78,6 @@ class xgentoolsUI:
         cmds.textField(target,text=PL.normailizePath(path),e=1)
     def show(self):
         cmds.showWindow(self.window)
-def xgentoolsMain():
+def showUI():
     UI = xgentoolsUI()
     UI.show()

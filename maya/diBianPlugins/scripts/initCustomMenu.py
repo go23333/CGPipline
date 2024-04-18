@@ -3,14 +3,14 @@
 
 import os
 import sys
+
+# 添加包目录
 vendroPath = os.path.dirname(__file__).replace('scripts','vendor')
 sys.path.insert(0,vendroPath)
 
 
-from imp import reload
 
 import pymel.core as pm
-
 
 main_window = pm.language.melGlobals['gMainWindow']  #获取主窗口
 
@@ -42,7 +42,7 @@ pm.menuItem(label=u'UE流程工具',subMenu=True,tearOff=True)
 pm.menuItem(label=u'abc导出工具',command="mayaTools.abcExporter.abcExportToolMain()")
 pm.menuItem(label=u'贴图连接',command="mayaTools.connectTexture.ConnectTextureMain()")
 pm.menuItem(label=u'相机导出',command="mayaTools.cameraExporter.CameraExporterMain()")
-pm.menuItem(label=u'静态网格体导出',command="import module.unreal.collection_textures_combine as ctc;reload(ctc);ctc.MayaToUnrealPackUtil()")
+pm.menuItem(label=u'静态网格体导出',command="import module.unreal.collection_textures_combine as ctc;ctc.MayaToUnrealPackUtil()")
 pm.menuItem(label=u'毛发导出',command="mayaTools.xgenexporter.xgentoolsMain()")
 pm.menuItem(label=u'地编流程工具',command="mayaTools.editPiplineTools.editPiplineToolsMain()")
 
@@ -52,8 +52,9 @@ pm.menuItem(label=u'灯光工具',subMenu=True,tearOff=True)
 pm.menuItem(label=u'AO层覆盖',command="mayaTools.mayaProxyTool.aoLayerOverlay()")
 pm.setParent('..',menu=True)
 
+
+
+
 otherTools = pm.menu('otherTools',label=u'其他工具',parent=main_window,tearOff=True)
-
-
 pm.menuItem(label=u'腾讯导出工具',command="import pages\nglobal txExportPage\ntxExportPage = pages.exportPipline()\ntxExportPage.show(dockable=True)")
-#add some commit to update
+

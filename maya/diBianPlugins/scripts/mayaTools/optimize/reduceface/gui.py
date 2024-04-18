@@ -1,21 +1,15 @@
 #coding=utf-8
-#auther=zcx
-#data=20220721
-
-from imp import reload
-
-#导入自定义模块
-import lib.mayaLibrary as ML
 #导入标准模块
 import maya.cmds as cmds
 
-reload(ML)
-import lib.pathLibrary as PL
+#导入自定义模块
+import mayaTools.core.mayaLibrary as ML
+import mayaTools.core.pathLibrary as PL
 
-reload(PL)
+
 import lib.callThirdpart as CT
 
-reload(CT)
+
 #define global vir
 tempFilePath = r'D:/reduceTempMesh.fbx'
 resFilePath = r'D:/Results/reduceTempMesh1.fbx'

@@ -5,14 +5,14 @@ from imp import reload
 
 import maya.cmds as cmds
 
-import mayaTools.lib.mayaLibrary as ml
-from mayaTools.lib.pathLibrary import normailizePath
+import mayaToolsold.lib.mayaLibrary as ml
+from mayaToolsold.lib.pathLibrary import normailizePath
 
 reload(ml)
 
 #Dir
 ##########################################################################
-from mayaTools.lib import pluginsRootPath
+from mayaToolsold.lib import pluginsRootPath
 RizomUVDir = (pluginsRootPath + r'thirdpart\Unfold3D VS 2018.0\unfold3d.exe')
 print(RizomUVDir)
 ObjectType = (r'fbx')
