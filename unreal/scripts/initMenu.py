@@ -86,7 +86,7 @@ entry = unreal.ToolMenuEntry(
         )
 entry.set_label("整合关卡(AAI)")
 entry.set_tool_tip("暂用")
-entry.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", "from songshunjie import AAI_import \AAI_import.start()")
+entry.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", "from songshunjie import AAI_import \nAAI_import.start()")
 script_menu.add_menu_entry("Test Section",entry)
 
 menus.refresh_all_widgets()
