@@ -8,19 +8,12 @@ from Qt import QtWidgets
 from Qt import QtGui
 
 
-from dayu_widgets.line_tab_widget import MLineTabWidget
+
 from dayu_widgets.label import MLabel
 from dayu_widgets.field_mixin import MFieldMixin
-from dayu_widgets.browser import MClickBrowserFolderToolButton
-from dayu_widgets.menu import MMenu
 from dayu_widgets.push_button import MPushButton
-from dayu_widgets.slider import MSlider
-from dayu_widgets.switch import MSwitch
-from dayu_widgets.message import MMessage
 from dayu_widgets.line_edit import MLineEdit
 from dayu_widgets.button_group import MRadioButtonGroup
-from dayu_widgets.drawer import MDrawer
-from dayu_widgets.check_box import MCheckBox
 from dayu_widgets.button_group import MCheckBoxGroup
 from dayu_widgets.divider import MDivider
 from dayu_widgets.text_edit import MTextEdit
@@ -35,11 +28,6 @@ print('AAI')
 
 class mw(QtWidgets.QWidget, MFieldMixin):
 
-    # asset_ch_list=['aasset_pro_list','basset_ch_list','c','d','a','b','c','d','a','b','c','d','a','b','c','d']
-    # asset_pro_list=['basset_pro_list','basset_ch_list','c','d','a','b','c','d','a','b','c','d','a','b','c','d']
-    # asset_level_list=['casset_level_list','basset_level_list','casset_level_list','d','a','b','c','d','a','b','c','d','a','b','c','d']
-    # asset_map_list=['asset_map_list','basset_level_list','casset_level_list','d','a','b','c','d','a','b','c','d','a','b','c','d']
-    # cs_list=['aasset_pro_list','basset_ch_list','c','d','a','b']
 
 
     k=[]
@@ -349,7 +337,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                             if find_level_asset.get_asset().get_name()==asset_level_name:
                                 unreal.EditorLevelUtils().add_level_to_world(map.get_asset(),level_package_name=find_level_asset.get_asset().get_path_name(),level_streaming_class=unreal.LevelStreamingAlwaysLoaded)
                                 # unreal.EditorActorSubsystem().spawn_actor_from_object(find_level_asset.get_asset(),location=(0,0,0))
-                    unreal.LevelEditorSubsystem().save_current_level()
+                                unreal.LevelEditorSubsystem().save_current_level()
 
             #对动画关卡序列添加资产
             for sequnence_asset_find in sequnence_asset_find_list:
@@ -410,7 +398,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
 
 
     def getEpList(self):
-        
+        self.ep_flie_list=[]
         ep_i=0
         while ep_i<300:
             ep_i_str=str(ep_i).zfill(3)

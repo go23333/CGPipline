@@ -145,6 +145,10 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                         if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Shots/%s/%s/%s/%s/%s'%(ep,file_class_name,sc_name,flie_name,flie_name)):
                             lt_ls=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s'%(flie_name),package_path='/Game/Shots/%s/%s/%s/%s'%(ep,file_class_name,sc_name,flie_name),asset_class=unreal.LevelSequence,factory=unreal.LevelSequenceFactoryNew())
                             lt_ls.set_display_rate((25,1))
+                            if cam_name[1]:
+                                lt_ls.set_playback_start(int(cam_name[1])-1)
+                            if cam_name[2]:
+                                lt_ls.set_playback_end(int(cam_name[2])+1)
                             lt_ls_list.append(lt_ls)
                         unreal.EditorAssetLibrary.save_directory('/Game/Shots/%s/%s/%s/%s'%(ep,file_class_name,sc_name,flie_name))
                         unreal.LevelEditorSubsystem().load_level('/Game/Shots/%s/%s/%s/%s/%s'%(ep,file_class_name,sc_name,flie_name,cam_name[0]))
@@ -197,17 +201,25 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         #保存全部创建的文件
         unreal.EditorAssetLibrary.save_directory('/Game')
 
+# def start():
+
+#     with application() as app:
+#         global test
+#         test = mw()
+#         dayu_theme.apply(test)
+#         test.show()
+#         unreal.parent_external_window_to_slate(int(test.winId()))
+#         # app.exec_()
+
+# start()
+
+if __name__ == "__main__":
 
 
-def start():
     with application() as app:
-        global test
         test = mw()
         dayu_theme.apply(test)
         test.show()
-        unreal.parent_external_window_to_slate(int(test.winId()))
-        # app.exec_()
-
 
 
 
