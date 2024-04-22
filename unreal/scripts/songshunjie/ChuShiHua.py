@@ -201,17 +201,15 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         #保存全部创建的文件
         unreal.EditorAssetLibrary.save_directory('/Game')
 
-# def start():
+def start():
+    with application() as app:
+        global test
+        test = mw()
+        dayu_theme.apply(test)
+        test.show()
+        unreal.parent_external_window_to_slate(int(test.winId()))
 
-#     with application() as app:
-#         global test
-#         test = mw()
-#         dayu_theme.apply(test)
-#         test.show()
-#         unreal.parent_external_window_to_slate(int(test.winId()))
-#         # app.exec_()
 
-# start()
 
 if __name__ == "__main__":
 

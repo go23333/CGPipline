@@ -337,7 +337,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                             if find_level_asset.get_asset().get_name()==asset_level_name:
                                 unreal.EditorLevelUtils().add_level_to_world(map.get_asset(),level_package_name=find_level_asset.get_asset().get_path_name(),level_streaming_class=unreal.LevelStreamingAlwaysLoaded)
                                 # unreal.EditorActorSubsystem().spawn_actor_from_object(find_level_asset.get_asset(),location=(0,0,0))
-                                unreal.LevelEditorSubsystem().save_current_level()
+                                unreal.EditorAssetLibrary.save_directory('/Game/Shots')
 
             #对动画关卡序列添加资产
             for sequnence_asset_find in sequnence_asset_find_list:
