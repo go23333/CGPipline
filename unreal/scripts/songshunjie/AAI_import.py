@@ -16,6 +16,7 @@ from dayu_widgets.line_edit import MLineEdit
 from dayu_widgets.button_group import MRadioButtonGroup
 from dayu_widgets.button_group import MCheckBoxGroup
 from dayu_widgets.divider import MDivider
+from dayu_widgets.browser import MClickBrowserFolderToolButton
 from dayu_widgets.text_edit import MTextEdit
 from dayu_widgets.splitter import MSplitter
 from dayu_widgets.item_view import MTreeView
@@ -95,9 +96,10 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         #角色列表
 
         self.ch_path_text=MLineEdit(text=self.ch_path).small()
-        ch_path_text_button = MPushButton(text="查询资产").primary()
-        ch_path_text_button.setFixedWidth(70)
+        ch_path_text_button = MClickBrowserFolderToolButton()
+        ch_path_text_button.sig_folder_changed.connect(self.ch_path_text.setText)
         self.ch_path_text.set_suffix_widget(ch_path_text_button)
+        self.ch_path_text.returnPressed.connect(self.chQueryClicked)
         ch_path_text_button.clicked.connect(self.chQueryClicked)
 
         self.radio_group_ch = MCheckBoxGroup(orientation=QtCore.Qt.Vertical)
@@ -128,9 +130,10 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         #道具列表
 
         self.pro_path_text=MLineEdit(text=self.pro_path).small()
-        pro_path_text_button = MPushButton(text="查询资产").primary()
-        pro_path_text_button.setFixedWidth(70)
+        pro_path_text_button = MClickBrowserFolderToolButton()
+        pro_path_text_button.sig_folder_changed.connect(self.pro_path_text.setText)
         self.pro_path_text.set_suffix_widget(pro_path_text_button)
+        self.pro_path_text.returnPressed.connect(self.proQueryClicked)
         pro_path_text_button.clicked.connect(self.proQueryClicked)
 
         self.radio_group_pro = MCheckBoxGroup(orientation=QtCore.Qt.Vertical)
@@ -160,9 +163,12 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         #场景列表
 
         self.level_path_text=MLineEdit(text=self.level_path).small()
-        level_path_text_button = MPushButton(text="查询资产").primary()
-        level_path_text_button.setFixedWidth(70)
+        level_path_text_button = MClickBrowserFolderToolButton()
+        level_path_text_button.sig_folder_changed.connect(self.level_path_text.setText)
+        # self.level_path_text.textChanged.connect(level_path_text_button.set_dayu_path)
+        # level_path_text_button.setFixedWidth(45)
         self.level_path_text.set_suffix_widget(level_path_text_button)
+        self.level_path_text.returnPressed.connect(self.levelQueryClicked)
         level_path_text_button.clicked.connect(self.levelQueryClicked)
 
 
@@ -221,6 +227,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         radio_group_ep.set_button_list(self.ep_flie_list)
         radio_group_ep.set_spacing(1)
         radio_group_ep.get_button_group().buttonClicked.connect(self.getLightMap)
+        
 
 
         self.register_field("ep_app")
@@ -285,6 +292,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         box_l.setLayout(lay_asset)
         box_l.setStyleSheet('QGroupBox{color:white;border:0px ;}')
         box_r=QtWidgets.QGroupBox()
+        box_r.setFixedWidth(350)
         box_r.setLayout(lay2s)
         box_r.setStyleSheet('QGroupBox{color:white;border:0px ;}')
 
@@ -459,12 +467,18 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             self.model_map.appendRow(tree_1) 
             
     def chQueryClicked(self):
+        if 'Content' in self.ch_path_text.text():
+            self.ch_path_text.setText('/Game'+self.ch_path_text.text().split('Content',1)[1])
         self.find_ch_assets=[]
         self.queryPath(path_class='ch')
     def proQueryClicked(self):
+        if 'Content' in self.pro_path_text.text():
+            self.pro_path_text.setText('/Game'+self.pro_path_text.text().split('Content',1)[1])
         self.find_pro_assets=[]
         self.queryPath(path_class='pro')
     def levelQueryClicked(self):
+        if 'Content' in self.level_path_text.text():
+            self.level_path_text.setText('/Game'+self.level_path_text.text().split('Content',1)[1])
         self.find_level_assets=[]
         self.queryPath(path_class='level')
 
@@ -482,8 +496,9 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             if unreal.EditorAssetLibrary().does_directory_exist(self.ch_path_text.text())==1:
                 self.asset_ch_list=unreal.EditorAssetLibrary.list_assets(self.ch_path_text.text())
                 for ch_name in self.asset_ch_list:
-                    self.find_ch_assets.append(unreal.EditorAssetLibrary.find_asset_data(ch_name))
-                    asset_ch_list_name.append(unreal.EditorAssetLibrary.find_asset_data(ch_name).get_asset().get_name())               
+                    if unreal.EditorAssetLibrary.find_asset_data(ch_name).get_asset().get_class().get_name()=='Blueprint':
+                        self.find_ch_assets.append(unreal.EditorAssetLibrary.find_asset_data(ch_name))
+                        asset_ch_list_name.append(unreal.EditorAssetLibrary.find_asset_data(ch_name).get_asset().get_name())               
                 self.radio_group_ch.set_button_list(asset_ch_list_name) 
                 self.radio_group_ch.setMaximumHeight(len(asset_ch_list_name)*16)
                 self.radio_group_ch.setMinimumSize(300,len(asset_ch_list_name)*16)
@@ -495,8 +510,9 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             if unreal.EditorAssetLibrary().does_directory_exist(self.pro_path_text.text())==1:
                 self.asset_pro_list=unreal.EditorAssetLibrary.list_assets(self.pro_path_text.text())
                 for pro_name in self.asset_pro_list:
-                    self.find_pro_assets.append(unreal.EditorAssetLibrary.find_asset_data(pro_name))
-                    asset_pro_list_name.append(unreal.EditorAssetLibrary.find_asset_data(pro_name).get_asset().get_name())
+                    if unreal.EditorAssetLibrary.find_asset_data(pro_name).get_asset().get_class().get_name()=='Blueprint':
+                        self.find_pro_assets.append(unreal.EditorAssetLibrary.find_asset_data(pro_name))
+                        asset_pro_list_name.append(unreal.EditorAssetLibrary.find_asset_data(pro_name).get_asset().get_name())
                 self.radio_group_pro.set_button_list(asset_pro_list_name)
                 self.radio_group_pro.setMaximumHeight(len(asset_pro_list_name)*16)
                 self.radio_group_pro.setMinimumSize(300,len(asset_pro_list_name)*16)
@@ -506,9 +522,10 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             if unreal.EditorAssetLibrary().does_directory_exist(self.level_path_text.text())==1:
                 self.asset_level_list=unreal.EditorAssetLibrary.list_assets(self.level_path_text.text())
                 for level_name in self.asset_level_list:
-                    self.find_level_assets.append(unreal.EditorAssetLibrary.find_asset_data(level_name))
-                    asset_level_list_name.append(unreal.EditorAssetLibrary.find_asset_data(level_name).get_asset().get_name())
-                
+                    if unreal.EditorAssetLibrary.find_asset_data(level_name).get_asset().get_class().get_name()=='World':
+                        self.find_level_assets.append(unreal.EditorAssetLibrary.find_asset_data(level_name))
+                        asset_level_list_name.append(unreal.EditorAssetLibrary.find_asset_data(level_name).get_asset().get_name())
+                    
                 self.radio_group_level.set_button_list(asset_level_list_name)
                 self.radio_group_level.setMaximumHeight(len(asset_level_list_name)*16)
                 self.radio_group_level.setMinimumSize(300,len(asset_level_list_name)*16)
