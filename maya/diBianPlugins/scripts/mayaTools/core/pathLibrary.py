@@ -5,6 +5,15 @@ import re
 import webbrowser
 
 
+
+
+def getWorkDir():
+    workDir = r"d:\\Documents\\CGPipline\\maya\\"
+    if not os.path.exists(workDir):
+        os.makedirs(workDir)
+    return workDir
+
+
 def ListAllTexFromFolder(FolderPath):
     files = os.listdir(FolderPath)
     res = []
@@ -87,8 +96,12 @@ def writejson(data,path):
     file.write(jsondata)
     file.close()
 
-if __name__ == '__main__':
-    print(isPath(r'E:\AM_UE4_vol4'))
+
+
+def getRootPath():
+    import mayaTools
+    return (mayaTools.__path__[0])
+
 
 def openWeb(webPath,*args):
 	webbrowser.open(webPath, new=0, autoraise=True)

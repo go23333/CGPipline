@@ -1,18 +1,14 @@
 #coding=utf-8
 import math
 import re
-from imp import reload
 
 import maya.cmds as cmds
 import maya.mel as mel
-import pathLibrary as PL
 import pymel.core as pm
+import maya.api.OpenMaya as om
 
-# Load Plugins
+import mayaTools.core.pathLibrary as PL
 
-
-
-reload(PL)
 
 def getScenename():
     scenename = cmds.file(q=True, sn=True).split('/')[-1]
@@ -264,7 +260,6 @@ def createNewUvset(obj,name):
     cmds.polyUVSet(obj,rename=True,uvSet=newvset,newUVSet='vat1')
     return True
 
-
 def exportFBXStatic(object,path):
     cmds.select( clear=True )
     cmds.select(object)
@@ -279,14 +274,20 @@ def exportFBXStatic(object,path):
     cmds.select( clear=True )
 
 def export_fbx_without_dialog(object,path):
-    cmds.select( clear=True )
-    cmds.select(object)
-    pm.mel.FBXExport(f=path,s=1)
-    cmds.select( clear=True )
+    pm.mel.FBXExport(object,f=path,s=1)
+    
 def import_fbx_without_dialog(fbxfile):
-    mel.eval("FBXImport -f \"{0}\"".format(fbxfile))
+    beforeImportNodes = pm.ls(long=1)
+    mel.eval('FBXImport -f "{0}"'.format(fbxfile))
+    afterImportNodes = pm.ls(long=1)
+    newNodes = [node for node in afterImportNodes if node not in beforeImportNodes]
+    return(newNodes)
 
 
+if __name__ == "__main__":
+    pm.ls()
+    print(import_fbx_without_dialog(r"d:\\Documents\\CGPipline\\maya\\temp\\Results\\toReduceMesh1.fbx"))
+    pass
 
 
 def getAllRepeatNodes():

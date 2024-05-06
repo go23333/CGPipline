@@ -6,27 +6,23 @@ import pymel.core as pm
 
 def install():
     pm.setParent(mayaTools.menu_id,menu=True)
-    pm.menuItem("exportTool",label=u'导出工具',subMenu=True,tearOff=True)
-    pm.menuItem(label=u'腾讯导出工具',command=openNormalizeExport)
-    pm.menuItem(label=u'abc导出工具',command=openAbcExport)
-    pm.menuItem(label=u'相机导出工具',command=openCameraExport)
-    pm.menuItem(label=u'XGen导出工具',command=openxGenExport)
+    pm.menuItem("optimize",label=u'优化工具',subMenu=True,tearOff=True)
 
-openNormalizeExport = """
-from mayaTools.export.normalizeExport import gui
+
+    pm.menuItem(label=u'GPU缓存工具',command=commandGpuCache)
+    pm.menuItem(label=u'减面工具 ',command=commandreduceface)
+    pm.menuItem(label=u'代理工具 ',command=commandProxyTools)
+
+
+commandGpuCache = """
+from mayaTools.optimize.gpuCacheTool import gui
 gui.showUI()
 """
-
-openAbcExport = """
-from mayaTools.export.abcExport import gui
+commandreduceface = """
+from mayaTools.optimize.reduceface import gui
 gui.showUI()
 """
-
-openCameraExport = """
-from mayaTools.export.cameraExport import gui
+commandProxyTools = """
+from mayaTools.optimize.mayaProxyTool import gui
 gui.showUI()
 """
-
-openxGenExport = """
-from mayaTools.export.xGenExport import gui
-gui.showUI()"""

@@ -8,7 +8,6 @@ def create(menuID=menuID):
     #确保不重复创建
     if pm.menu(menuID, exists=True):
         pm.deleteUI(menuID)
-
     menuID = pm.menu(menuID,
             parent="MayaWindow",
             tearOff=True,

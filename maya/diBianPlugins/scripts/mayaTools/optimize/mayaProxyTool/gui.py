@@ -6,7 +6,6 @@ import maya.cmds as cmds
 
 #导入自定义模块
 import mayaTools.core.mayaLibrary as ML
-import mayaTools.core.pathLibrary as PL
 
 tempFilePath = r'D:/reduceTempMesh.obj'
 resFilePath = r'D:/Results/reduceTempMesh1.obj'
@@ -189,8 +188,12 @@ def importProxyAsMesh(arg):
                 continue
         # 导入代理MB
         importedGroup = importFile(proxyMBfilePath)
-        parent = cmds.listRelatives(select,parent=True)[0]
-        cmds.parent(importedGroup,parent,relative=1)
+        try:
+            parent = cmds.listRelatives(select,parent=True)[0]
+        except TypeError:
+            parent = False
+        if parent:
+            cmds.parent(importedGroup,parent,relative=1)
         if importedGroup:
             SourceCenterX = cmds.getAttr(select+'.boundingBoxCenterX')
             SourceCenterY = cmds.getAttr(select+'.boundingBoxCenterY')
@@ -316,7 +319,7 @@ class UIMAIN:
         cmds.textFieldGrp('SceneName',label=u'场景名称:', text=scenename)
         cmds.textFieldGrp('GroupName',label=u'子文件夹名称:', text='' )
         cmds.checkBox('CB_DeleteOriginModel',l=u'导出后删除原模型',value=1)
-        cmds.checkBox('CB_CreatLowMesh',l=u'使用减面模型而不是立方体作为代理模型',value=0)
+        #cmds.checkBox('CB_CreatLowMesh',l=u'使用减面模型而不是立方体作为代理模型',value=0)
         cmds.button( h=30, l=u'导出', width=50, c = self.makeLowPoly)
         cmds.checkBox('CB_DeleteProxyMesh',l=u'导入后删除代理文件',value=1)
 
@@ -374,7 +377,7 @@ class UIMAIN:
             NewBoxSizeZ = cmds.getAttr(getattCommand)
 
 
-            notbox = cmds.checkBox('CB_CreatLowMesh',value=1,q=1)
+            
             # 移动到零点
             OTrasnlateX = cmds.getAttr(slNode + '.translateX')
             OTrasnlateY = cmds.getAttr(slNode + '.translateY')
@@ -385,7 +388,9 @@ class UIMAIN:
             cmds.select( clear=True )
 
             LowMeshname = str(slNode) + '_LowRSPR'
-            if notbox:
+
+            #notbox = cmds.checkBox('CB_CreatLowMesh',value=1,q=1)
+            if False:
                 ML.exportOBJ(slNodes,tempFilePath)
 
                 CT.callPolygonCruncher(False,False,tempFilePath,98.0)
@@ -401,17 +406,21 @@ class UIMAIN:
             # 导出并记录路径 
             ProxyFilePath = self.Export_OBJ(str(slNode))
             # 获取原模型父级
-            parent = cmds.listRelatives(slNode,parent=True)[0]
+            try:
+                parent = cmds.listRelatives(slNode,parent=True)[0]
+            except TypeError:
+                parent = False
             if cmds.checkBox('CB_DeleteOriginModel',value=1,q=1):
                 # 删除原模型
                 cmds.delete(slNode)
             # 清除选择
             cmds.select( clear=True )
             # 连接代理
-            self.ConnectProxy(ProxyFilePath,LowMeshname,notbox)
+            self.ConnectProxy(ProxyFilePath,LowMeshname)
             # 将代理放入原来的组中
-            cmds.parent(LowMeshname,parent,relative=1)
-    def ConnectProxy(self,ProxyFilePath,ProxyMeshNode,notbox):
+            if parent:
+                cmds.parent(LowMeshname,parent,relative=1)
+    def ConnectProxy(self,ProxyFilePath,ProxyMeshNode,notbox=False):
         #清除历史
         cmds.delete(ProxyMeshNode, constructionHistory = True)
         # 获得创建的用于代理的box
@@ -459,11 +468,6 @@ class UIMAIN:
         MBPath = uniformFilePath(MBPath,MBPath)
         cmds.file( MBPath, force=1, type='mayaBinary', pr=1, es=1)
         return (RSpath)
-    def DebugPrint(self,Text):
-        print('-------------------------------------------------------------------------------')
-        print(Text)
-        print('-------------------------------------------------------------------------------')
-
 
 def showUI():
     ui = UIMAIN()

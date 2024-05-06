@@ -110,9 +110,6 @@ class gpuCacheToolUI:
 
 
 
-
-
-
 def showUI():
     UI = gpuCacheToolUI()#实例化UI
 

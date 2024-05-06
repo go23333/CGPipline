@@ -1,18 +1,19 @@
 #coding=utf-8
 #导入标准模块
 import maya.cmds as cmds
+import pymel.core as pm
 
 #导入自定义模块
 import mayaTools.core.mayaLibrary as ML
-import mayaTools.core.pathLibrary as PL
-
-
-import lib.callThirdpart as CT
 
 
 #define global vir
-tempFilePath = r'D:/reduceTempMesh.fbx'
-resFilePath = r'D:/Results/reduceTempMesh1.fbx'
+from mayaTools.core.pathLibrary import getWorkDir
+
+
+tempFilePath = getWorkDir() + r"temp\\toReduceMesh.fbx"
+
+resFilePath =  getWorkDir() + r"temp\\Results\\toReduceMesh1.fbx"
 
 class reducefaceUI:
     def __init__(self):
@@ -29,14 +30,14 @@ class reducefaceUI:
         self.cb_pnormals = cmds.checkBox(p = MainLayout,l=u'保护法线',annotation=u'是否保护模型法线',value=True)
         #UV
         self.cb_pUV = cmds.checkBox(p = MainLayout,l=u'保护UV',annotation=u'是否保护模型UV',value=True)
+        #delete origin
+        self.cb_deleteOrigin = cmds.checkBox(p = MainLayout,l=u'删除原有',value=False)
         #button
         cmds.separator(p=MainLayout)
         BTN_PickPath = cmds.button(l=u'执行',p=MainLayout,c=self.reduceface)
         cmds.separator(p=MainLayout)
-        cmds.separator(p=MainLayout)
-        cmds.separator(p=MainLayout)
-        cmds.separator(p=MainLayout)
-        BTN_back = cmds.button(l=u'将模型回退到减面前',p=MainLayout,c=self.rollback)
+
+        #BTN_back = cmds.button(l=u'将模型回退到减面前',p=MainLayout,c=self.rollback)
         #help
         cmds.separator(p = MainLayout )
         cmds.helpLine(p = MainLayout )
@@ -45,21 +46,21 @@ class reducefaceUI:
     def show(self):
         cmds.showWindow(self.window)
     def reduceface(self,*arg):
-        sl = ML.getSelectNodes(True)
-        ML.exportFBXStatic(sl,tempFilePath)
-
-
-        CT.callPolygonCruncher(cmds.checkBox(self.cb_pnormals,q=1,v=1),cmds.checkBox(self.cb_pUV,q=1,v=1),tempFilePath,cmds.floatField(self.FF_Aspect,q=1,v=1))
-
-
-
-        cmds.delete(sl[0])
-        self.importfile = ML.importobjfile(resFilePath)
-
-    def rollback(self,*arg):
-        cmds.delete(self.importfile)
-        self.importfile = ML.importobjfile(tempFilePath)
-
-def reducefaceMain():
+        selectedObjs = pm.ls(selection=True,l=1)
+        for obj in selectedObjs:
+            ML.export_fbx_without_dialog(obj,tempFilePath)
+            import mayaTools.core.callThirdpart as ct
+            ct.callPolygonCruncher(cmds.checkBox(self.cb_pnormals,q=1,v=1),cmds.checkBox(self.cb_pUV,q=1,v=1),tempFilePath,cmds.floatField(self.FF_Aspect,q=1,v=1))
+            if cmds.checkBox(self.cb_deleteOrigin,q=1,v=1):
+                pm.delete(obj)
+            else:
+                pm.rename(obj,str(obj)+"_Origin")
+            self.newNodes = ML.import_fbx_without_dialog(resFilePath)
+    # def rollback(self,*arg):
+    #     import pymel.core as pm
+    #     for newNode in self.newNodes:
+    #         pm.delete(newNode)
+    #     self.importfile = ML.importobjfile(tempFilePath)
+def showUI():
     UI = reducefaceUI()
     UI.show()
