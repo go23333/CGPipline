@@ -89,6 +89,17 @@ entry.set_tool_tip("暂用")
 entry.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", "from songshunjie import AAI_import \nAAI_import.start()")
 script_menu.add_menu_entry("Test Section",entry)
 
+entry = unreal.ToolMenuEntry(
+            name="MaterialImport",
+            type=unreal.MultiBlockType.MENU_ENTRY,
+            insert_position=unreal.ToolMenuInsert(
+                "", unreal.ToolMenuInsertType.FIRST)
+        )
+entry.set_label("材质模型导入")
+entry.set_tool_tip("暂用")
+entry.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", "from songshunjie import ShadeCreate \nShadeCreate.start()")
+script_menu.add_menu_entry("Test Section",entry)
+
 menus.refresh_all_widgets()
 import uCommon as UC
 global Application
