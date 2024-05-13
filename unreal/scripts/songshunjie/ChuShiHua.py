@@ -33,7 +33,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         
         self.uii()
 
-    def uii(self):
+    def uii(self):   
         self.setWindowTitle('初始化项目基础文件目录')
         self.resize(300,200)
         lay=QtWidgets.QVBoxLayout()
@@ -189,13 +189,13 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         #AAI文件夹
         unreal.EditorAssetLibrary.make_directory('/Game/AAI/Reference/Character')
         unreal.EditorAssetLibrary.make_directory('/Game/AAI/Reference/Pro')
-        unreal.EditorAssetLibrary.make_directory('/Game/AAI/Reference/Scence')
+        unreal.EditorAssetLibrary.make_directory('/Game/AAI/Reference/Scenes')
 
         #Assets文件夹
         unreal.EditorAssetLibrary.make_directory('/Game/Assets/Common')
         unreal.EditorAssetLibrary.make_directory('/Game/Assets/Character')
         unreal.EditorAssetLibrary.make_directory('/Game/Assets/Pro')
-        unreal.EditorAssetLibrary.make_directory('/Game/Assets/Scence')
+        unreal.EditorAssetLibrary.make_directory('/Game/Assets/Scenes')
 
 
         #保存全部创建的文件
