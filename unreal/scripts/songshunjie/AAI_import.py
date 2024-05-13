@@ -42,7 +42,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
     light_sc_flie_list=[]
     ep_flie_list=[]
 
-    level_path='/Game/AAI/Reference/Scence'
+    level_path='/Game/AAI/Reference/Scenes'
     ch_path='/Game/AAI/Reference/Character'
     pro_path='/Game/AAI/Reference/Pro'
 
@@ -363,17 +363,6 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                                 sequnence_asset_find.get_asset().add_spawnable_from_instance(find_ch_asset.get_asset())
             unreal.EditorAssetLibrary.save_directory('/Game/Shots')
 
-
-
-        # print(self.select_world_names)
-        # print(self.find_level_assets)
-        # print(world_asset_find_list)
-        # print(asset_ch_name)
-        # print(self.find_pro_assets)
-                        
-        # print(asset_pro_names)
-        # print(asset_level_names)
-        # print(self.ep_flie_list[ep_name])
 
 
     def treeSelect(self):
