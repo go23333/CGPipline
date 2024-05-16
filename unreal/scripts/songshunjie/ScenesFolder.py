@@ -1,8 +1,6 @@
 import unreal
 import os
 
-
-
 from Qt import QtCore
 from Qt import QtWidgets
 
@@ -13,10 +11,14 @@ import Pages
 
 from dayu_widgets.push_button import MPushButton
 from dayu_widgets.push_button import MPushButton
-from dayu_widgets.combo_box import MComboBox
+from dayu_widgets.label import MLabel
+from dayu_widgets.push_button import MPushButton
+from dayu_widgets.line_edit import MLineEdit
+from dayu_widgets.line_tab_widget import MLineTabWidget
+from dayu_widgets import dayu_theme
+from dayu_widgets.qt import application
 
 import functools
-from importlib import reload
 from dayu_widgets import dayu_theme
 from dayu_widgets.qt import application
 
@@ -24,7 +26,7 @@ print('ScenesFolder')
 
 
 class ScenesMeshImporter(QtWidgets.QWidget):
-    fbx_name=''
+
     def __init__(self,parent=None):
         super().__init__(parent)
         self.setWindowTitle("场景模型导入")
@@ -35,87 +37,195 @@ class ScenesMeshImporter(QtWidgets.QWidget):
         layMain = QtWidgets.QVBoxLayout()   #定义主布局
 
         self.folderSelectGroup = Pages.folderSelectGroup("网格体文件路径:") #定义路径选择组
-
         self.wCamera = Pages.DateTableView(UC.CameraHeader)  #定义相机数据表格
 
-        context_menu = self.wCamera.MakeContexMenu()   # 获取相机表格的上下文菜单并自定义
-        maImportSelectedItems = context_menu.addAction("导入选中项目")
-        maImportSelectedItems.triggered.connect(
-            functools.partial(self.importCameras,True)
-            )
         self.folderSelectGroup.setOnTextChanged(self.wCamera.fetchCamera)        # 文字框改变时刷新
+        self.folderSelectGroup.setOnTextChanged(self.importName)  
 
-        layImport = QtWidgets.QHBoxLayout()  #用于防止导入按钮的布局
-        btnImport = MPushButton("场景模型导入并创建对应文件夹")
-        btnImport.clicked.connect(
-            functools.partial(self.importCameras,False)
+        layImport = QtWidgets.QVBoxLayout() 
+
+        lay_scene = QtWidgets.QVBoxLayout()
+        lay_pro = QtWidgets.QVBoxLayout()
+        #创建抽屉
+        btn_tab=MLineTabWidget(alignment=QtCore.Qt.AlignLeft)
+        #创建放到抽屉的盒子
+        box_scene=QtWidgets.QGroupBox()
+        box_scene.setStyleSheet('QGroupBox{color:white;border:0px ;}')
+        box_pro=QtWidgets.QGroupBox()
+        box_pro.setStyleSheet('QGroupBox{color:white;border:0px ;}')
+
+        #场景box
+        self.scene_name_text=MLineEdit().medium()
+        self.scene_name_text.setPlaceholderText(self.tr("输入资产名称"))
+
+        scene_btn = MPushButton("场景模型导入并创建对应文件夹")
+        scene_btn.clicked.connect(
+            functools.partial(self.importScenes,False)
             )
-        cbSceneName = MComboBox()
-        cbSceneName.setDisabled(True)
+        self.error_lable=MLabel('')
+        self.error_lable.setStyleSheet("color: red")
+        lay_scene.addWidget(self.scene_name_text)
+        lay_scene.addWidget(self.error_lable)
+        lay_scene.addWidget(scene_btn,alignment=QtCore.Qt.AlignRight)
 
-        layImport.addWidget(cbSceneName,alignment=QtCore.Qt.AlignLeft)
-        layImport.addWidget(btnImport,alignment=QtCore.Qt.AlignRight)
+        box_scene.setLayout(lay_scene)
+
+        #道具box
+        lay_pro_edit = QtWidgets.QHBoxLayout()
+        self.pro_name_text=MLineEdit().medium()
+        self.pro_name_text.setPlaceholderText(self.tr("输入资产名称"))
+
+        self.ep_text=MLineEdit().medium()
+        self.ep_text.setPlaceholderText(self.tr("输入集数"))
+
+        lay_pro_edit.addWidget(self.ep_text)
+        lay_pro_edit.addWidget(self.pro_name_text)
+
+        
+
+        pro_btn = MPushButton("道具模型导入并创建对应文件夹")
+        pro_btn.clicked.connect(
+            functools.partial(self.importPro,False)
+            )
+        
+        lay_pro.addLayout(lay_pro_edit)
+        lay_pro.addWidget(self.error_lable)
+        lay_pro.addWidget(pro_btn,alignment=QtCore.Qt.AlignRight)
+
+        box_pro.setLayout(lay_pro)
+        #创建抽屉名称
+        btn_tab.add_tab(box_scene,{"text": "场景"})
+        btn_tab.add_tab(box_pro,{"text": "道具"})
+
+        layImport.addWidget(btn_tab)
+
         # 依次添加布局
         layMain.addLayout(self.folderSelectGroup)
         layMain.addWidget(self.wCamera)
+
         layMain.addLayout(layImport)
+
         self.setLayout(layMain)
     def closeEvent(self, event):
         return super().closeEvent(event)
     def showEvent(self, event):
         return super().showEvent(event)
-    def importCameras(self,selected):
-        waitImportedQueue = []
-        if selected:
-            for name in self.wCamera.getSelectNames():
+    def importScenes(self,selected):
+        
+            waitImportedQueue = []
+            if selected:
+                for name in self.wCamera.getSelectNames():
+                    for data in self.wCamera.datas:
+                        if data["name"] == name:
+                            waitImportedQueue.append(data)
+            else:
                 for data in self.wCamera.datas:
-                    if data["name"] == name:
+                    if not data["imported"]:
                         waitImportedQueue.append(data)
-        else:
-            for data in self.wCamera.datas:
-                if not data["imported"]:
-                    waitImportedQueue.append(data)
-        self.scenesCreate()
-        self.importStaticmeshs(waitImportedQueue,self.fbx_name)
+            self.scenesCreate()
+            self.importStaticmeshs(waitImportedQueue)
+        
+
+    def importPro(self,selected):
+        
+            waitImportedQueue = []
+            if selected:
+                for name in self.wCamera.getSelectNames():
+                    for data in self.wCamera.datas:
+                        if data["name"] == name:
+                            waitImportedQueue.append(data)
+            else:
+                for data in self.wCamera.datas:
+                    if not data["imported"]:
+                        waitImportedQueue.append(data)
+            self.proCreate()
+            self.importStaticmeshs(waitImportedQueue)
+
+        
+
+    def importName(self):
+        
+        #获取文件名称
+        fbx_path=self.folderSelectGroup.getFolderPath()
+        fbx=os.listdir(fbx_path)[0]
+        #判断规则
+        if '_BG' in fbx:
+            fbx_name=fbx.rsplit('_BG',1)[0]   
+            self.scene_name_text.setText(fbx_name)
+        else:  
+            fbx_name=fbx.rsplit('.',1)[0] 
+            self.pro_name_text.setText(fbx_name)
+        
+        
+
+
 
     def scenesCreate(self):
         sub_level_names=['_Shade','_Shade_Light','_Shade_VFX']
         basefloder_names=['/Map/Level','/Common','/Material','/Mesh','/Other','/BP','/VFX','/Texture']
         #保存所有文件
         unreal.EditorAssetLibrary.save_directory('/Game')
-        #获取FBX路径
-        fbx_path=self.folderSelectGroup.getFolderPath()
-        #获取FBX名称
-        fbx=os.listdir(fbx_path)[0]
-        
-        self.fbx_name=fbx.rsplit('_BG',1)[0]
-        fbx_create_path='/Game/Assets/Scenes/'+self.fbx_name+'/Mesh'
+
+        scene_name= self.scene_name_text.text()
 
         #创建基础文件夹
         for basefloder_name in basefloder_names:
-            unreal.EditorAssetLibrary.make_directory('/Game/Assets/Scenes/'+self.fbx_name+basefloder_name)
+            unreal.EditorAssetLibrary.make_directory('/Game/Assets/Scenes/'+scene_name+basefloder_name)
         #创建主关卡
-        if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Scenes/'+self.fbx_name+'/Map/'+self.fbx_name+'_Main'):
-            unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=self.fbx_name+'_Main',package_path='/Game/Assets/Scenes/'+self.fbx_name+'/Map',asset_class=unreal.World,factory=unreal.WorldFactory())
+        if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Scenes/'+scene_name+'/Map/'+scene_name+'_Main'):
+            main_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=scene_name+'_Main',package_path='/Game/Assets/Scenes/'+scene_name+'/Map',asset_class=unreal.World,factory=unreal.WorldFactory())
         #创建子关卡
         for sub_level_name in sub_level_names:
-            if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Scenes/'+self.fbx_name+'/Map/Level/'+self.fbx_name+sub_level_name):
-                unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=self.fbx_name+sub_level_name,package_path='/Game/Assets/Scenes/'+self.fbx_name+'/Map/Level',asset_class=unreal.World,factory=unreal.WorldFactory())
+            if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Scenes/'+scene_name+'/Map/Level/'+scene_name+sub_level_name):
+                sub_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=scene_name+sub_level_name,package_path='/Game/Assets/Scenes/'+scene_name+'/Map/Level',asset_class=unreal.World,factory=unreal.WorldFactory())
+                unreal.EditorLevelUtils().add_level_to_world(main_level,level_package_name=sub_level.get_path_name(),level_streaming_class=unreal.LevelStreamingAlwaysLoaded)
+        #保存所有文件
+        unreal.EditorAssetLibrary.save_directory('/Game')
+        #生成路径
+        self.StaticMeshImportPathPatten ="/Game/Assets/Scenes/%s/Mesh/"%scene_name
+        # paramater Texture Import
+        self.TextureImportPathPatten = "/Game/Assets/Scenes/%s/Texture/"%scene_name
+        # paramater Material Create
+        self.MaterialInstancePath = "/Game/Assets/Scenes/%s/Material/"%scene_name
+        self.LocalSceneDefaultMaterial = "/Game/Assets/Scenes/%s/Common/Material/M_BG_ARM"%scene_name
+        self.SceneDefaultMaterial = "/ZynnPlugin/Assets/Material/M_BG_ARM"
+        self.error_lable.setText('') 
+
+
+
+    def proCreate(self):
+        #获取FBX名称
+        pro_name=self.pro_name_text.text()
+        #获取ep名称
+        ep=self.ep_text.text()
+        #设置名称列表
+        basefloder_names=['/Map','/Common','/Material','/Mesh','/Groom','/SkeletalMash','/Texture','/Behavior']
         #保存所有文件
         unreal.EditorAssetLibrary.save_directory('/Game')
 
+        #创建基础文件夹
+        for basefloder_name in basefloder_names:
+            unreal.EditorAssetLibrary.make_directory('/Game/Assets/Pro/'+ep+'/'+pro_name+basefloder_name)
+        #创建主关卡
+        if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Pro/'+ep+'/'+pro_name+'/Map/'+pro_name+'_Pro_Shade'):
+            unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=pro_name+'_Pro_Shade',package_path='/Game/Assets/Pro/'+ep+'/'+pro_name+'/Map',asset_class=unreal.World,factory=unreal.WorldFactory())
 
-
-    def importStaticmeshs(self,datas:list,fbx_name,sceneName=None):
-
-        self.StaticMeshImportPathPatten ="/Game/Assets/Scenes/%s/Mesh/"%fbx_name
+        #保存所有文件
+        unreal.EditorAssetLibrary.save_directory('/Game')
+        #生成路径
+        self.StaticMeshImportPathPatten ='/Game/Assets/Pro/'+ep+'/'+pro_name+'/Mesh/'
         # paramater Texture Import
-        self.TextureImportPathPatten = "/Game/Assets/Scenes/%s/Texture/"%fbx_name
+        self.TextureImportPathPatten = '/Game/Assets/Pro/'+ep+'/'+pro_name+'/Texture/'
         # paramater Material Create
-        self.MaterialInstancePath = "/Game/Assets/Scenes/%s/Material/"%fbx_name
-        self.LocalSceneDefaultMaterial = "/Game/Assets/Scenes/%s/Common/Material/M_BG_ARM"%fbx_name
+        self.MaterialInstancePath = '/Game/Assets/Pro/'+ep+'/'+pro_name+'/Material/'
+        self.LocalSceneDefaultMaterial ='/Game/Assets/Pro/'+ep+'/'+pro_name+'/Common/Material/M_BG_ARM'
         self.SceneDefaultMaterial = "/ZynnPlugin/Assets/Material/M_BG_ARM"
+        self.error_lable.setText('') 
+
         
+
+
+    def importStaticmeshs(self,datas:list,sceneName=None):
 
         UU.saveAll()          # 保存所有资产,防止导入过程中崩溃
         UU.duplicate_asset(self.SceneDefaultMaterial,self.LocalSceneDefaultMaterial)
