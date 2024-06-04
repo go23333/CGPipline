@@ -397,6 +397,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
     def getEpList(self):
         self.ep_flie_list=[]
         ep_i=0
+        self.tree_switch=0
         while ep_i<300:
             ep_i_str=str(ep_i).zfill(3)
             ep_path='/Game/Shots/Ep%s'%ep_i_str
@@ -405,6 +406,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             aa2=unreal.EditorAssetLibrary().does_directory_exist(ep_path2)
             if aa1==1 or aa2==1:
                 self.ep_flie_list.append('EP%s'%ep_i_str)
+                self.tree_switch=1
             ep_i+=1
         # print(self.ep_flie_list)
 
@@ -413,8 +415,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         
         ep_name=self.field("ep_app")
 
-        if ep_name:
-
+        if self.tree_switch==1:
             light_folder_asset_list=unreal.EditorAssetLibrary.list_assets('/Game/Shots/%s'%(self.ep_flie_list[ep_name]))
             light_sc_flie_lists=[]
             self.world_find_assets=[]
