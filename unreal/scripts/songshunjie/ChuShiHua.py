@@ -78,7 +78,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         i=0
         #确定行和列
         rowcount=sheet.max_row
-        colcount=7
+        colcount=8
         #读取所需的Excel内容
         for i in range(13,rowcount+1):
             list=[]
@@ -92,7 +92,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         ep=all_list[0][0]
         for i in all_list:
             cam_s=[]
-            if i[0]==ep:
+            if i[0]==ep and i[1] and i[2] and i[3] and i[4] and i[5]:
                 self.sc.append(i[1])
                 self.cam.append(i[2])
                 # self.startK.append(i[3])
@@ -215,9 +215,11 @@ if __name__ == "__main__":
 
 
     with application() as app:
+        global test
         test = mw()
         dayu_theme.apply(test)
         test.show()
+        unreal.parent_external_window_to_slate(int(test.winId()))
 
 
 

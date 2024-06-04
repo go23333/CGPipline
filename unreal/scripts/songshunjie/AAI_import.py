@@ -413,47 +413,50 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         
         ep_name=self.field("ep_app")
 
-        light_folder_asset_list=unreal.EditorAssetLibrary.list_assets('/Game/Shots/%s'%(self.ep_flie_list[ep_name]))
-        light_sc_flie_lists=[]
-        self.world_find_assets=[]
-        self.sequnence_find_assets=[]
-        for light_folder_asset in light_folder_asset_list:
-            light_asset_class=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset).get_class().get_name()
-            if light_asset_class=='World':
-                #确定world资产
-                world_asset=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
-                world_asset_name=world_asset.get_asset().get_name()
-                #获取灯光路径名
-                light_flie_sc_name=world_asset.get_asset().get_path_name().rsplit('/',3)[-3]
-                #添加信息到列表
-                self.world_asset_names.append(world_asset_name)
-                self.world_find_assets.append(world_asset)
-                light_sc_flie_lists.append(light_flie_sc_name)
-            
-            if light_asset_class=='LevelSequence':
-                #收集sequnence资产
-                sequnence_asset=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
-                self.sequnence_find_assets.append(sequnence_asset)
+        if ep_name:
+
+            light_folder_asset_list=unreal.EditorAssetLibrary.list_assets('/Game/Shots/%s'%(self.ep_flie_list[ep_name]))
+            light_sc_flie_lists=[]
+            self.world_find_assets=[]
+            self.sequnence_find_assets=[]
+            for light_folder_asset in light_folder_asset_list:
+                light_asset_class=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset).get_class().get_name()
+                if light_asset_class=='World':
+                    #确定world资产
+                    world_asset=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
+                    world_asset_name=world_asset.get_asset().get_name()
+                    #获取灯光路径名
+                    light_flie_sc_name=world_asset.get_asset().get_path_name().rsplit('/',3)[-3]
+                    #添加信息到列表
+                    self.world_asset_names.append(world_asset_name)
+                    self.world_find_assets.append(world_asset)
+                    light_sc_flie_lists.append(light_flie_sc_name)
+                
+                if light_asset_class=='LevelSequence':
+                    #收集sequnence资产
+                    sequnence_asset=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
+                    self.sequnence_find_assets.append(sequnence_asset)
 
         
                 
-        #简化sc数据内容
-        self.light_sc_flie_list=[]
-        for sc_flie in light_sc_flie_lists:
-            if sc_flie not in self.light_sc_flie_list:
-                self.light_sc_flie_list.append(sc_flie)
+            #简化sc数据内容
+            self.light_sc_flie_list=[]
+            for sc_flie in light_sc_flie_lists:
+                if sc_flie not in self.light_sc_flie_list:
+                    self.light_sc_flie_list.append(sc_flie)
 
             
-        #创建TreeView数据树
-        self.model_map.clear()
-        self.model_map.setHorizontalHeaderLabels([self.tr("目标场景目录")])
-        for light_sc in self.light_sc_flie_list:
-            tree_1=QtGui.QStandardItem(light_sc)
-            for world_assets_name in self.world_find_assets:
-                if light_sc==world_assets_name.get_asset().get_path_name().rsplit('/',3)[-3]:
-                    tree_2=QtGui.QStandardItem(world_assets_name.get_asset().get_name())
-                    tree_1.appendRow(tree_2)
-            self.model_map.appendRow(tree_1) 
+            #创建TreeView数据树
+            self.model_map.clear()
+            self.model_map.setHorizontalHeaderLabels([self.tr("目标场景目录")])
+            if self.light_sc_flie_list:
+                for light_sc in self.light_sc_flie_list:
+                    tree_1=QtGui.QStandardItem(light_sc)
+                    for world_assets_name in self.world_find_assets:
+                        if light_sc==world_assets_name.get_asset().get_path_name().rsplit('/',3)[-3]:
+                            tree_2=QtGui.QStandardItem(world_assets_name.get_asset().get_name())
+                            tree_1.appendRow(tree_2)
+                    self.model_map.appendRow(tree_1) 
             
     def chQueryClicked(self):
         if 'Content' in self.ch_path_text.text():
@@ -536,6 +539,8 @@ def start():
 if __name__ == "__main__":
    
    with application() as app:
+        global test
         test = mw()
         dayu_theme.apply(test)
         test.show()
+        unreal.parent_external_window_to_slate(int(test.winId()))
