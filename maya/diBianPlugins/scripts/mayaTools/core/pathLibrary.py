@@ -3,16 +3,16 @@ import json
 import os
 import re
 import webbrowser
+import tempfile
 
 
-
-
+def GetTempPath():
+    return (tempfile.gettempdir())
 def getWorkDir():
     workDir = r"d:\\Documents\\CGPipline\\maya\\"
     if not os.path.exists(workDir):
         os.makedirs(workDir)
     return workDir
-
 
 def ListAllTexFromFolder(FolderPath):
     files = os.listdir(FolderPath)
@@ -95,8 +95,6 @@ def writejson(data,path):
     file = open(path,'w+')
     file.write(jsondata)
     file.close()
-
-
 
 def getRootPath():
     import mayaTools

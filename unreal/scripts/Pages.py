@@ -497,11 +497,32 @@ class Settings(QtWidgets.QWidget):
 
 
 
+class NormalizeExporter(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__(parent=None)
+        self.setWindowTitle("规范化导出工具")
+        self.resize(500,100)
+        self.__init_ui()
+    def __init_ui(self):
+        layMain = QtWidgets.QVBoxLayout()
+        self.folderSelectGroup = folderSelectGroup(u"选择导出路径:") 
+        btnImport = MPushButton(u"导出选中的资产")
+        btnImport.clicked.connect(self.__export)
+        layMain.addLayout(self.folderSelectGroup)
+        layMain.addWidget(btnImport)
+        self.setLayout(layMain)
+    def __export(self):
+        exportPath = self.folderSelectGroup.getFolderPath()
+        if exportPath == '':
+            MMessage.error(parent=self,text="当前路径不合法")
+            return False
+        UU.NormalizeExport(exportPath)
+
 
 
 if __name__ == "__main__":
     global mywindow
-    mywindow = Settings()
+    mywindow = NormalizeExporter()
     dayu_theme.apply(mywindow)
     mywindow.show()
     UU.appendWindowToUnreal(int(mywindow.winId()))

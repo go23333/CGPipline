@@ -13,7 +13,6 @@ from dayu_widgets.push_button import MPushButton
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 import os
 
-
 #custom modules
 import mayaTools.core.uMaya as UM
 
@@ -58,16 +57,15 @@ class exportPipline(MayaQWidgetDockableMixin,QtWidgets.QWidget):
         if fileName == "":
             MMessage.error(parent=self,text="文件名为空")
             return 0
-        fullName = os.path.join(path,fileName)
+        fullName = os.path.join(path,fileName,fileName)
         return fullName
     def export(self):
         fullName = self.getFullPath()
         if not fullName:
             return False
-        (flag,message) = UM.exportPipline(fullName)
+        flag,message = UM.exportPipline(fullName)
         if flag:
             MMessage.info(parent=self,text=message)
-
         else:
             MMessage.error(parent=self,text=message)
 
@@ -75,9 +73,10 @@ def showUI():
     global txExportPage
     txExportPage = exportPipline()
     txExportPage.show(dockable=True)
-
     
 if __name__ == "__main__":
+    from mayaTools import reloadModule
+    reloadModule()
     global txExportPage
     txExportPage = exportPipline()
     txExportPage.show(dockable=True)

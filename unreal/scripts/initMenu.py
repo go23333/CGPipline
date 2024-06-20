@@ -112,8 +112,25 @@ entry.set_tool_tip("暂用")
 entry.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", "from songshunjie import ScenesFolder \nScenesFolder.start()")
 script_menu.add_menu_entry("Test Section",entry)
 
+
+
+
+entry = unreal.ToolMenuEntry(
+            name="normalizeExport",
+            type=unreal.MultiBlockType.MENU_ENTRY,
+            insert_position=unreal.ToolMenuInsert(
+                "", unreal.ToolMenuInsertType.FIRST)
+        )
+entry.set_label("规范化导出工具")
+
+entry.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", "import ShowWindow\nShowWindow.showNormalizeExporter()")
+script_menu.add_menu_entry("Test Section",entry)
+
+
+
+
+#放在最底部
 menus.refresh_all_widgets()
 import uCommon as UC
 global Application
 Application = UC.getApplication()
-

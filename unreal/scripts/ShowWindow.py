@@ -55,3 +55,11 @@ def showSettings():
     mywindow.show()
     externalWindow.append(mywindow)
     UU.appendWindowToUnreal(int(mywindow.winId()))
+
+
+def showNormalizeExporter():
+    mywindow = Pages.NormalizeExporter()
+    dayu_theme.apply(mywindow)
+    mywindow.show()
+    externalWindow.append(mywindow)
+    UU.appendWindowToUnreal(int(mywindow.winId()))

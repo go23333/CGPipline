@@ -17,6 +17,9 @@ reload(UC)
 import uGlobalConfig as UG
 reload(UG)
 
+import os
+from enum import Enum,auto
+import json
 
 
 #获取一些subsystem
@@ -26,6 +29,7 @@ assetEditorSubsystem = unreal.get_editor_subsystem(unreal.AssetEditorSubsystem)
 levelEditorSybsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 levelSequenceEditorSubsystem = unreal.get_editor_subsystem(unreal.LevelSequenceEditorSubsystem)
 unrealEditorSybsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
+unrealAssetsSubsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
 
 # 定义一些包裹类
 
@@ -583,10 +587,242 @@ def importStaticmeshs(datas:list,sceneName=None):
             wrapSM.setMaterialBySloatName(MaterialInfo["Materialname"],wrapMaterialIns.asset)
         wrapSM.saveAsset()
 
+from PIL import Image
+class TextureType(Enum):
+    COLOR = auto()
+    LINEARCOLOR = auto()
+    NOMRAL = auto()
 
+
+def getTextureSize(texture):
+    return texture.blueprint_get_size_x()
+
+
+def GetTextureByParam(texures:list[unreal.Texture2D],keywords:list[str],tType:TextureType) -> unreal.Texture2D:
+    candidateTextures = []
+    for texture in texures:
+        if tType == TextureType.COLOR:
+            if not texture.srgb == True:
+                continue
+        elif tType == TextureType.LINEARCOLOR:
+            if texture.srgb == True or texture.compression_settings == unreal.TextureCompressionSettings.TC_NORMALMAP:
+                continue
+        elif tType == TextureType.NOMRAL:
+            if not texture.compression_settings == unreal.TextureCompressionSettings.TC_NORMALMAP:
+                continue
+        candidateTextures.append(texture)
+
+
+    
+    candidateTextures2 = []
+    for texture in candidateTextures:
+        textureName = texture.get_name()
+        for keyword in keywords:
+            if keyword in textureName.lower():
+                candidateTextures2.append(texture)
+
+    candidateTextures2.sort(key=getTextureSize,reverse=True)
+
+    if candidateTextures2 == []:
+        return False
+    else:
+        return candidateTextures2[0]
+
+def ExportTexture(Texture,dir):
+    Path = os.path.join(dir,Texture.get_name() + '.png')
+    task = unreal.AssetExportTask()
+    task.replace_identical = False
+    task.prompt = False
+    task.automated = True
+    task.options = unreal.TextureExporterPNG()
+    task.object = Texture
+    task.filename = Path
+    unreal.Exporter.run_asset_export_task(task)
+    return Path
+
+def ExportMesh(Mesh,dir):
+    Path = os.path.join(dir,Mesh.get_name() + '.fbx')
+    task = unreal.AssetExportTask()
+    task.replace_identical = False
+    task.prompt = False
+    task.automated = True
+    task.options = unreal.FbxExportOption()
+    task.object = Mesh
+    task.filename = Path
+    res = unreal.Exporter.run_asset_export_task(task)
+    return Path
+
+def NormalExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Metallic:unreal.Texture2D,Roughness:unreal.Texture2D):
+    import tempfile
+    import os
+    temp_dir = tempfile.gettempdir()
+    BaseColorpath = ExportTexture(BaseColor,temp_dir)
+    Normalpath = ExportTexture(Normal,temp_dir)
+    RoughnessPath = ExportTexture(Roughness,temp_dir)
+
+    
+    if not Metallic:
+        MetallicPath = RoughnessPath.replace(".png","_Metallic.png")
+        image = Image.new('L',(64,64),color = 0)
+        image.save(MetallicPath,'png')
+    else:
+        MetallicPath = ExportTexture(Metallic,temp_dir)
+
+    return [BaseColorpath,Normalpath,MetallicPath,RoughnessPath]
+
+
+def CompositeExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Composite:unreal.Texture2D,RoughnessChannel:int,MetallicChannel:int):
+    import tempfile
+    temp_dir = tempfile.gettempdir()
+
+    BaseColorpath = ExportTexture(BaseColor,temp_dir)
+    Normalpath = ExportTexture(Normal,temp_dir)
+
+    CompositePath = ExportTexture(Composite,temp_dir)
+    
+    CompositeImage = Image.open(CompositePath)
+
+    RoughnessImage = CompositeImage.split()[0]
+    MetallicImage = CompositeImage.split()[1]
+
+    RoughnessPath = CompositePath.replace(".png","_Roughness.png")
+    RoughnessImage.save(RoughnessPath,"PNG")
+
+    MetallicPath = CompositePath.replace(".png","_Metallic.png")
+    MetallicImage.save(MetallicPath,"PNG")
+
+    return [BaseColorpath,Normalpath,MetallicPath,RoughnessPath]
+
+
+def ExportUsefulTextures(textures:list[unreal.Texture2D]):
+    baseColorKeyWords = ['basecolor','color','diffuse',"_c","_bc","_d"]
+    roughnessKeyWords = ['roughness','_rough','_rou']
+    metallicKeyWords = ["metal"]
+    normalKeyWords = ["_n",'norm','normal']
+    ramKeyWords = ["_ram"]
+    armKeyWords = ['_orm','_arm','_mask']
+    rmaKeyWords  =  ['_rma']
+    mraKeyWords = ["_mra"]
+
+
+    baseColorTexture = GetTextureByParam(textures,baseColorKeyWords,TextureType.COLOR)
+    normalTexture = GetTextureByParam(textures,normalKeyWords,TextureType.NOMRAL)
+
+
+    RoughnessTexture = GetTextureByParam(textures,roughnessKeyWords,TextureType.LINEARCOLOR)
+    MetallicTexture = GetTextureByParam(textures,metallicKeyWords,TextureType.LINEARCOLOR)
+    armTexture = GetTextureByParam(textures,armKeyWords,TextureType.LINEARCOLOR)
+    ramTexture = GetTextureByParam(textures,ramKeyWords,TextureType.LINEARCOLOR)
+    rmaTexture = GetTextureByParam(textures,rmaKeyWords,TextureType.LINEARCOLOR)
+    mraTexture = GetTextureByParam(textures,mraKeyWords,TextureType.LINEARCOLOR)
+
+    
+    #排除不需要的情况
+    if not (baseColorTexture and normalTexture):
+        return False
+    if not (RoughnessTexture or armTexture or ramTexture or rmaTexture or mraTexture):
+        return False
+    
+    if RoughnessTexture:
+        return NormalExportPipline(baseColorTexture,normalTexture,MetallicTexture,RoughnessTexture)
+    elif armTexture:
+        return CompositeExportPipline(baseColorTexture,normalTexture,armTexture,1,2)
+    elif ramTexture:
+        return CompositeExportPipline(baseColorTexture,normalTexture,ramTexture,0,2)
+    elif rmaTexture:
+        return CompositeExportPipline(baseColorTexture,normalTexture,rmaTexture,0,1)
+    elif mraTexture:
+        return CompositeExportPipline(baseColorTexture,normalTexture,mraTexture,1,0)
+    else:
+        return False
+    
+
+
+def GetUsedTextures(mat):
+    if(type(mat) == unreal.Material):
+        return unreal.MaterialEditingLibrary.get_used_textures(mat)
+    else:
+        textures = []
+        for texParm in mat.texture_parameter_values:
+            if texParm.parameter_value != None:
+                textures.append(texParm.parameter_value)
+        return textures
+
+def MoveAndRenameFile(srcPath:str,desFolder:str,newFileName:str):
+    if not os.path.exists(desFolder):
+        os.makedirs(desFolder)
+    import shutil
+    desPath = os.path.join(desFolder,newFileName)
+    shutil.move(srcPath,desPath)
+    print(f"将文件{srcPath}移动到{desPath}")
+    return desPath
+
+def NormalizeExport(exportFolder:str):
+    selectedAssets = unreal.EditorUtilityLibrary.get_selected_assets()
+    #遍历所有模型
+    for selectedAsset in selectedAssets:
+        selectedAsset:unreal.StaticMesh
+        meshName = selectedAsset.get_name()
+        rootFolder = os.path.join(exportFolder,meshName)
+        staticMaterials = selectedAsset.static_materials
+        print(f"准备开始导出:{meshName},共有材质{len(staticMaterials)}个,导出的路径为:{rootFolder}")
+        # 遍历所有材质
+        materials = []
+        for staticMaterial in staticMaterials:
+            staticMaterial:unreal.StaticMaterial
+            materialName = str(staticMaterial.material_slot_name)
+            if staticMaterial.material_interface == None:
+                print(f"模型{meshName}的材质:{materialName},不存在,跳过该材质")
+                continue
+            textures = GetUsedTextures(staticMaterial.material_interface)
+            if len(textures) < 2:
+                #踢除小于2材质
+                print(f"模型{meshName}的材质:{materialName},上贴图数量少于2,判定为无效材质,跳过")
+                continue
+            textures = ExportUsefulTextures(textures)
+            if not textures:
+                print(f"模型{meshName}的材质:{materialName},贴图获取失败,或不符合标准,跳过")
+                continue
+            BaseColorpath,NormalPath,MetallicPath,RoughnessPath = textures
+            textureRootPath = os.path.join(rootFolder,'Textures')
+
+            newBaseColorPath = MoveAndRenameFile(BaseColorpath,textureRootPath,materialName + "_BaseColor.png")
+            newNormalPath = MoveAndRenameFile(NormalPath,textureRootPath,materialName + "_Normal.png")
+            newMetallicpath = MoveAndRenameFile(MetallicPath,textureRootPath,materialName + "_Metallic.png")
+            newRoughnessPath = MoveAndRenameFile(RoughnessPath,textureRootPath,materialName + "_Roughness.png")
+
+            materialInfo = dict(
+                materialName = materialName,
+                fUDIM = False,
+                type = "PBR",
+                baseColorPaths=[newBaseColorPath.replace(rootFolder,"")],
+                roughnessPaths = [newRoughnessPath.replace(rootFolder,"")],
+                metallicPaths = [newMetallicpath.replace(rootFolder,"")],
+                normalPaths = [newNormalPath.replace(rootFolder,"")],
+                TextureTiling = (1.0,1.0)
+            )
+            materials.append(materialInfo)
+        if len(materials) == 0:
+            print(f"模型{meshName}上有效材质过少,跳过")
+            continue
+        fbxFilePath = ExportMesh(selectedAsset,rootFolder)
+        jsonFilepath = fbxFilePath.replace(".fbx",'.json')
+        datas = json.dumps(materials)
+        with open(jsonFilepath,'w+',encoding='utf-8') as f:
+            f.write(datas)
+        print(f"模型{meshName}导出成功")
 
 if __name__ == "__main__":
-    toLevl = unreal.load_asset("/Game/HLSL/HLSL_Map.HLSL_Map")
-    subLevel = unreal.load_asset("/Game/HLSL/NewWorld.NewWorld")
-    world = toLevl.get_world()
-    unreal.EditorLevelUtils().add_level_to_world(world,"/Game/HLSL/NewWorld.NewWorld",unreal.LevelStreamingAlwaysLoaded)
+    ExportFolder = r"E:\HuaWiProject\Output"
+    NormalizeExport(ExportFolder)
+
+          
+
+
+
+
+
+
+
+
+

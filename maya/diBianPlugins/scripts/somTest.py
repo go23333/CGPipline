@@ -1,17 +1,26 @@
-import maya.api.OpenMaya as om2
+
+import os
+from PIL import Image
 
 
 
+def GeneratePureColorImage(size,color,path):
+    image = Image.new('RGB',size,color)
+    image.save(path)
+
+def InvertImage(path):
+    image = Image.open(path)
+    imvertImage = Image.eval(image,lambda x: 255 -x )
+    imvertImage.save(path)
+    
+def BlendImagesByImage(imageAPath,imageBPath,alphaImagePath,NewPath):
+    imageA = Image.open(imageAPath)
+    imageB = Image.open(imageBPath)
+    alphaImage = Image.open(alphaImagePath)   
+    imageA = imageA.resize(alphaImage.size())
+    imageB = imageB.resize(alphaImage.size())
+    a,_,_,_ = alphaImage.split()
+    Image.composite(imageA,imageB,a).save(NewPath)
 
 
-
-
-if __name__ == "__main__":
-    sel_list = om2.MGlobal.getActiveSelectionList()
-    #sel_list:om2.MSelectionList
-    attrFromMesh = om2.MFnMesh(sel_list.getDagPath(0))
-    attrToMesh = om2.MFnMesh(sel_list.getDagPath(1))
-
-    for point in attrFromMesh.getPoints():
-        u,v,faceid = attrFromMesh.getUVAtPoint(point)
-        print(attrToMesh.getPointAtUV(faceid,u,v,tolerance = 0.0001))
+BlendImagesByImage("E:\Downloads\HuaWei\AnQi_LiuChangYu_Pro_Shade\Texture\JWW_A001_ANQI_Color.1001.png",)
