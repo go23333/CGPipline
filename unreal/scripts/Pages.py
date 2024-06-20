@@ -517,6 +517,7 @@ class NormalizeExporter(QtWidgets.QWidget):
             MMessage.error(parent=self,text="当前路径不合法")
             return False
         UU.NormalizeExport(exportPath)
+        MMessage.info(parent=self,text="导出完成")
 
 
 
