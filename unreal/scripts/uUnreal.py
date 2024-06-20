@@ -588,6 +588,15 @@ def importStaticmeshs(datas:list,sceneName=None):
         wrapSM.saveAsset()
 
 from PIL import Image
+
+class MyTexture2D(object):
+    def __init__(self):
+        self.sloatname = None
+        self.texture2D = None
+        pass
+
+
+
 class TextureType(Enum):
     COLOR = auto()
     LINEARCOLOR = auto()
@@ -598,28 +607,27 @@ def getTextureSize(texture):
     return texture.blueprint_get_size_x()
 
 
-def GetTextureByParam(texures:list[unreal.Texture2D],keywords:list[str],tType:TextureType) -> unreal.Texture2D:
+def GetTextureByParam(texures:list[MyTexture2D],keywords:list[str],tType:TextureType) -> unreal.Texture2D:
     candidateTextures = []
     for texture in texures:
         if tType == TextureType.COLOR:
-            if not texture.srgb == True:
+            if not texture.texture2D.srgb == True:
                 continue
         elif tType == TextureType.LINEARCOLOR:
-            if texture.srgb == True or texture.compression_settings == unreal.TextureCompressionSettings.TC_NORMALMAP:
+            if texture.texture2D.srgb == True or texture.texture2D.compression_settings == unreal.TextureCompressionSettings.TC_NORMALMAP:
                 continue
         elif tType == TextureType.NOMRAL:
-            if not texture.compression_settings == unreal.TextureCompressionSettings.TC_NORMALMAP:
+            if not texture.texture2D.compression_settings == unreal.TextureCompressionSettings.TC_NORMALMAP:
                 continue
         candidateTextures.append(texture)
-
-
     
     candidateTextures2 = []
     for texture in candidateTextures:
-        textureName = texture.get_name()
+        textureName = texture.texture2D.get_name() 
+        textureName = textureName+ "_" + str(texture.sloatname)
         for keyword in keywords:
             if keyword in textureName.lower():
-                candidateTextures2.append(texture)
+                candidateTextures2.append(texture.texture2D)
 
     candidateTextures2.sort(key=getTextureSize,reverse=True)
 
@@ -694,7 +702,7 @@ def CompositeExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Co
     return [BaseColorpath,Normalpath,MetallicPath,RoughnessPath]
 
 
-def ExportUsefulTextures(textures:list[unreal.Texture2D]):
+def ExportUsefulTextures(textures:list[MyTexture2D]):
     baseColorKeyWords = ['basecolor','color','diffuse',"_c","_bc","_d",'_b']
     roughnessKeyWords = ['roughness','_rough','_rou']
     metallicKeyWords = ["metal"]
@@ -738,17 +746,28 @@ def ExportUsefulTextures(textures:list[unreal.Texture2D]):
         return CompositeExportPipline(baseColorTexture,normalTexture,srmTexture,1,2)
     else:
         return False
-    
 
 
-def GetUsedTextures(mat):
+
+
+def GetUsedTextures(mat) -> list[MyTexture2D]:
+    textures = []
     if(type(mat) == unreal.Material):
-        return unreal.MaterialEditingLibrary.get_used_textures(mat)
+        texs = unreal.MaterialEditingLibrary.get_used_textures(mat)
+        for tex in texs:
+            myTex = MyTexture2D()
+            myTex.texture2D = tex
+            textures.append(myTex)
+        return textures
     else:
-        textures = []
         for texParm in mat.texture_parameter_values:
             if texParm.parameter_value != None:
-                textures.append(texParm.parameter_value)
+                sloatName = texParm.parameter_info.name
+                texture2D = texParm.parameter_value
+                myTex = MyTexture2D()
+                myTex.sloatname = sloatName
+                myTex.texture2D = texture2D
+                textures.append(myTex)
         return textures
 
 def MoveAndRenameFile(srcPath:str,desFolder:str,newFileName:str):
