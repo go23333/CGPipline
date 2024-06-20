@@ -695,7 +695,7 @@ def CompositeExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Co
 
 
 def ExportUsefulTextures(textures:list[unreal.Texture2D]):
-    baseColorKeyWords = ['basecolor','color','diffuse',"_c","_bc","_d"]
+    baseColorKeyWords = ['basecolor','color','diffuse',"_c","_bc","_d",'_b']
     roughnessKeyWords = ['roughness','_rough','_rou']
     metallicKeyWords = ["metal"]
     normalKeyWords = ["_n",'norm','normal']
@@ -703,6 +703,7 @@ def ExportUsefulTextures(textures:list[unreal.Texture2D]):
     armKeyWords = ['_orm','_arm','_mask']
     rmaKeyWords  =  ['_rma']
     mraKeyWords = ["_mra"]
+    srmKeyWords = ['_srm']
 
 
     baseColorTexture = GetTextureByParam(textures,baseColorKeyWords,TextureType.COLOR)
@@ -715,12 +716,12 @@ def ExportUsefulTextures(textures:list[unreal.Texture2D]):
     ramTexture = GetTextureByParam(textures,ramKeyWords,TextureType.LINEARCOLOR)
     rmaTexture = GetTextureByParam(textures,rmaKeyWords,TextureType.LINEARCOLOR)
     mraTexture = GetTextureByParam(textures,mraKeyWords,TextureType.LINEARCOLOR)
-
+    srmTexture = GetTextureByParam(textures,srmKeyWords,TextureType.LINEARCOLOR)
     
     #排除不需要的情况
     if not (baseColorTexture and normalTexture):
         return False
-    if not (RoughnessTexture or armTexture or ramTexture or rmaTexture or mraTexture):
+    if not (RoughnessTexture or armTexture or ramTexture or rmaTexture or mraTexture or srmTexture):
         return False
     
     if RoughnessTexture:
@@ -733,6 +734,8 @@ def ExportUsefulTextures(textures:list[unreal.Texture2D]):
         return CompositeExportPipline(baseColorTexture,normalTexture,rmaTexture,0,1)
     elif mraTexture:
         return CompositeExportPipline(baseColorTexture,normalTexture,mraTexture,1,0)
+    elif srmTexture:
+        return CompositeExportPipline(baseColorTexture,normalTexture,srmTexture,1,2)
     else:
         return False
     
