@@ -732,17 +732,23 @@ def ExportUsefulTextures(textures:list[MyTexture2D]):
     if not (RoughnessTexture or armTexture or ramTexture or rmaTexture or mraTexture or srmTexture):
         return False
     
-    if RoughnessTexture:
+    if RoughnessTexture and not (armTexture or ramTexture or rmaTexture or mraTexture or srmTexture):
+        print("当前贴图模式为默认模式")
         return NormalExportPipline(baseColorTexture,normalTexture,MetallicTexture,RoughnessTexture)
     elif armTexture:
+        print("当前贴图模式为ARM")
         return CompositeExportPipline(baseColorTexture,normalTexture,armTexture,1,2)
     elif ramTexture:
+        print("当前贴图模式为RAM")
         return CompositeExportPipline(baseColorTexture,normalTexture,ramTexture,0,2)
     elif rmaTexture:
+        print("当前贴图模式为RMA")
         return CompositeExportPipline(baseColorTexture,normalTexture,rmaTexture,0,1)
     elif mraTexture:
+        print("当前贴图模式为MRA")
         return CompositeExportPipline(baseColorTexture,normalTexture,mraTexture,1,0)
     elif srmTexture:
+        print("当前贴图模式为SRM")
         return CompositeExportPipline(baseColorTexture,normalTexture,srmTexture,1,2)
     else:
         return False
