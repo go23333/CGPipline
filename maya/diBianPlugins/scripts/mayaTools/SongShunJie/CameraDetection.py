@@ -235,9 +235,11 @@ class CameraJudge(QWidget):
 						for cam in cams:
 							cam_txt+=cam+' '
 						cam_txt+='\n\n'
+			
 
-				self.execute_data.setPlainText(cam_txt)
-
+			self.execute_data.setPlainText(cam_txt)
+			if not self.execute_data.toPlainText():
+				self.execute_data.setPlainText('Camera normal')
 		
 
 
