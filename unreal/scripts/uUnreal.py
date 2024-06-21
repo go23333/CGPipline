@@ -645,7 +645,8 @@ def ExportTexture(Texture,dir):
     task.options = unreal.TextureExporterPNG()
     task.object = Texture
     task.filename = Path
-    unreal.Exporter.run_asset_export_task(task)
+    if not unreal.Exporter.run_asset_export_task(task):
+        return False
     return Path
 
 def ExportMesh(Mesh,dir):
@@ -668,6 +669,8 @@ def NormalExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Metal
     Normalpath = ExportTexture(Normal,temp_dir)
     RoughnessPath = ExportTexture(Roughness,temp_dir)
 
+
+
     
     if not Metallic:
         MetallicPath = RoughnessPath.replace(".png","_Metallic.png")
@@ -676,6 +679,8 @@ def NormalExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Metal
     else:
         MetallicPath = ExportTexture(Metallic,temp_dir)
 
+    if not (BaseColorpath or Normalpath or RoughnessPath or MetallicPath):
+        return False
     return [BaseColorpath,Normalpath,MetallicPath,RoughnessPath]
 
 
@@ -687,6 +692,8 @@ def CompositeExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Co
     Normalpath = ExportTexture(Normal,temp_dir)
 
     CompositePath = ExportTexture(Composite,temp_dir)
+    if not CompositePath:
+        return False
     
     CompositeImage = Image.open(CompositePath)
 
@@ -699,6 +706,8 @@ def CompositeExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Co
     MetallicPath = CompositePath.replace(".png","_Metallic.png")
     MetallicImage.save(MetallicPath,"PNG")
 
+    if not (BaseColorpath or Normalpath or RoughnessPath or MetallicPath):
+        return False
     return [BaseColorpath,Normalpath,MetallicPath,RoughnessPath]
 
 
@@ -731,6 +740,7 @@ def ExportUsefulTextures(textures:list[MyTexture2D]):
         return False
     if not (RoughnessTexture or armTexture or ramTexture or rmaTexture or mraTexture or srmTexture):
         return False
+    
     
     if RoughnessTexture and not (armTexture or ramTexture or rmaTexture or mraTexture or srmTexture):
         print("当前贴图模式为默认模式")
