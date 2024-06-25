@@ -20,7 +20,8 @@ from dayu_widgets.line_edit import MClickBrowserFolderToolButton, MLineEdit
 from dayu_widgets.loading import MLoadingWrapper
 from dayu_widgets.menu import MMenu
 from dayu_widgets.message import MMessage
-from dayu_widgets.spin_box import MDoubleSpinBox, MSpinBox 
+from dayu_widgets.spin_box import MDoubleSpinBox, MSpinBox
+
 import functools
 from importlib import reload
 #导入自定义库
@@ -429,6 +430,19 @@ class Settings(QtWidgets.QWidget):
         layCameraAspectRatio.addWidget(MLabel("相机纵横比:"))
         layCameraAspectRatio.addWidget(self.sbCameraRatio)
 
+        # 相机剪切前后滚帧设置
+        self.cameraImportPreRollFrame = MSpinBox()
+        self.cameraImportPostRollFrame = MSpinBox()
+
+
+
+        layCameraRollFrame = QtWidgets.QHBoxLayout()
+        layCameraRollFrame.addWidget(MLabel("相机导入前滚帧"))
+        layCameraRollFrame.addWidget(self.cameraImportPreRollFrame)
+        layCameraRollFrame.addWidget(MLabel("相机导入后滚帧"))
+        layCameraRollFrame.addWidget(self.cameraImportPostRollFrame)
+
+
 
         # NOTE add to main layout
         layCameraImportSettings.addWidget(MLabel("相机导入路径宏设置:").h4(),alignment=QtCore.Qt.AlignTop)
@@ -437,6 +451,7 @@ class Settings(QtWidgets.QWidget):
         layCameraImportSettings.addWidget(MLabel(f"当前可以使用的宏有:{CurrentMacro}"))
         layCameraImportSettings.addLayout(layMacroOutput)
         layCameraImportSettings.addLayout(layCameraAspectRatio)
+        layCameraImportSettings.addLayout(layCameraRollFrame)
         # 静态网格体设置
         layMeshImportSettings = QtWidgets.QVBoxLayout()  #定义Q主布局
         layMeshImportSettings.setSpacing(5)
@@ -481,12 +496,16 @@ class Settings(QtWidgets.QWidget):
     def __loadConfig(self):
         self.leCameraInputMacro.setText(UG.globalConfig.get().CameraImportPathPatten)
         self.sbCameraRatio.setValue(UG.globalConfig.get().CameraimportAspectRatio)
-
+        self.cameraImportPreRollFrame.setValue(UG.globalConfig.get().cameraImportPreRollFrame)
+        self.cameraImportPostRollFrame.setValue(UG.globalConfig.get().cameraImportPostRollFrame)
 
     def saveConfig(self):
         UG.globalConfig.get().CameraImportPathPatten = self.leCameraInputMacro.text()
         UG.globalConfig.get().CameraimportAspectRatio = self.sbCameraRatio.value()
-        
+        UG.globalConfig.get().cameraImportPreRollFrame = self.cameraImportPreRollFrame.value()
+        UG.globalConfig.get().cameraImportPostRollFrame = self.cameraImportPostRollFrame.value()
+
+   
         UG.globalConfig.get().saveConfig()
         pass
     def applyMacroCamera(self):
@@ -494,7 +513,6 @@ class Settings(QtWidgets.QWidget):
         if parseResult:
             result = UC.applyMacro(self.leCameraInputMacro.text(),parseResult)
             self.leMacroOutput.setText(UC.normalizePath(result))
-
 
 
 class NormalizeExporter(QtWidgets.QWidget):
@@ -520,10 +538,9 @@ class NormalizeExporter(QtWidgets.QWidget):
         MMessage.info(parent=self,text="导出完成")
 
 
-
 if __name__ == "__main__":
     global mywindow
-    mywindow = NormalizeExporter()
+    mywindow = Settings()
     dayu_theme.apply(mywindow)
     mywindow.show()
     UU.appendWindowToUnreal(int(mywindow.winId()))

@@ -4,6 +4,7 @@
 build
 __pycache__
 /unreal/vendor
+/unreal/uis
 /maya/diBianPlugins/vendor
 /maya/diBianPlugins/scripts/mayaTools/thirdpart/thirdpart
 /maya/diBianPlugins/thirdpart

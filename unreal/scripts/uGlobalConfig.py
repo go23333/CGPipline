@@ -13,6 +13,8 @@ class globalConfig():
         self.CameraImportPathPatten = "/Game/Shots/Sequence/$ep/$sc/$ep_$sc_$number"
         self.CameraimportUniformScale = 1
         self.CameraimportAspectRatio = 1.777778
+        self.cameraImportPreRollFrame = 10
+        self.cameraImportPostRollFrame = 10
         # paramater Mesh Import
         self.StaticMeshImportPathPatten = "/Game/Assets/Scene/Mesh/"
         # paramater Texture Import

@@ -92,6 +92,13 @@ class WarpLevelSequence(WrapBaseAsset):
             if type(obj) == objectType:
                 return(bindingProxy,obj)
         return False
+    def SetCameraCutsStartEnd(self,startFrame:int,endFrame:int):
+        cameraCut = self.asset.find_tracks_by_type(unreal.MovieSceneCameraCutTrack)[0]
+        cameraCut:unreal.MovieSceneCameraCutTrack
+        cameraCutSection = cameraCut.get_sections()[0]
+        cameraCutSection:unreal.MovieSceneCameraCutSection
+        cameraCutSection.set_start_frame(startFrame)
+        cameraCutSection.set_end_frame(endFrame)
     @classmethod
     def create(cls,assetPath:str,override:bool=True):
         print(assetPath)
@@ -514,7 +521,7 @@ def importCameras(datas:list):
             wrapCamera.setFilmback(UC.FilmBackPreset.DSLR)
             wrapCamera.setFocusMethod(unreal.CameraFocusMethod.DISABLE)
             wrapCamera.setAspectRatio(UG.globalConfig.get().CameraimportAspectRatio)
-
+            wrapLevelSeq.SetCameraCutsStartEnd(int(parsedName["frameStart"])-10,int(parsedName["frameEnd"])+10)
             wrapLevelSeq.setLock(True)                                                    # 锁定序列
             wrapLevelSeq.saveAsset()                                                      # 保存序列
         else:
@@ -851,9 +858,8 @@ def NormalizeExport(exportFolder:str):
         print(f"模型{meshName}导出成功")
 
 if __name__ == "__main__":
-    ExportFolder = r"E:\HuaWiProject\Output"
-    NormalizeExport(ExportFolder)
-
+    testCameraPaths = [dict(name = "Ep001_sc003_001_001_082_cam_export",path="d:\Desktop\Cam\Ep001_sc003_001_001_082_cam_export.fbx")]
+    importCameras(testCameraPaths)
           
 
 
