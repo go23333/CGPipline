@@ -620,9 +620,8 @@ def getKeyWordIndex(texture:MyTexture2D,keyWorlds:list[str]):
     textureName = textureName+ "_" + str(texture.sloatname)
     for keyword in keyWorlds:
         if keyword in textureName.lower():
-            return keyWorlds.index(keyword)
-    return 10000
-
+            return len(keyWorlds) - keyWorlds.index(keyword)
+    return 0
 def GetTextureByParam(texures:list[MyTexture2D],keywords:list[str],tType:TextureType) -> unreal.Texture2D:
     candidateTextures = []
     for texture in texures:
@@ -636,19 +635,11 @@ def GetTextureByParam(texures:list[MyTexture2D],keywords:list[str],tType:Texture
             if not texture.texture2D.compression_settings == unreal.TextureCompressionSettings.TC_NORMALMAP:
                 continue
         candidateTextures.append(texture)
+    
+    #根据关键词过滤
+    candidateTextures = list(filter(partial(getKeyWordIndex,keyWorlds=keywords),candidateTextures))
     # 根据关键词发现的顺序排序
-    candidateTextures.sort(key=partial(getKeyWordIndex,keyWorlds=keywords))
-
-    # return False
-    # candidateTextures2 = []
-    # for texture in candidateTextures:
-    #     textureName = texture.texture2D.get_name() 
-    #     textureName = textureName+ "_" + str(texture.sloatname)
-    #     for keyword in keywords:
-    #         if keyword in textureName.lower():
-    #             candidateTextures2.append(texture.texture2D)
-    # # 根据贴图大小排序
-    # candidateTextures2.sort(key=getTextureSize,reverse=True)
+    candidateTextures.sort(key=partial(getKeyWordIndex,keyWorlds=keywords),reverse=True)
 
     if candidateTextures == []:
         return False
@@ -714,7 +705,6 @@ def CompositeExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Co
     if not CompositePath:
         return False
     
-    print(CompositePath)
     CompositeImage = Image.open(CompositePath)
 
     RoughnessImage = CompositeImage.split()[RoughnessChannel]
