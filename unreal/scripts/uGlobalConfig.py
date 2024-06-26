@@ -8,6 +8,8 @@
 class globalConfig():
     _instance = None
     def __init__(self) -> None:
+        # paths
+        self.LogFilePath = r'D:\Documents\CGPipline\log\unreal.log'
         self.configFilePath = r"d:\Documents\CGPipline\save\config.config"
         # paramater Camera Import
         self.CameraImportPathPatten = "/Game/Shots/Sequence/$ep/$sc/$ep_$sc_$number"

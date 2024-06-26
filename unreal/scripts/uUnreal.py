@@ -20,6 +20,7 @@ reload(UG)
 import os
 from enum import Enum,auto
 import json
+from functools import partial
 
 
 #获取一些subsystem
@@ -600,6 +601,7 @@ class MyTexture2D(object):
     def __init__(self):
         self.sloatname = None
         self.texture2D = None
+        self.priority = 0
         pass
 
 
@@ -613,6 +615,13 @@ class TextureType(Enum):
 def getTextureSize(texture):
     return texture.blueprint_get_size_x()
 
+def getKeyWordIndex(texture:MyTexture2D,keyWorlds:list[str]):
+    textureName = texture.texture2D.get_name() 
+    textureName = textureName+ "_" + str(texture.sloatname)
+    for keyword in keyWorlds:
+        if keyword in textureName.lower():
+            return keyWorlds.index(keyword)
+    return 10000
 
 def GetTextureByParam(texures:list[MyTexture2D],keywords:list[str],tType:TextureType) -> unreal.Texture2D:
     candidateTextures = []
@@ -627,21 +636,24 @@ def GetTextureByParam(texures:list[MyTexture2D],keywords:list[str],tType:Texture
             if not texture.texture2D.compression_settings == unreal.TextureCompressionSettings.TC_NORMALMAP:
                 continue
         candidateTextures.append(texture)
-    
-    candidateTextures2 = []
-    for texture in candidateTextures:
-        textureName = texture.texture2D.get_name() 
-        textureName = textureName+ "_" + str(texture.sloatname)
-        for keyword in keywords:
-            if keyword in textureName.lower():
-                candidateTextures2.append(texture.texture2D)
+    # 根据关键词发现的顺序排序
+    candidateTextures.sort(key=partial(getKeyWordIndex,keyWorlds=keywords))
 
-    candidateTextures2.sort(key=getTextureSize,reverse=True)
+    # return False
+    # candidateTextures2 = []
+    # for texture in candidateTextures:
+    #     textureName = texture.texture2D.get_name() 
+    #     textureName = textureName+ "_" + str(texture.sloatname)
+    #     for keyword in keywords:
+    #         if keyword in textureName.lower():
+    #             candidateTextures2.append(texture.texture2D)
+    # # 根据贴图大小排序
+    # candidateTextures2.sort(key=getTextureSize,reverse=True)
 
-    if candidateTextures2 == []:
+    if candidateTextures == []:
         return False
     else:
-        return candidateTextures2[0]
+        return candidateTextures[0].texture2D
 
 def ExportTexture(Texture,dir):
     Path = os.path.join(dir,Texture.get_name() + '.png')
@@ -702,10 +714,11 @@ def CompositeExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Co
     if not CompositePath:
         return False
     
+    print(CompositePath)
     CompositeImage = Image.open(CompositePath)
 
-    RoughnessImage = CompositeImage.split()[0]
-    MetallicImage = CompositeImage.split()[1]
+    RoughnessImage = CompositeImage.split()[RoughnessChannel]
+    MetallicImage = CompositeImage.split()[MetallicChannel]
 
     RoughnessPath = CompositePath.replace(".png","_Roughness.png")
     RoughnessImage.save(RoughnessPath,"PNG")
@@ -719,10 +732,10 @@ def CompositeExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Co
 
 
 def ExportUsefulTextures(textures:list[MyTexture2D]):
-    baseColorKeyWords = ['basecolor','color','diffuse',"_c","_bc","_d",'_b']
+    baseColorKeyWords = ['basecolor','diffuse','color',"_bc","_c","_d",'_b']
     roughnessKeyWords = ['roughness','_rough','_rou']
     metallicKeyWords = ["metal"]
-    normalKeyWords = ["_n",'norm','normal']
+    normalKeyWords = ["_n",'_norm','_normal']
     ramKeyWords = ["_ram"]
     armKeyWords = ['_orm','_arm','_mask']
     rmaKeyWords  =  ['_rma']
@@ -858,10 +871,8 @@ def NormalizeExport(exportFolder:str):
         print(f"模型{meshName}导出成功")
 
 if __name__ == "__main__":
-    testCameraPaths = [dict(name = "Ep001_sc003_001_001_082_cam_export",path="d:\Desktop\Cam\Ep001_sc003_001_001_082_cam_export.fbx")]
-    importCameras(testCameraPaths)
+    NormalizeExport(r"E:\HuaWiProject\Output")
           
-
 
 
 
