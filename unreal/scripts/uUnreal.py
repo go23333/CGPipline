@@ -666,6 +666,9 @@ def ExportMesh(Mesh,dir):
     task.prompt = False
     task.automated = True
     task.options = unreal.FbxExportOption()
+    task.options.level_of_detail = False
+    task.options.collision = False
+
     task.object = Mesh
     task.filename = Path
     res = unreal.Exporter.run_asset_export_task(task)
@@ -818,7 +821,7 @@ def NormalizeExport(exportFolder:str):
         materials = []
         for staticMaterial in staticMaterials:
             staticMaterial:unreal.StaticMaterial
-            materialName = str(staticMaterial.material_slot_name)
+            materialName = staticMaterial.material_interface.get_name()
             if staticMaterial.material_interface == None:
                 print(f"模型{meshName}的材质:{materialName},不存在,跳过该材质")
                 continue
