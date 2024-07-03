@@ -709,9 +709,12 @@ def CompositeExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Co
         return False
     
     CompositeImage = Image.open(CompositePath)
-
-    RoughnessImage = CompositeImage.split()[RoughnessChannel]
-    MetallicImage = CompositeImage.split()[MetallicChannel]
+    channels = CompositeImage.split()
+    if len(channels) == 1:
+        # 当贴图通道较少时,贴图识别不合格
+        return False
+    RoughnessImage = channels[RoughnessChannel]
+    MetallicImage = channels[MetallicChannel]
 
     RoughnessPath = CompositePath.replace(".png","_Roughness.png")
     RoughnessImage.save(RoughnessPath,"PNG")
@@ -775,8 +778,6 @@ def ExportUsefulTextures(textures:list[MyTexture2D]):
         return CompositeExportPipline(baseColorTexture,normalTexture,srmTexture,1,2)
     else:
         return False
-
-
 
 
 def GetUsedTextures(mat) -> list[MyTexture2D]:
