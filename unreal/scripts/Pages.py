@@ -33,6 +33,8 @@ import uGlobalConfig as UG
 reload (UG)
 import ShowWindow as SW
 
+from songshunjie import lt_level,CameraHide
+
 
 #定义一些共享的widget
 
@@ -305,12 +307,18 @@ class LightTools(QtWidgets.QWidget):
         pbPopEmmissive.clicked.connect(self.popEmmissive)
         pbOpenImportCameraUI = MPushButton("打开相机导入窗口")
         pbOpenImportCameraUI.clicked.connect(self.openImportCameraUI)
+        pbLightImportAndExport = MPushButton("灯光场景导入导出工具")
+        pbLightImportAndExport.clicked.connect(self.LightImportAndExport)
+        pbACtorVisible = MPushButton("使选中对象对镜头隐藏和显示")
+        pbACtorVisible.clicked.connect(self.ACtorVisible)
         self.wNearClip = SpinBoxWithLabel("近裁剪面:",0,1,6,1000.0,0.00001,0.00001,0.00001)
         self.wNearClip.setOnValueChanged(self.nearClip)
         layMain.addWidget(pbAutoID)
         layMain.addWidget(pbPoolSize)
         layMain.addWidget(pbPopEmmissive)
         layMain.addWidget(pbOpenImportCameraUI)
+        layMain.addWidget(pbLightImportAndExport)
+        layMain.addWidget(pbACtorVisible)
         layMain.addWidget(self.wNearClip,alignment=QtCore.Qt.AlignTop)
         self.setLayout(layMain)
     def autoID(self):
@@ -328,6 +336,14 @@ class LightTools(QtWidgets.QWidget):
     def nearClip(self):
         value = self.wNearClip.getValue()
         UU.nearClip(value)
+        pass
+
+        #songshunjie插件
+    def LightImportAndExport(self):
+        lt_level.start()
+        pass
+    def ACtorVisible(self):
+        CameraHide.start()
         pass
 
 
