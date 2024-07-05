@@ -638,6 +638,7 @@ def GetTextureByParam(texures:list[MyTexture2D],keywords:list[str],tType:Texture
     
     #根据关键词过滤
     candidateTextures = list(filter(partial(getKeyWordIndex,keyWorlds=keywords),candidateTextures))
+
     # 根据关键词发现的顺序排序
     candidateTextures.sort(key=partial(getKeyWordIndex,keyWorlds=keywords),reverse=True)
 
@@ -728,7 +729,7 @@ def CompositeExportPipline(BaseColor:unreal.Texture2D,Normal:unreal.Texture2D,Co
 
 
 def ExportUsefulTextures(textures:list[MyTexture2D]):
-    baseColorKeyWords = ['basecolor','diffuse','color',"_bc","_c","_d",'_b']
+    baseColorKeyWords = ['albedo','basecolor','diffuse','color',"_bc","_c","_d",'_b']
     roughnessKeyWords = ['roughness','_rough','_rou']
     metallicKeyWords = ["metal"]
     normalKeyWords = ["_n",'_norm','_normal']
@@ -751,12 +752,17 @@ def ExportUsefulTextures(textures:list[MyTexture2D]):
     mraTexture = GetTextureByParam(textures,mraKeyWords,TextureType.LINEARCOLOR)
     srmTexture = GetTextureByParam(textures,srmKeyWords,TextureType.LINEARCOLOR)
     
+
     #排除不需要的情况
     if not (baseColorTexture and normalTexture):
         return False
+    
+    
     if not (RoughnessTexture or armTexture or ramTexture or rmaTexture or mraTexture or srmTexture):
         return False
     
+    if RoughnessTexture == MetallicTexture:
+        return False
     
     if RoughnessTexture and not (armTexture or ramTexture or rmaTexture or mraTexture or srmTexture):
         print("当前贴图模式为默认模式")
@@ -866,6 +872,7 @@ def NormalizeExport(exportFolder:str):
 
 if __name__ == "__main__":
     NormalizeExport(r"E:\HuaWiProject\Output")
+    #FoliageToSMActor()
           
 
 
