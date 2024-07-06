@@ -815,7 +815,12 @@ def MoveAndRenameFile(srcPath:str,desFolder:str,newFileName:str):
     print(f"将文件{srcPath}移动到{desPath}")
     return desPath
 
-def NormalizeExport(exportFolder:str):
+
+
+
+
+
+def NormalizeExport_old(exportFolder:str):
     selectedAssets = unreal.EditorUtilityLibrary.get_selected_assets()
     #遍历所有模型
     for selectedAsset in selectedAssets:
@@ -823,10 +828,18 @@ def NormalizeExport(exportFolder:str):
         meshName = selectedAsset.get_name()
         rootFolder = os.path.join(exportFolder,meshName)
         staticMaterials = selectedAsset.static_materials
-        print(f"准备开始导出:{meshName},共有材质{len(staticMaterials)}个,导出的路径为:{rootFolder}")
+        
+        # 去重材质
+        MaterialWaitForExport = []
+        for m in staticMaterials:
+            if m not in MaterialWaitForExport:
+                MaterialWaitForExport.append(m)
+                
+
+        print(f"准备开始导出:{meshName},共有材质{len(MaterialWaitForExport)}个,导出的路径为:{rootFolder}")
         # 遍历所有材质
         materials = []
-        for staticMaterial in staticMaterials:
+        for staticMaterial in MaterialWaitForExport:
             staticMaterial:unreal.StaticMaterial
             materialName = staticMaterial.material_interface.get_name()
             if staticMaterial.material_interface == None:
@@ -870,9 +883,104 @@ def NormalizeExport(exportFolder:str):
             f.write(datas)
         print(f"模型{meshName}导出成功")
 
+
+def ExportMeshGLB(Mesh,dir):
+    Path = os.path.join(dir,Mesh.get_name() + '.glb')
+
+    ExportOptions = unreal.GLTFExportOptions()
+    ExportOptions.export_uniform_scale = 0.01
+    ExportOptions.export_preview_mesh = True
+    ExportOptions.export_proxy_materials = False
+    ExportOptions.export_unlit_materials = False
+    ExportOptions.export_clear_coat_materials = False
+    ExportOptions.export_emissive_strength = False
+    ExportOptions.bake_material_inputs = unreal.GLTFMaterialBakeMode.USE_MESH_DATA
+    ExportOptions.default_material_bake_size = unreal.GLTFMaterialBakeSizePOT.POT_2048
+
+    unreal.GLTFExporter.export_to_gltf(Mesh,Path,ExportOptions,set())
+
+    return Path
+
+def HandleTextures(materials,rootPath):
+    import shutil
+    result = []
+    TextureRootPath = os.path.join(rootPath,"Textures")
+    if not os.path.exists(TextureRootPath):
+        os.makedirs(TextureRootPath)
+    for material in materials:
+        name,basecolor,normal,mr = material
+        baseColorPath = os.path.join(TextureRootPath,f"{name}_BaseColor.png")
+        shutil.move(basecolor,baseColorPath)
+        normalPath = os.path.join(TextureRootPath,f"{name}_Normal.png")
+        shutil.move(normal,normalPath)
+
+        RoughnessPath = os.path.join(TextureRootPath,f"{name}_Roughness.png")
+        MetallicPath = os.path.join(TextureRootPath,f"{name}_Metallic.png")
+        if mr != None:
+            CompositeImage = Image.open(mr)
+            channels = CompositeImage.split()
+            MetallicImage = channels[1]
+            RoughnessImage = channels[2]
+            RoughnessImage.save(RoughnessPath,"PNG")
+            MetallicImage.save(MetallicPath,"PNG")
+            CompositeImage.close()
+            os.remove(mr)
+        else:
+            image = Image.new('L',(64,64),color = 0)
+            image.save(MetallicPath,'png')
+            image = Image.new('L',(64,64),color = 1)
+            image.save(RoughnessPath,'png')
+
+        materialInfo = dict(
+                materialName = name,
+                fUDIM = False,
+                type = "PBR",
+                baseColorPaths=[baseColorPath.replace(rootPath,"")],
+                roughnessPaths = [RoughnessPath.replace(rootPath,"")],
+                metallicPaths = [MetallicPath.replace(rootPath,"")],
+                normalPaths = [normalPath.replace(rootPath,"")],
+                TextureTiling = (1.0,1.0)
+            )
+        result.append(materialInfo)
+    return result
+
+import core.glbHelper as g
+reload(g)
+import shutil
+def NormalizeExport(exportFolder:str):
+    selectedAssets = unreal.EditorUtilityLibrary.get_selected_assets()
+    # 过滤掉非Mesh的类型
+    staticMeshs = list(filter(lambda x : isinstance(x,unreal.StaticMesh),selectedAssets))
+    for mesh in staticMeshs:
+        meshName = mesh.get_name()
+        print(f"开始导出模型{meshName}")
+        rootFolder = os.path.join(exportFolder,meshName)
+        GlbFilePath = ExportMeshGLB(mesh,rootFolder)
+        if not GlbFilePath:
+            print(f"模型{meshName}导出失败,跳过")
+            shutil.rmtree(rootFolder)
+            continue
+        myglb = g.WrapGLB(GlbFilePath)
+        result =  myglb.ExportAndGetMaterialData()
+        if not result:
+            print(f"模型{meshName}导出失败,跳过")
+            shutil.rmtree(rootFolder)
+            continue
+        fbxFilePath = ExportMesh(mesh,rootFolder)
+        jsonFilepath = fbxFilePath.replace(".fbx",'.json')
+        datas = json.dumps(result)
+        with open(jsonFilepath,'w+',encoding='utf-8') as f:
+            f.write(datas)
+        myglb.DeleteUseless()
+        print(f"模型{meshName}导出成功")
+
+
 if __name__ == "__main__":
     NormalizeExport(r"E:\HuaWiProject\Output")
     #FoliageToSMActor()
+
+    
+
           
 
 
