@@ -128,6 +128,19 @@ script_menu.add_menu_entry("Test Section",entry)
 
 
 
+entry = unreal.ToolMenuEntry(
+            name="qunJiExport",
+            type=unreal.MultiBlockType.MENU_ENTRY,
+            insert_position=unreal.ToolMenuInsert(
+                "", unreal.ToolMenuInsertType.FIRST)
+        )
+entry.set_label("导出关卡序列群集")
+entry.set_tool_tip("暂用")
+entry.set_string_command(unreal.ToolMenuStringCommandType.PYTHON, "", "from songshunjie import QunJiSequenceExport \nQunJiSequenceExport.start()")
+script_menu.add_menu_entry("Test Section",entry)
+
+
+
 
 #放在最底部
 menus.refresh_all_widgets()
