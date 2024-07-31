@@ -69,12 +69,12 @@ class gpuCacheToolUI:
             abcFileName = os.path.basename(abcFilePath)
             newMbFilePath = os.path.join(newRootFolder,mbFileName)
             if not os.path.exists(newMbFilePath):
-                log("GPUCache {0} cant find MB file in {1}".format(gpuCache.newMbFilePath))
+                log("GPUCache {0} cant find MB file in {1}".format(gpuCache,newMbFilePath))
                 notFindCount += 1
                 newMbFilePath = mbFilePath
             newAbcFilePath = os.path.join(newRootFolder,abcFileName)
             if not os.path.exists(newAbcFilePath):
-                log("GPUCache {0} cant find ABC file in {1}".format(gpuCache.newAbcFilePath))
+                log("GPUCache {0} cant find ABC file in {1}".format(gpuCache,newAbcFilePath))
                 newAbcFilePath = abcFilePath
             self.addAndSetAttr(gpuCache.getTransform(),newAbcFilePath,newMbFilePath)
         if notFindCount > 0:
