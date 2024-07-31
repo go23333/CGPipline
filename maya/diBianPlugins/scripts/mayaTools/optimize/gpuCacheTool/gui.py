@@ -76,7 +76,7 @@ class gpuCacheToolUI:
             if not os.path.exists(newAbcFilePath):
                 log("GPUCache {0} cant find ABC file in {1}".format(gpuCache.newAbcFilePath))
                 newAbcFilePath = abcFilePath
-            self.addAndSetAttr(gpuCache,newAbcFilePath,newMbFilePath)
+            self.addAndSetAttr(gpuCache.getTransform(),newAbcFilePath,newMbFilePath)
         if notFindCount > 0:
             pm.confirmDialog(m=u"注意新路径下未包含所有的MB文件,场景中仍存在为找到MB的GPU缓存")
         else:
