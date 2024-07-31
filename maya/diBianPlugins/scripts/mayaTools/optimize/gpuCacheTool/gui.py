@@ -61,18 +61,18 @@ class gpuCacheToolUI:
             mbFilePath = gpuCache.getTransform().getAttr("mbFilePath")
             abcFilePath = gpuCache.getTransform().getAttr("abcFilePath")
 
-            if (os.path.exists(mbFilePath) or os.path.exists(abcFilePath)):
+            if (os.path.exists(mbFilePath) and os.path.exists(abcFilePath)):
                 log("GPUCache {0} dont need to find path".format(gpuCache))
-                continue
+                return
             mbFileName = os.path.basename(mbFilePath)
             abcFileName = os.path.basename(abcFilePath)
-
+            
             newMbFilePath = os.path.join(newRootFolder,mbFileName)
             newAbcFilePath = os.path.join(newRootFolder,abcFileName)
-
-            if not (os.path.exists(newMbFilePath) or os.path.exists(newAbcFilePath)):
-                log(u"GPUCache {0} cant find any file in this dir".format(gpuCache))
-                return False
+            if not os.path.exists(newMbFilePath):
+                newMbFilePath = mbFilePath
+            if not os.path.exists(newAbcFilePath):
+                newMbFilePath = abcFilePath
             self.addAndSetAttr(gpuCache,newAbcFilePath,newMbFilePath)
         pm.confirmDialog(m=u"当前场景中的GPU缓存路径更新完成")
     def normalizeTextFieldTex(self,target):
