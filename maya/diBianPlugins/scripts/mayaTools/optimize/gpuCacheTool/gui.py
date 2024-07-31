@@ -2,10 +2,11 @@
 
 import pymel.core as pm
 import maya.cmds as cmds
+import os
 #导入自定义模块
 import mayaTools.core.mayaLibrary as ML
 import mayaTools.core.pathLibrary as PL
-
+from mayaTools.core.log import log
 
 class gpuCacheToolUI:
     def __init__(self):
@@ -43,13 +44,37 @@ class gpuCacheToolUI:
 
         cmds.button(label=u"转换为GPUCache", c=self.convertToCache)
         cmds.separator(height=20, style="none")
-        convertTOMesh_row_layout = cmds.rowLayout(numberOfColumns=2, adjustableColumn=2)
+        convertTOMesh_row_layout = cmds.rowLayout(numberOfColumns=3, adjustableColumn=3)
         #是否继承变换
         self.inherit_transform_checkBox = cmds.checkBox("inherit_transform_checkBox",label=u"继承变换",v=1)
+        self.reference_checkBox = cmds.checkBox("reference_checkBox",label=u"使用引用方式导入",v=1)
         cmds.button(label=u"转换为网格体", c=self.convertToMesh)
-
+        cmds.setParent("..")
+        # cmds.rowLayout(numberOfColumns=1, adjustableColumn=1)
+        cmds.button(label=u"寻找丢失的文件", c=self.findMissFiles)
 
         cmds.showWindow(window_name)
+    def findMissFiles(self,*args):
+        newRootFolder = ML.fileDialog(u'选择ABC文件存放路径',3)
+        gpuCaches = pm.ls(et='gpuCache')
+        for gpuCache in gpuCaches:
+            mbFilePath = gpuCache.getTransform().getAttr("mbFilePath")
+            abcFilePath = gpuCache.getTransform().getAttr("abcFilePath")
+
+            if (os.path.exists(mbFilePath) or os.path.exists(abcFilePath)):
+                log("GPUCache {0} dont need to find path".format(gpuCache))
+                continue
+            mbFileName = os.path.basename(mbFilePath)
+            abcFileName = os.path.basename(abcFilePath)
+
+            newMbFilePath = os.path.join(newRootFolder,mbFileName)
+            newAbcFilePath = os.path.join(newRootFolder,abcFileName)
+
+            if not (os.path.exists(newMbFilePath) or os.path.exists(newAbcFilePath)):
+                log(u"GPUCache {0} cant find any file in this dir".format(gpuCache))
+                return False
+            self.addAndSetAttr(gpuCache,newAbcFilePath,newMbFilePath)
+        pm.confirmDialog(m=u"当前场景中的GPU缓存路径更新完成")
     def normalizeTextFieldTex(self,target):
         cmds.textField(target, edit=True, text=PL.normailizePath(cmds.textField(target, query=True, text=True)))
     def convertToCache(self,*args):
@@ -91,6 +116,9 @@ class gpuCacheToolUI:
         original_root_nodes = pm.ls(assemblies=True)  #保存导入前场景中的根节点
         obj = pm.ls(sl=True)[0]
         mbfilepath = obj.getAttr('mbFilePath')
+        if not os.path.exists(mbfilepath):
+            pm.confirmDialog(m=u"GPU缓存:{0}对应的mb文件不存在,请尝试找回".format(obj))
+            return False
         parent = obj.getParent()
         # get obj transform
         Translation = obj.getTranslation()
@@ -98,8 +126,15 @@ class gpuCacheToolUI:
         scale = obj.getScale()
 
         pm.delete(obj)#删除对象
-        pm.importFile(mbfilepath,returnNewNodes=True) #导入mb文件
+
+        # 判断是否使用引用的方式导入
+        if cmds.checkBox(self.reference_checkBox,query=True,value=True):
+            pm.createReference(mbfilepath)
+        else:
+            pm.importFile(mbfilepath,returnNewNodes=True) #导入mb文件
+
         afterImportRootNodes = pm.ls(assemblies=True)  #保存导入后场景中的根节点
+        #遍历新节点并设定节点父级和变换
         for node in afterImportRootNodes:
             if node not in original_root_nodes:
                 node.setParent(parent)             #设置新导入的根节点的父级
@@ -111,6 +146,13 @@ class gpuCacheToolUI:
 
 
 def showUI():
+    UI = gpuCacheToolUI()#实例化UI
+
+if __name__ == "__main__":
+    from mayaTools import reloadModule
+    reloadModule()
+
+
     UI = gpuCacheToolUI()#实例化UI
 
 
