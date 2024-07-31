@@ -57,6 +57,7 @@ class gpuCacheToolUI:
     def findMissFiles(self,*args):
         newRootFolder = ML.fileDialog(u'选择ABC文件存放路径',3)
         gpuCaches = pm.ls(et='gpuCache')
+        notFindCount = 0
         for gpuCache in gpuCaches:
             mbFilePath = gpuCache.getTransform().getAttr("mbFilePath")
             abcFilePath = gpuCache.getTransform().getAttr("abcFilePath")
@@ -66,15 +67,20 @@ class gpuCacheToolUI:
                 return
             mbFileName = os.path.basename(mbFilePath)
             abcFileName = os.path.basename(abcFilePath)
-            
             newMbFilePath = os.path.join(newRootFolder,mbFileName)
-            newAbcFilePath = os.path.join(newRootFolder,abcFileName)
             if not os.path.exists(newMbFilePath):
+                log("GPUCache {0} cant find MB file in {1}".format(gpuCache.newMbFilePath))
+                notFindCount += 1
                 newMbFilePath = mbFilePath
+            newAbcFilePath = os.path.join(newRootFolder,abcFileName)
             if not os.path.exists(newAbcFilePath):
-                newMbFilePath = abcFilePath
+                log("GPUCache {0} cant find ABC file in {1}".format(gpuCache.newAbcFilePath))
+                newAbcFilePath = abcFilePath
             self.addAndSetAttr(gpuCache,newAbcFilePath,newMbFilePath)
-        pm.confirmDialog(m=u"当前场景中的GPU缓存路径更新完成")
+        if notFindCount > 0:
+            pm.confirmDialog(m=u"注意新路径下未包含所有的MB文件,场景中仍存在为找到MB的GPU缓存")
+        else:
+            pm.confirmDialog(m=u"当前场景中的GPU缓存路径更新完成")
     def normalizeTextFieldTex(self,target):
         cmds.textField(target, edit=True, text=PL.normailizePath(cmds.textField(target, query=True, text=True)))
     def convertToCache(self,*args):
