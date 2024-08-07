@@ -4,7 +4,8 @@ import os
 import re
 import webbrowser
 import tempfile
-
+import shutil
+from mayaTools.core.log import log
 
 def GetTempPath():
     return (tempfile.gettempdir())
@@ -63,6 +64,24 @@ def calUDIMCount(TexturePath):
         if not os.path.exists(path):
             return i-1
         i = i+1
+
+def getUDIMTextures(TexturePath):
+    UDIMKeyWord = IsUDIMFormate(TexturePath)
+    textures = []
+    if not UDIMKeyWord:
+        return [TexturePath]
+    i = 1
+    while True:
+        tile = '.' + str(1000 + i) + '.'
+        path = TexturePath.replace(UDIMKeyWord,tile)
+        if not os.path.exists(path):
+            if textures == []:
+                return [TexturePath]
+            else:
+                return textures
+        textures.append(path)
+        i = i+1
+
 # NOTE 判断给定的字符串是否为路径
 def isPath(Path):
     return True
@@ -103,3 +122,17 @@ def getRootPath():
 
 def openWeb(webPath,*args):
 	webbrowser.open(webPath, new=0, autoraise=True)
+
+
+def CopyFileToDir(filePath,dir):
+    fileName = os.path.basename(filePath)
+    newFilePath = os.path.join(dir,fileName)
+    try:
+        shutil.copyfile(filePath,newFilePath)
+    except:
+        log("file {0} copy failed,please check".format(filePath))
+    return filePath
+
+def CopyFilesToDir(files,dir):
+    for file in files:
+        CopyFileToDir(file,dir)

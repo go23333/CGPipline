@@ -8,6 +8,21 @@ import pymel.core as pm
 import maya.api.OpenMaya as om
 
 import mayaTools.core.pathLibrary as PL
+from mayaTools.core.log import log
+import os
+
+
+
+
+class TextureNode(object):
+    def __init__(self):
+        self.nodeName = None
+        self.nodeType = None
+        self.TextureDir = None
+        self.TextureValue = None
+        self.TextureList = []
+ 
+
 
 
 def getScenename():
@@ -284,12 +299,6 @@ def import_fbx_without_dialog(fbxfile):
     return(newNodes)
 
 
-if __name__ == "__main__":
-    pm.ls()
-    print(import_fbx_without_dialog(r"d:\\Documents\\CGPipline\\maya\\temp\\Results\\toReduceMesh1.fbx"))
-    pass
-
-
 def getAllRepeatNodes():
     templist = []
     repeatNode = {}
@@ -414,3 +423,33 @@ def exportGpuCache(obj,ExportPath):
     file_name = file_name.replace('.abc','')
     pm.gpuCache(obj,directory=file_dir,fileName=file_name,dataFormat='ogawa',startTime=1,endTime=1,optimizationThreshold=40000,optimize=1,useBaseTessellation=False,writeMaterials=1,)
     
+
+
+def GetAllTextureNodes():
+    textureNodes = []
+    fileNodes = pm.ls(type="file")
+    normalNodes = pm.ls(type="RedshiftNormalMap")
+    SpriteNodes = pm.ls(type="RedshiftSprite")
+    allTextureNodes = fileNodes + normalNodes + SpriteNodes
+    for node in allTextureNodes:
+        myTextureNode = TextureNode()
+        myTextureNode.nodeName = node.name()
+        myTextureNode.nodeType = pm.nodeType(node)
+        if myTextureNode.nodeType == 'file':
+            attrName = "fileTextureName"
+        else:
+            attrName = "tex0"
+        myTextureNode.TextureValue = node.getAttr(attrName)
+        myTextureNode.TextureDir = os.path.normpath(os.path.split(myTextureNode.TextureValue)[0])
+        TextureList = PL.getUDIMTextures(myTextureNode.TextureValue )
+        for texture in TextureList:
+            myTextureNode.TextureList.append(dict(path = texture,exist=os.path.exists(texture)))
+        textureNodes.append(myTextureNode)
+    return textureNodes
+
+
+
+
+if __name__ == "__main__":
+    from mayaTools import reloadModule
+    reloadModule()
