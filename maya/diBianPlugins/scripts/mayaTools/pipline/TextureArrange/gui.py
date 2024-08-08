@@ -2,6 +2,8 @@
 
 from Qt import QtWidgets,QtCore
 from Qt.QtCore import QThread,Signal,Slot,QObject
+from Qt.QtWidgets import QMenu,QAction
+from Qt.QtGui import QCursor
 from dayu_widgets.item_view import MTreeView
 from dayu_widgets.item_model import MTableModel
 from dayu_widgets.item_model import MSortFilterModel
@@ -11,14 +13,14 @@ from dayu_widgets.line_edit import MClickBrowserFolderToolButton,MLineEdit
 from dayu_widgets.push_button import MPushButton
 from dayu_widgets.progress_bar import MProgressBar
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
+from dayu_widgets.menu import MMenu
+from dayu_widgets.combo_box import MComboBox
 from dayu_widgets import dayu_theme
 import mayaTools.core.pathLibrary as PL
 import mayaTools.core.mayaLibrary as ML
 import os
 import pymel.core as pm
 import copy
-import time
-
 
 
 
@@ -44,7 +46,7 @@ def score_color(score, y):
         return dayu_theme.warning_color
     elif score == 2:
         return dayu_theme.success_color
-
+    
 
 header_list = [
 
@@ -78,7 +80,9 @@ class TextureArrange(MayaQWidgetDockableMixin,QtWidgets.QTabWidget):
     def __init__(self):
         super(TextureArrange,self).__init__()
         self.setWindowTitle(u"贴图整理工具")
-        self.resize(1000,800)
+        self.winWidth = 1000
+        self.winHeight = 800
+        self.resize(self.winWidth,self.winHeight)
 
         self.__init_ui()
 
@@ -98,11 +102,21 @@ class TextureArrange(MayaQWidgetDockableMixin,QtWidgets.QTabWidget):
         self.tvFileNodes.setHeaderHidden(1)
         model_sort.set_header_list(header_list)
         self.tvFileNodes.set_header_list(header_list)
+        self.tvFileNodes.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.tvFileNodes.customContextMenuRequested.connect(self.__createRightMenu)
 
 
+
+        self.ColumWidths = []
+        for i in range(len(header_list)):
+            self.ColumWidths.append(self.tvFileNodes.columnWidth(i))
+        self.ColumScaleRate = [0.8,1.2,0.01,0.0]
 
         self.treeDatas = []
         self.model_1.set_data_list(self.treeDatas)
+
+        self.tvFileNodes.setSizeAdjustPolicy(
+                QtWidgets.QAbstractScrollArea.AdjustToContents)
 
         laySelectDir = QtWidgets.QHBoxLayout()
         pbSelectTextureDir = MClickBrowserFolderToolButton()
@@ -130,11 +144,27 @@ class TextureArrange(MayaQWidgetDockableMixin,QtWidgets.QTabWidget):
         layMain.addLayout(layButtons)
         layMain.addWidget(self.progress)
         self.setLayout(layMain)
-    def onTreeViewClicked(self,arg):
-        if arg.sibling(arg.row(),3).data() != 1:
+    def __createRightMenu(self):
+        self.TreeViewRightMenu = QMenu(self)
+        actions = []
+        if self.getSelectedRow(1):
+           action_SelectMesh = QAction(u"选择相关的模型",self)
+           action_SelectMesh.triggered.connect(self.selectRelevantMesh)
+           actions.append(action_SelectMesh)
+        self.TreeViewRightMenu.addActions(actions)
+        self.TreeViewRightMenu.popup(QCursor().pos())
+    def selectRelevantMesh(self):
+        selectRow = self.getSelectedRow(1)
+        if not selectRow:
             return
-        pm.select(pm.PyNode(arg.sibling(arg.row(),0).data()))
-        
+        selectNode = pm.PyNode(selectRow[0])
+        pm.select(ML.GetMeshBaseFileNode(selectNode))
+
+
+    def onTreeViewClicked(self,arg):
+        rowData = self.getSelectedRow(1)
+        if rowData:
+            pm.select(pm.PyNode(rowData[0]))
     def RefreshList(self):
         self.treeDatas = []
         textureNode = ML.GetAllTextureNodes()
@@ -174,19 +204,21 @@ class TextureArrange(MayaQWidgetDockableMixin,QtWidgets.QTabWidget):
     def showEvent(self,arg):
         self.RefreshList()
         return super(TextureArrange,self).showEvent(arg)
+    def resizeEvent(self,arg):
+        scale = float(self.size().width())/float(self.winWidth)
+        for i in range(len(self.ColumWidths)):
+            newWidth = self.ColumWidths[i]*scale
+            newWidth = newWidth * self.ColumScaleRate[i] + (1-self.ColumScaleRate[i]) * self.ColumWidths[i]
+            self.tvFileNodes.setColumnWidth(i,newWidth)
+        return super(TextureArrange,self).resizeEvent(arg)
     def SetPath(self):
         newRootDir = self.leNewTextureDir.text()
         if newRootDir == "":
             MMessage.warning(parent=self,text="路径为空")
             return
-        arg = self.tvFileNodes.selectedIndexes()
-        if arg == []:
-            MMessage.warning(parent=self,text="未选择任何内容")
+        rootDir = self.getSelectedRow(0)[0]
+        if not rootDir:
             return
-        arg = arg[0]
-        if arg.sibling(arg.row(),3).data() != 0:
-            return
-        rootDir = arg.sibling(arg.row(),0).data()
         textureNode = ML.GetAllTextureNodes()
         for node in textureNode:
             if node.TextureDir!= rootDir:
@@ -200,20 +232,27 @@ class TextureArrange(MayaQWidgetDockableMixin,QtWidgets.QTabWidget):
             pm.PyNode(node.nodeName).setAttr(attrName,newTextureName)
         self.RefreshList()
         MMessage.info(parent=self,text="路径设置成功")
+    def getSelectedRow(self,layer):
+        #获取当前选择的index
+        arg = self.tvFileNodes.selectedIndexes()
+        #判断是否选择节点
+        if arg == []:
+            MMessage.warning(parent=self,text="未选择任何内容")
+            return False
+        arg = arg[0]
+        if arg.sibling(arg.row(),3).data() != layer:
+            return False
+        return [arg.sibling(arg.row(),i).data() for i in range(len(header_list))]
     @Slot()
     def copyTextures(self):
-        newRootDir = self.leNewTextureDir.text()
+        newRootDir = self.leNewTextureDir.text()#获取设置的路径
+        #判断路径是否为空
         if newRootDir == "":
             MMessage.warning(parent=self,text="路径为空")
             return
-        arg = self.tvFileNodes.selectedIndexes()
-        if arg == []:
-            MMessage.warning(parent=self,text="未选择任何内容")
+        rootDir = self.getSelectedRow(0)[0]
+        if not rootDir:
             return
-        arg = arg[0]
-        if arg.sibling(arg.row(),3).data() != 0:
-            return
-        rootDir = arg.sibling(arg.row(),0).data()
         textureNode = ML.GetAllTextureNodes()
         texWaitToCopy = []
         for node in textureNode:
@@ -237,19 +276,29 @@ class TextureArrange(MayaQWidgetDockableMixin,QtWidgets.QTabWidget):
         finish_signal.emit()
     @Slot(float)
     def UpdataProgress(self,value):
-        print(value)
         self.progress.setValue(value)
     @Slot()
     def onCopyTextureFinsihed(self):
         self.RefreshList()
+        self.progress.setValue(0)
         MMessage.info(parent=self,text="贴图复制完成")
 
-
+class SetTextureColorSpaceWidget(MComboBox):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.__init__ui()
+    def __init__ui(self):
+        colorSpaces = ["sRGB","Raw"]
+        menu = MMenu(exclusive=False,parent=self)
+        menu.set_data(colorSpaces)
+        self.set_menu(menu)
 
 def showUI():
     global textureArrange
     textureArrange = TextureArrange()
     textureArrange.show(dockable=True)
+
+
 
 
 if __name__ == "__main__":

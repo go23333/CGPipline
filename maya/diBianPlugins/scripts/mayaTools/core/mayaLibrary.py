@@ -24,6 +24,7 @@ class TextureNode(object):
  
 
 
+materialNodeNames = ['lambert','blinn','RedshiftMaterial','RedshiftArchitectural']
 
 def getScenename():
     scenename = cmds.file(q=True, sn=True).split('/')[-1]
@@ -447,9 +448,19 @@ def GetAllTextureNodes():
         textureNodes.append(myTextureNode)
     return textureNodes
 
-
+def GetMeshBaseFileNode(filenode):
+    materials = []
+    for nodeName in materialNodeNames:
+        materials += pm.listConnections(filenode,c=False,t=nodeName)
+    transfroms = []
+    for m in materials:
+        for sg in pm.listConnections(m,c=False,type="shadingEngine"):
+            transfroms += [node for node in sg.inputs() if pm.nodeType(node) == "transform"]
+    return transfroms
 
 
 if __name__ == "__main__":
     from mayaTools import reloadModule
     reloadModule()
+    
+    GetMeshBaseFileNode(pm.ls(selection=1)[0])
