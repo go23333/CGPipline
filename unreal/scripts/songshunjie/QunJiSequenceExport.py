@@ -211,17 +211,22 @@ class mw(QtWidgets.QWidget, MFieldMixin):
 
         notice_label=MLabel('使用前需手动拖动修改关卡序列中的对象顺序,否则会影响名称生成')
 
-        #导入文件
+        #只生成关卡序列
+        create_seq_btn=MPushButton(text="只创建新关卡序列")
+        create_seq_btn.clicked.connect(lambda:self.execute(fbx_export_switch=False))#不启用fbx导出
+
+        #导出文件
         self.flie_export=MLineEdit().save_file(filters=['fbx']).medium()
         self.flie_export.setPlaceholderText(self.tr("选择FBX导出目录"))
 
-        export_fbx_btn=MPushButton(text="导出当前关卡序列到FBX")
-        export_fbx_btn.clicked.connect(self.execute)
+        export_fbx_btn=MPushButton(text="创建新关卡序列并导出到FBX")
+        export_fbx_btn.clicked.connect(lambda:self.execute(fbx_export_switch=True))#启用fbx导出
 
         self.error_label=MLabel('')
         self.error_label.setStyleSheet('color: red;')
 
         folder_lay.addWidget(notice_label)
+        folder_lay.addWidget(create_seq_btn)
         folder_lay.addWidget(self.flie_export)
         folder_lay.addWidget(export_fbx_btn)
         folder_lay.addWidget(self.error_label)
@@ -234,73 +239,86 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         lay.addLayout(import_lay)
         self.setLayout(lay)
 
+    def createNewLevelSequence(self):
+        #获取当前level sequence
+        start_level_sequence=unreal.LevelSequenceEditorBlueprintLibrary.get_current_level_sequence()
+        #生成动画导出的路径名称
+        current_parent_path=sequenceCurrentPath(start_level_sequence)
+        #去掉无用字符
+        sequence_counts=re.sub(r'[a-zA-Z]','',current_parent_path.split('/')[-1]).split('_')
+        #根据当前文件名称生成新关卡序列名称
+        if len(sequence_counts)==3:
+            item_count=''
+            for count in sequence_counts:
+                #去除有效数字前的0后转为str累加
+                item_count+=str(int(count))+'-'
+            item_count=item_count.rsplit('-',1)[0]
+            new_seq_name=item_count+'_DaoChu'
+        else:
+            new_seq_name=current_parent_path.split('/')[-1]+'_DaoChu'
+
+        new_seq_path=current_parent_path+'/'+new_seq_name
+
+        #如果路径不存在就创建导出文件夹
+        if not unreal.EditorAssetLibrary.does_directory_exist(new_seq_path):
+            unreal.EditorAssetLibrary.make_directory(new_seq_path)
+
+        #导出基于关卡序列和当前世界的新动画序列，并且获取动画序列对象和其实结束帧
+        export_anim_seqs_dict=exportAnimSequence(start_level_sequence,new_seq_path)
+
+        #保存动画序列
+        unreal.EditorAssetLibrary.save_directory(new_seq_path)
+
+        #基于动画序列生成关卡序列
+        export_sequence=animSequenceToLevelSequence(export_anim_seqs_dict,new_seq_name,new_seq_path)
+
+        #保存
+        unreal.EditorAssetLibrary.save_directory(new_seq_path)
+
+        return export_sequence
+        
 
 
-    def execute(self):
+    def execute(self,fbx_export_switch:bool):
 
         #保存所有文件
         unreal.EditorAssetLibrary.save_directory('/Game')
 
         #规范化路径格式
         fbx_export_path=self.flie_export.text().replace('\\','/')
-        fbx_export_switch=0
+        fbx_legal=0
 
         #判断文件夹是否存在，不存在则不运行程序
         if os.path.exists(fbx_export_path.rsplit('/',1)[0]):
-            fbx_export_switch=1
+            fbx_legal=1
 
-        #判断输入框是否合法
-        if fbx_export_switch==1:
+        #判断是否导出FBX文件
+        if fbx_export_switch:
 
-            #清空错误提示
-            self.error_label.setText('')
+            #判断fbx导出输入框是否合法
+            if fbx_legal==1:
 
-            #判断fbx后缀是否合法，不合法的话添加后缀
-            path_suffix=fbx_export_path.split('.')[-1]
-            suffix_name='fbx'
-            if str(path_suffix).lower()!=suffix_name.lower():
-                fbx_export_path=fbx_export_path+'.fbx'
+                #清空错误提示
+                self.error_label.setText('')
 
-            #获取当前level sequence
-            start_level_sequence=unreal.LevelSequenceEditorBlueprintLibrary.get_current_level_sequence()
-            #生成动画导出的路径名称
-            current_parent_path=sequenceCurrentPath(start_level_sequence)
-            #去掉无用字符
-            sequence_counts=re.sub(r'[a-zA-Z]','',current_parent_path.split('/')[-1]).split('_')
-            #根据当前文件名称生成导出文件名称
-            if len(sequence_counts)==3:
-                item_count=''
-                for count in sequence_counts:
-                    #去除有效数字前的0后转为str累加
-                    item_count+=str(int(count))+'-'
-                item_count=item_count.rsplit('-',1)[0]
-                export_file_name=item_count+'_DaoChu'
+                #判断fbx后缀是否合法，不合法的话添加后缀
+                path_suffix=fbx_export_path.split('.')[-1]
+                suffix_name='fbx'
+                if str(path_suffix).lower()!=suffix_name.lower():
+                    fbx_export_path=fbx_export_path+'.fbx'
+
+                #创建包含新动画的新关卡序列并获取关卡序列名称
+                export_sequence=self.createNewLevelSequence()
+
+                #导出FBX
+                unreal.SequencerTools.export_level_sequence_fbx(sequenceFbxExportparams(fbx_export_path,export_sequence))   
+            
             else:
-                export_file_name=current_parent_path.split('/')[-1]+'_DaoChu'
+                self.error_label.setText('路径不合法,请检查路径')
 
-            export_path=current_parent_path+'/'+export_file_name
-
-            #如果路径不存在就创建导出文件夹
-            if not unreal.EditorAssetLibrary.does_directory_exist(export_path):
-                unreal.EditorAssetLibrary.make_directory(export_path)
-
-            #导出基于关卡序列和当前世界的新动画序列，并且获取动画序列对象和其实结束帧
-            export_anim_seqs_dict=exportAnimSequence(start_level_sequence,export_path)
-
-            #保存动画序列
-            unreal.EditorAssetLibrary.save_directory(export_path)
-
-            #基于动画序列生成关卡序列
-            export_sequence=animSequenceToLevelSequence(export_anim_seqs_dict,export_file_name,export_path)
-
-            #导出前保存
-            unreal.EditorAssetLibrary.save_directory(export_path)
-
-            #导出FBX
-            unreal.SequencerTools.export_level_sequence_fbx(sequenceFbxExportparams(fbx_export_path,export_sequence))   
-        
         else:
-            self.error_label.setText('路径不合法,请检查路径')
+            #创建包含新动画的新关卡序列
+            self.createNewLevelSequence()
 
 
 
