@@ -185,6 +185,7 @@ class CameraImporter(QtWidgets.QWidget):
 
         menubar = CommonMenuBar()  #定义菜单栏
         layMain.setMenuBar(menubar)
+        layMain.menuBar = menubar
         
         self.folderSelectGroup = folderSelectGroup(u"相机路径:") #定义路径选择组
 
@@ -241,6 +242,7 @@ class StaticMeshImporter(QtWidgets.QWidget):
         layMain = QtWidgets.QVBoxLayout()   #定义主布局
         menubar = CommonMenuBar()  #定义菜单栏
         layMain.setMenuBar(menubar)
+        layMain.menuBar = menubar
 
         self.folderSelectGroup = folderSelectGroup("网格体文件路径:") #定义路径选择组
 
@@ -298,6 +300,7 @@ class LightTools(QtWidgets.QWidget):
         layMain = QtWidgets.QVBoxLayout()   #定义主布局
         menubar = CommonMenuBar()  #定义菜单栏
         layMain.setMenuBar(menubar)
+        layMain.menuBar = menubar
         # 添加一些按钮
         pbAutoID = MPushButton("自动ID(包括植物)")
         pbAutoID.clicked.connect(self.autoID)
@@ -358,6 +361,7 @@ class LevelDesignTool(QtWidgets.QWidget):
         layMain = QtWidgets.QVBoxLayout()   #定义主布局
         menubar = CommonMenuBar()  #定义菜单栏
         layMain.setMenuBar(menubar)
+        layMain.menuBar = menubar
         # 添加一些按钮
         pbOpenSelectedFoliage = MPushButton(text="打开选中植物窗口")
         pbOpenSelectedFoliage.clicked.connect(self.openSelectedFoliage)
@@ -413,6 +417,7 @@ class Settings(QtWidgets.QWidget):
 
         menubar = CommonMenuBar()  #定义菜单栏
         layMain.setMenuBar(menubar)
+        layMain.menuBar = menubar
 
         # 相机设置
         layCameraImportSettings = QtWidgets.QVBoxLayout()  #定义Q主布局
