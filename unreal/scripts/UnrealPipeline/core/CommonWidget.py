@@ -24,6 +24,8 @@ import functools
 
 import UnrealPipeline.core.utilis as UU
 
+
+
 class FetchCameraDataWorker(QtCore.QThread):
     def __init__(self,parent=None):
         super().__init__(parent)
@@ -38,10 +40,11 @@ class FetchCameraDataWorker(QtCore.QThread):
 
 class CommonMenuBar(QtWidgets.QMenuBar):
     def __init__(self,parent=None):
+        from UnrealPipeline.Settings.Settings import Start
         super().__init__(parent)
         menuEdit = self.addMenu("编辑")
         aSetting = menuEdit.addAction("设置")
-        #aSetting.triggered.connect() 
+        aSetting.triggered.connect(Start) 
         menuHelp = self.addMenu("帮助")
         aHelp = menuHelp.addAction("打开帮助页面")
 

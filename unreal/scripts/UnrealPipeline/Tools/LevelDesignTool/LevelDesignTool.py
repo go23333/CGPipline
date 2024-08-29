@@ -22,11 +22,11 @@ class LevelDesignTool(QtWidgets.QWidget):
         super().__init__(parent)
         self.setWindowTitle("地编工具")
         self.resize(300,400)
+        self.move(800,600)
         self.__init_ui()
     def __init_ui(self):
         layMain = QtWidgets.QVBoxLayout()   #定义主布局
-        menubar = CommonMenuBar()  #定义菜单栏
-        layMain.setMenuBar(menubar)
+
         # 添加一些按钮
         pbOpenSelectedFoliage = MPushButton(text="打开选中植物窗口")
         pbOpenSelectedFoliage.clicked.connect(self.openSelectedFoliage)
@@ -46,7 +46,9 @@ class LevelDesignTool(QtWidgets.QWidget):
         layBreakBlueprint.addWidget(self.cboxDeleteOriginalBlueprint)
         layBreakBlueprint.addWidget(pbBreakBlueprint)
 
-
+        menubar = CommonMenuBar()  #定义菜单栏
+        layMain.menuBar = menubar
+        layMain.setMenuBar(menubar)
         layMain.addWidget(pbOpenSelectedFoliage)
         layMain.addWidget(pbConvertFoliageToStaticMesh)
         layMain.addWidget(pbEnalbeFullPercisionUV)

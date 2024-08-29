@@ -30,12 +30,14 @@ class StaticMeshImporter(QtWidgets.QWidget):
         super().__init__(parent)
         self.setWindowTitle("静态网格体导入")
         self.resize(600,400)
+        self.move(800,400)
         self.__init_ui()
     def __init_ui(self):
 
         layMain = QtWidgets.QVBoxLayout()   #定义主布局
         menubar = CommonMenuBar()  #定义菜单栏
         layMain.setMenuBar(menubar)
+        layMain.menuBar = menubar
 
         self.folderSelectGroup = folderSelectGroup("网格体文件路径:") #定义路径选择组
 

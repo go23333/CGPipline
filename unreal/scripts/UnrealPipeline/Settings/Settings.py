@@ -20,7 +20,7 @@ from dayu_widgets.qt import application
 from dayu_widgets import dayu_theme
 
 
-from UnrealPipeline.core.CommonWidget import CommonMenuBar
+
 
 import UnrealPipeline.core.Config as UC
 import UnrealPipeline.core.utilis as UU
@@ -31,13 +31,12 @@ class Settings(QtWidgets.QWidget):
         super().__init__(parent=None)
         self.setWindowTitle("全局设置")
         self.resize(500,400)
+        self.move(800,600)
         self.__init_ui()
         self.__loadConfig()
     def __init_ui(self):
         layMain = QtWidgets.QVBoxLayout()
 
-        menubar = CommonMenuBar()  #定义菜单栏
-        layMain.setMenuBar(menubar)
 
         # 相机设置
         layCameraImportSettings = QtWidgets.QVBoxLayout()  #定义Q主布局

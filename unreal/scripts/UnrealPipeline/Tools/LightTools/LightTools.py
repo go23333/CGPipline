@@ -22,11 +22,10 @@ class LightTools(QtWidgets.QWidget):
         super().__init__(parent)
         self.setWindowTitle("灯光工具")
         self.resize(300,400)
+        self.move(800,400)
         self.__init_ui()
     def __init_ui(self):
         layMain = QtWidgets.QVBoxLayout()   #定义主布局
-        menubar = CommonMenuBar()  #定义菜单栏
-        layMain.setMenuBar(menubar)
         # 添加一些按钮
         pbAutoID = MPushButton("自动ID(包括植物)")
         pbAutoID.clicked.connect(UH.autoID())
@@ -42,6 +41,10 @@ class LightTools(QtWidgets.QWidget):
         pbACtorVisible.clicked.connect(self.ACtorVisible)
         self.wNearClip = SpinBoxWithLabel("近裁剪面:",0,1,6,1000.0,0.00001,0.00001,0.00001)
         self.wNearClip.setOnValueChanged(self.nearClip)
+        menubar = CommonMenuBar()  #定义菜单栏
+        layMain.menuBar = menubar
+        
+        layMain.setMenuBar(menubar)
         layMain.addWidget(pbAutoID)
         layMain.addWidget(pbPoolSize)
         layMain.addWidget(pbPopEmmissive)
@@ -50,9 +53,10 @@ class LightTools(QtWidgets.QWidget):
         layMain.addWidget(pbACtorVisible)
         layMain.addWidget(self.wNearClip,alignment=QtCore.Qt.AlignTop)
         self.setLayout(layMain)
+
+
     def openImportCameraUI(self):
         UH.openImportCameraUI()
-        pass
     def nearClip(self):
         value = self.wNearClip.getValue()
         UH.nearClip(value)

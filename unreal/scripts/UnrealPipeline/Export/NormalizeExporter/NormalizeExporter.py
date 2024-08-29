@@ -13,7 +13,7 @@ from dayu_widgets.qt import application
 from dayu_widgets import dayu_theme
 import unreal
 
-from UnrealPipeline.core.CommonWidget import folderSelectGroup
+from UnrealPipeline.core.CommonWidget import folderSelectGroup,CommonMenuBar
 import UnrealPipeline.core.UnrealHelper as UH
 
 class NormalizeExporter(QtWidgets.QWidget):
@@ -24,6 +24,10 @@ class NormalizeExporter(QtWidgets.QWidget):
         self.__init_ui()
     def __init_ui(self):
         layMain = QtWidgets.QVBoxLayout()
+        menubar = CommonMenuBar()
+        layMain.menuBar = menubar
+        layMain.setMenuBar(menubar)
+
         self.folderSelectGroup = folderSelectGroup(u"选择导出路径:") 
         btnImport = MPushButton(u"导出选中的资产")
         btnImport.clicked.connect(self.__export)
