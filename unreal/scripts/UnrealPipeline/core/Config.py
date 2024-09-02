@@ -17,6 +17,8 @@ class globalConfig():
         self.CameraimportAspectRatio = 1.777778
         self.cameraImportPreRollFrame = 10
         self.cameraImportPostRollFrame = 10
+        self.cameraPlaybackStartOffset = 0
+        self.cameraPlaybackEndOffset = 0
         # paramater Mesh Import
         self.StaticMeshImportPathPatten = "/Game/Assets/Scene/Mesh/"
         # paramater Texture Import

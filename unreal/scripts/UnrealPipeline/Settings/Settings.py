@@ -80,6 +80,18 @@ class Settings(QtWidgets.QWidget):
         layCameraRollFrame.addWidget(MLabel("相机导入后滚帧"))
         layCameraRollFrame.addWidget(self.cameraImportPostRollFrame)
 
+        # 相机导入playback Range 设置
+
+        self.cameraImportPlayBackRangeStart = MSpinBox()
+        self.cameraImportPlayBackRangeEnd = MSpinBox()
+
+        layCameraPlayBackRange = QtWidgets.QHBoxLayout()
+
+        layCameraPlayBackRange.addWidget(MLabel("相机导入回放范围开始偏移值"))
+        layCameraPlayBackRange.addWidget(self.cameraImportPlayBackRangeStart)
+        layCameraPlayBackRange.addWidget(MLabel("相机导入回放范围结束偏移值"))
+        layCameraPlayBackRange.addWidget(self.cameraImportPlayBackRangeEnd)
+
 
 
         # NOTE add to main layout
@@ -90,6 +102,7 @@ class Settings(QtWidgets.QWidget):
         layCameraImportSettings.addLayout(layMacroOutput)
         layCameraImportSettings.addLayout(layCameraAspectRatio)
         layCameraImportSettings.addLayout(layCameraRollFrame)
+        layCameraImportSettings.addLayout(layCameraPlayBackRange)
         # 静态网格体设置
         layMeshImportSettings = QtWidgets.QVBoxLayout()  #定义Q主布局
         layMeshImportSettings.setSpacing(5)
@@ -121,7 +134,7 @@ class Settings(QtWidgets.QWidget):
 
         layoutbuttons = QtWidgets.QHBoxLayout()
         pbSaveConfig = MPushButton("保存设置")
-        pbSaveConfig.clicked.connect(self.saveConfig)
+        pbSaveConfig.clicked.connect(self.__saveConfig)
         layoutbuttons.addWidget(pbSaveConfig,alignment=QtCore.Qt.AlignRight)
 
 
@@ -136,11 +149,17 @@ class Settings(QtWidgets.QWidget):
         self.sbCameraRatio.setValue(UC.globalConfig.get().CameraimportAspectRatio)
         self.cameraImportPreRollFrame.setValue(UC.globalConfig.get().cameraImportPreRollFrame)
         self.cameraImportPostRollFrame.setValue(UC.globalConfig.get().cameraImportPostRollFrame)
-    def saveConfig(self):
+
+        self.cameraImportPlayBackRangeStart.setValue(UC.globalConfig.get().cameraPlaybackStartOffset)
+        self.cameraImportPlayBackRangeEnd.setValue(UC.globalConfig.get().cameraPlaybackEndOffset)
+    def __saveConfig(self):
         UC.globalConfig.get().CameraImportPathPatten = self.leCameraInputMacro.text()
         UC.globalConfig.get().CameraimportAspectRatio = self.sbCameraRatio.value()
         UC.globalConfig.get().cameraImportPreRollFrame = self.cameraImportPreRollFrame.value()
         UC.globalConfig.get().cameraImportPostRollFrame = self.cameraImportPostRollFrame.value()
+
+        UC.globalConfig.get().cameraPlaybackStartOffset = self.cameraImportPlayBackRangeStart.value()
+        UC.globalConfig.get().cameraPlaybackEndOffset = self.cameraImportPlayBackRangeEnd.value()
         UC.globalConfig.get().saveConfig()
         pass
     def applyMacroCamera(self):
@@ -148,7 +167,6 @@ class Settings(QtWidgets.QWidget):
         if parseResult:
             result = UU.applyMacro(self.leCameraInputMacro.text(),parseResult)
             self.leMacroOutput.setText(os.path.normpath(result))
-
 
 def Start():
     with application() as app:

@@ -506,8 +506,8 @@ def importCameras(datas:list):
             assetPath = UT.applyMacro(globalConfig.get().CameraImportPathPatten,parsedName) # 应用宏替换
             wrapLevelSeq = WarpLevelSequence.create(assetPath,False)                     # 创建关卡序列
             wrapLevelSeq.setFrameRate(25)                                                # 设置帧率
-            wrapLevelSeq.setPlayBackStart(int(parsedName["frameStart"]))
-            wrapLevelSeq.setPlayBackEnd(int(parsedName["frameEnd"]))
+            wrapLevelSeq.setPlayBackStart(int(parsedName["frameStart"])-globalConfig.get().cameraPlaybackStartOffset)
+            wrapLevelSeq.setPlayBackEnd(int(parsedName["frameEnd"])+globalConfig.get().cameraPlaybackStartOffset)
             wrapLevelSeq.importCamera(path,globalConfig.get().CameraimportUniformScale)                                              # 导入相机
             templist = wrapLevelSeq.getBindingProxyAndObject(unreal.CineCameraActor)
             if not templist:
@@ -518,7 +518,7 @@ def importCameras(datas:list):
             wrapCamera.setFilmback(FilmBackPreset.DSLR)
             wrapCamera.setFocusMethod(unreal.CameraFocusMethod.DISABLE)
             wrapCamera.setAspectRatio(globalConfig.get().CameraimportAspectRatio)
-            wrapLevelSeq.SetCameraCutsStartEnd(int(parsedName["frameStart"])-10,int(parsedName["frameEnd"])+10)
+            wrapLevelSeq.SetCameraCutsStartEnd(int(parsedName["frameStart"])-globalConfig.get().cameraImportPreRollFrame,int(parsedName["frameEnd"])+globalConfig.get().cameraImportPostRollFrame)
             wrapLevelSeq.setLock(True)                                                    # 锁定序列
             wrapLevelSeq.saveAsset()
         else:
