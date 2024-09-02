@@ -27,7 +27,7 @@ class globalConfig():
         # paramater Material Create
         self.MaterialInstancePath = "/Game/Assets/Scene/Material/"
         self.LocalSceneDefaultMaterial = "/Game/Assets/Scene/Common/Material/M_BG_ARM"
-        self.SceneDefaultMaterial = "/ZynnPlugin/Assets/Material/M_BG_ARM"
+        self.SceneDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_BG_ARM"
         self.loadConfig()
     def saveConfig(self):
         import json
