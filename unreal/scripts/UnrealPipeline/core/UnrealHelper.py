@@ -978,6 +978,11 @@ def MakeEntry(name:str,label:str,command:str = "",toolTip:str = "") -> unreal.To
     entry.set_string_command(unreal.ToolMenuStringCommandType.PYTHON,"",command)
     return entry
 if __name__ == "__main__":
+    print(unrealEditorSybsystem.get_level_viewport_camera_info())
+
+
+
+
     # NormalizeExport(r"E:\HuaWiProject\Output")
     # #FoliageToSMActor()
     pass

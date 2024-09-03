@@ -16,6 +16,7 @@ from dayu_widgets import dayu_theme
 from dayu_widgets.item_view import MTableView,MTableModel
 from dayu_widgets.item_model import MSortFilterModel
 from dayu_widgets.push_button import MPushButton
+from dayu_widgets.check_box import MCheckBox
 
 import unreal
 
@@ -62,8 +63,11 @@ class LevelInfo(CommonMainWindow):
         button_refresh = MPushButton("    刷新    ")
         button_refresh.clicked.connect(self.__refresh)
 
+        self.checkbox_only_in_camera = MCheckBox("仅显示镜头中的物体")
+
 
         layout_header.addWidget(button_refresh,alignment=Qt.AlignLeft)
+        layout_header.addWidget(self.checkbox_only_in_camera,alignment=Qt.AlignRight)
 
         self.tvMain = MTableView(size=dayu_theme.medium, show_row_count=True)
         self.dataModle = MTableModel()
@@ -112,6 +116,10 @@ class LevelInfo(CommonMainWindow):
         staticMeshs = []
         for actor in actors:
             actor:unreal.Actor
+            print(actor.was_recently_rendered(0.001))
+            #判断actor是否在屏幕上
+            if self.checkbox_only_in_camera.isChecked() and not actor.was_recently_rendered(0.001):
+                continue
             components = []
             componentsStaticmesh = actor.get_components_by_class(unreal.StaticMeshComponent)
             componentsFStaticmesh = actor.get_components_by_class(unreal.FoliageInstancedStaticMeshComponent)
@@ -122,7 +130,7 @@ class LevelInfo(CommonMainWindow):
                 components += componentsFStaticmesh
             if components  == []:
                 continue
-            for component in components:
+            for component in components:#遍历每个组件
                 # 判断静态网格体是否可用
                 staticMesh = component.static_mesh
                 if not staticMesh:
@@ -135,6 +143,7 @@ class LevelInfo(CommonMainWindow):
                 else:
                     self.datas[staticMeshs.index(wrapStaticMesh.asset)]["Count"] += 1
                     self.datas[staticMeshs.index(wrapStaticMesh.asset)]["Actor"] = "Actors"
+        # 统计数据
         for data in self.datas:
             self._objectCountSum += data["Count"]
             self._verticesNumberSum += (data["Count"] * data["VerticesNumber"])

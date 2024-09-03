@@ -30,6 +30,7 @@ class globalConfig():
         self.LocalSceneDefaultMaterial = "/Game/Assets/Scene/Common/Material/M_BG_ARM"
         self.SceneDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_BG_ARM"
         # engine version
+        self.engine_version = unreal.SystemLibrary.get_engine_version().split("-")[-1]
         self.loadConfig()
     def saveConfig(self):
         import json
