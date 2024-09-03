@@ -122,20 +122,19 @@ class LevelInfo(CommonMainWindow):
                 components += componentsFStaticmesh
             if components  == []:
                 continue
-
             for component in components:
                 # 判断静态网格体是否可用
                 staticMesh = component.static_mesh
                 if not staticMesh:
                     continue
                 wrapStaticMesh = UH.WrapStaticMesh(staticMesh)
-            if wrapStaticMesh.asset not in staticMeshs:
-                data = dict(Object=wrapStaticMesh.get_asset_name(),Actor=actor.get_name(),Count=1,VerticesNumber = wrapStaticMesh.get_vertices_count())
-                self.datas.append(data)
-                staticMeshs.append(wrapStaticMesh.asset)
-            else:
-                self.datas[staticMeshs.index(wrapStaticMesh.asset)]["Count"] += 1
-                self.datas[staticMeshs.index(wrapStaticMesh.asset)]["Actor"] = "Actors"
+                if wrapStaticMesh.asset not in staticMeshs:
+                    data = dict(Object=wrapStaticMesh.get_asset_name(),Actor=actor.get_name(),Count=1,VerticesNumber = wrapStaticMesh.get_vertices_count())
+                    self.datas.append(data)
+                    staticMeshs.append(wrapStaticMesh.asset)
+                else:
+                    self.datas[staticMeshs.index(wrapStaticMesh.asset)]["Count"] += 1
+                    self.datas[staticMeshs.index(wrapStaticMesh.asset)]["Actor"] = "Actors"
         for data in self.datas:
             self._objectCountSum += data["Count"]
             self._verticesNumberSum += (data["Count"] * data["VerticesNumber"])
