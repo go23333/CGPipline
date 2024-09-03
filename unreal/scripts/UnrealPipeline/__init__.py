@@ -32,6 +32,10 @@ def InstallMenu():
     from UnrealPipeline.Export import InstallMenu
     InstallMenu(toolbar)
 
+    
+    from UnrealPipeline.info import InstallMenu
+    InstallMenu(toolbar)
+
     menus.refresh_all_widgets()
     
 

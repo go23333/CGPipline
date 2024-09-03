@@ -32,6 +32,8 @@ class WrapBaseAsset():
         self.asset = asset
     def saveAsset(self,onlyIfIsDirty = True):
         unreal.EditorAssetLibrary.save_loaded_asset(self.asset,onlyIfIsDirty)
+    def get_asset_name(self)-> str:
+        return self.asset.get_name()
 
 
 class WarpLevelSequence(WrapBaseAsset):
@@ -119,6 +121,8 @@ class WrapStaticMesh(WrapBaseAsset):
     def setMaterialBySloatName(self,sloatName:str,Material:unreal.MaterialInterface):
         index = self.asset.get_material_index(sloatName)
         self.asset.set_material(index,Material)
+    def get_vertices_count(self):
+        return(staticMeshEditorSubsystem.get_number_verts(self.asset,0))
     @classmethod
     def importFromFbx(cls,sourcePath:str,destinationPath,scale:int):
         # 构建导入选项
