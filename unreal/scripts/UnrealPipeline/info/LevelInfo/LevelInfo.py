@@ -114,18 +114,20 @@ class LevelInfo(CommonMainWindow):
             actor:unreal.Actor
             components = []
             componentsStaticmesh = actor.get_components_by_class(unreal.StaticMeshComponent)
-
             componentsFStaticmesh = actor.get_components_by_class(unreal.FoliageInstancedStaticMeshComponent)
-
+            # 判断是否获取到了跟静态网格体
             if componentsStaticmesh:
                 components += componentsStaticmesh
             if componentsFStaticmesh:
                 components += componentsFStaticmesh
             if components  == []:
                 continue
-
+            # 判断静态网格体是否可用
+            staticMesh = component.static_mesh
+            if not staticMesh:
+                continue
             for component in components:
-                wrapStaticMesh = UH.WrapStaticMesh(component.static_mesh)
+                wrapStaticMesh = UH.WrapStaticMesh(staticMesh)
             if wrapStaticMesh.asset not in staticMeshs:
                 data = dict(Object=wrapStaticMesh.get_asset_name(),Actor=actor.get_name(),Count=1,VerticesNumber = wrapStaticMesh.get_vertices_count())
                 self.datas.append(data)
