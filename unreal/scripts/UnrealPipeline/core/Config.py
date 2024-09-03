@@ -5,6 +5,7 @@
 # Email  : 978654313@qq.com
 # version: 3.9.7
 ##################################################################
+import unreal
 class globalConfig():
     _instance = None
     def __init__(self) -> None:
@@ -28,6 +29,7 @@ class globalConfig():
         self.MaterialInstancePath = "/Game/Assets/Scene/Material/"
         self.LocalSceneDefaultMaterial = "/Game/Assets/Scene/Common/Material/M_BG_ARM"
         self.SceneDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_BG_ARM"
+        # engine version
         self.loadConfig()
     def saveConfig(self):
         import json

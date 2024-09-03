@@ -122,11 +122,12 @@ class LevelInfo(CommonMainWindow):
                 components += componentsFStaticmesh
             if components  == []:
                 continue
-            # 判断静态网格体是否可用
-            staticMesh = component.static_mesh
-            if not staticMesh:
-                continue
+
             for component in components:
+                # 判断静态网格体是否可用
+                staticMesh = component.static_mesh
+                if not staticMesh:
+                    continue
                 wrapStaticMesh = UH.WrapStaticMesh(staticMesh)
             if wrapStaticMesh.asset not in staticMeshs:
                 data = dict(Object=wrapStaticMesh.get_asset_name(),Actor=actor.get_name(),Count=1,VerticesNumber = wrapStaticMesh.get_vertices_count())
