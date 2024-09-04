@@ -290,7 +290,10 @@ def exportFBXStatic(object,path):
     cmds.select( clear=True )
 
 def export_fbx_without_dialog(object,path):
+    pm.select(clear=1)
+    pm.select(object)
     pm.mel.FBXExport(object,f=path,s=1)
+    pm.select(clear=1)
     
 def import_fbx_without_dialog(fbxfile):
     beforeImportNodes = pm.ls(long=1)

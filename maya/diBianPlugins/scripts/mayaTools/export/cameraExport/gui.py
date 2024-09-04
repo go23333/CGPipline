@@ -91,6 +91,7 @@ class CameraExporertUI:
         cmds.textField(target,text=PL.normailizePath(path),e=1)
     def btnExportCamera(self,*arg):
         slnodes = ML.getSelectNodes(False)
+        pm.select(clear=1)
         nslnodes = []
         for slnode in slnodes:
             if cmds.listRelatives(slnode,s=1) == None:
@@ -141,3 +142,8 @@ class CameraExporertUI:
 def showUI():
     UI = CameraExporertUI()
     UI.show()
+
+if __name__ == "__main__":
+    from mayaTools import reloadModule
+    reloadModule()
+    showUI()
