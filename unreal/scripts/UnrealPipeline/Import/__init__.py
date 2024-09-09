@@ -16,5 +16,5 @@ def InstallMenu(rootMenu:unreal.ToolMenu):
     entry = MakeEntry("model_import","地编模型导入",toolTip="",command="from UnrealPipeline.songshunjie import ScenesFolder;ScenesFolder.start()")
     submenu.add_menu_entry("",entry)
 
-    entry = MakeEntry("material_model_import","材质模型导入",toolTip="",command="from UnrealPipeline.songshunjie import ShadeCreate;ShadeCreate.start()")
+    entry = MakeEntry("material_model_import","角色材质模型导入",toolTip="",command="from UnrealPipeline.songshunjie import ShadeCreate;ShadeCreate.start()")
     submenu.add_menu_entry("",entry)
