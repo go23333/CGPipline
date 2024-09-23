@@ -34,6 +34,9 @@ pm.menuItem(label=u'检查模型重复',command="mayaTools.others.checkRepeat()"
 pm.menuItem(label=u'检查物体隐藏显示',command="mayaTools.others.checkHidden()")
 pm.menuItem(label=u'随机选择面',command="mayaTools.others.randomSelectFaces()")
 pm.menuItem(label=u'贴图自动刷新开关',command="mayaTools.others.distableRefreshTextures()")
+
+#ssj插件
+pm.menuItem(label=u'UDIM材质分离',command="mayaTools.SongShunJie.UDIM_Split.start()")
  
 
 
@@ -45,6 +48,12 @@ pm.menuItem(label=u'相机导出',command="mayaTools.cameraExporter.CameraExport
 pm.menuItem(label=u'静态网格体导出',command="import module.unreal.collection_textures_combine as ctc;ctc.MayaToUnrealPackUtil()")
 pm.menuItem(label=u'毛发导出',command="mayaTools.xgenexporter.xgentoolsMain()")
 pm.menuItem(label=u'地编流程工具',command="mayaTools.editPiplineTools.editPiplineToolsMain()")
+
+#ssj插件
+pm.menuItem(label=u'动画自动烘焙导出工具',command="mayaTools.SongShunJie.AnimationAutoBake1.1.start()")
+pm.menuItem(label=u'动画烘焙导出工具',command="mayaTools.SongShunJie.AnimationBake1.1.start()")
+pm.menuItem(label=u'BlendShape烘焙工具(布料解算)',command="mayaTools.SongShunJie.BsBake.start()")
+pm.menuItem(label=u'UE角色材质模型导出工具',command="mayaTools.SongShunJie.UeCharacterShader.start()")
 
 
 pm.setParent('..',menu=True)
