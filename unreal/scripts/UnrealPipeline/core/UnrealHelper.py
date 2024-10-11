@@ -121,6 +121,8 @@ class WrapStaticMesh(WrapBaseAsset):
     def setMaterialBySloatName(self,sloatName:str,Material:unreal.MaterialInterface):
         index = self.asset.get_material_index(sloatName)
         self.asset.set_material(index,Material)
+    def setMaterialByIndex(self,index:int,Material:unreal.MaterialInterface):
+        self.asset.set_material(index,Material)
     def get_vertices_count(self):
         return(staticMeshEditorSubsystem.get_number_verts(self.asset,0))
     @classmethod
@@ -155,14 +157,21 @@ class WrapTexture(WrapBaseAsset):
     def setAsLinerColor(self):
         self.asset.compression_settings = unreal.TextureCompressionSettings.TC_MASKS
         self.asset.srgb = False
+        pass
     def setAsNormal(self):
         self.asset.compression_settings = unreal.TextureCompressionSettings.TC_NORMALMAP
         self.asset.srgb = False
     @classmethod
     def importTexture(cls,sourcePath:str,destinationPath:str):
-        task = buildImportTask(sourcePath,destinationPath)
-        unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
-        return(WrapTexture(task.get_objects()[0]))
+        importData = unreal.AutomatedAssetImportData()
+        importData.destination_path = destinationPath
+        importData.filenames = [sourcePath]
+        importData.replace_existing = True
+        importData.factory = unreal.TextureFactory()
+        try:
+            return(WrapTexture(unreal.AssetToolsHelpers.get_asset_tools().import_assets_automated(importData)[0]))
+        except IndexError:
+            return False
 
 class WrapMaterial(WrapBaseAsset):
     def __init__(self,asset:unreal.Material) -> None:
@@ -325,14 +334,14 @@ class FilmBackPreset():
     Super16mm = "Super 16mm"
 # 函数
 def createGerericAsset(assetPath:str,uniqueName:bool,assetClass:unreal.StreamableRenderAsset,assetFactory:unreal.Factory):
+    #保证路径分隔符为斜杠
+    assetPath = assetPath.replace("\\","/")
     if uniqueName:
         assetPath,assetName = unreal.AssetToolsHelpers.get_asset_tools().create_unique_asset_name(base_package_name=assetPath,suffix="")
     if not unreal.EditorAssetLibrary.does_asset_exist(asset_path=assetPath):
-        path = assetPath.rsplit("/",1)[0]
-        name = assetPath.rsplit("/",1)[1]
         unreal.AssetToolsHelpers.get_asset_tools().create_asset(
-            asset_name=name,
-            package_path=path,
+            asset_name = os.path.basename(assetPath),
+            package_path = os.path.dirname(assetPath),
             asset_class=assetClass,
             factory=assetFactory
         )
@@ -353,7 +362,8 @@ def buildImportTask(filePath:str,destinationPath:str,options = None):
     task.filename = filePath
     task.replace_existing = True
     task.save = True
-    task.options = options
+    if options:
+        task.options = options
     return task
 
 def unrealLog(category:str,text:str):
@@ -529,38 +539,42 @@ def importCameras(datas:list):
             unrealLogError("相机导入",f"无法解析相机名称{name}")
 
 
-def textureImport(texturePaths:list):
-    wrapTex = WrapTexture.importTexture( texturePaths[0],globalConfig.get().TextureImportPathPatten)
+def textureImport(texturePaths:list,path):
+    wrapTex = WrapTexture.importTexture(texturePaths[0],path)
     if len(texturePaths) == 1:
         return wrapTex
     if not (wrapTex.setVTEnable(globalConfig.get().TextureEnableVT) and globalConfig.get().TextureEnableVT):
         UT.ConvertTexture.resizerTextures(texturePaths)
-        wrapTex = WrapTexture.importTexture(texturePaths[0],globalConfig.get().TextureImportPathPatten)
+        wrapTex = WrapTexture.importTexture(texturePaths[0],path)
     return wrapTex
+
 
 
 def importStaticmeshs(datas:list,sceneName=None):
     saveAll()          # 保存所有资产,防止导入过程中崩溃
-    duplicate_asset(globalConfig.get().SceneDefaultMaterial,globalConfig.get().LocalSceneDefaultMaterial)
-    wrapMaterial = WrapMaterial(unreal.load_asset(globalConfig.get().LocalSceneDefaultMaterial))
+    #duplicate_asset(globalConfig.get().SceneDefaultMaterial,globalConfig.get().LocalSceneDefaultMaterial)
+    # 载入对应母球
+    wrapMaterial = WrapMaterial(unreal.load_asset(globalConfig.get().SceneDefaultVTMaterial))
     for data in datas: # 遍历所有传入的资产数据
         name = data["name"]
         path = data["path"]
         parseReslut = UT.parseStaticMeshName(name,sceneName)
-        destinationPath = UT.applyMacro(globalConfig.get().StaticMeshImportPathPatten,parseReslut)
-        wrapSM = WrapStaticMesh.importFromFbx(path,destinationPath,1) #导入静态网格体
+        rootPath = UT.applyMacro(globalConfig.get().StaticMeshImportPathPatten,parseReslut)
+        wrapSM = WrapStaticMesh.importFromFbx(path,os.path.join(rootPath,"Mesh"),1) #导入静态网格体
+        
         JsonPath = path.replace('.fbx','.json')
-        Json_file = UT.ReadJsonFile(JsonPath)
-        MaterialInfoList = UT.analyseJson(Json_file)
+        with open(JsonPath,"r",encoding="utf-8") as f:
+            jsonData = json.loads(f.read())
+        MaterialInfoList = UT.analyseJson(jsonData)
         for MaterialInfo in MaterialInfoList:
             # 判断是否创建材质
             if not MaterialInfo['CreateMaterial']:
                 continue
-            wrapMaterialIns = WrapMaterialInstance.create(globalConfig.get().MaterialInstancePath + MaterialInfo["Materialname"])
+            wrapMaterialIns = WrapMaterialInstance.create(os.path.join(rootPath,f"Material/{MaterialInfo['Materialname']}"))
             wrapMaterialIns.setParent(wrapMaterial.asset)
             TexturePath = MaterialInfo['TexturePath']
             if TexturePath['diffuse_color'] != None:
-                wrapBaseColor = textureImport(TexturePath['diffuse_color'])
+                wrapBaseColor = textureImport(TexturePath['diffuse_color'],os.path.join(rootPath,"Texture"))
                 wrapBaseColor.setAsColor()
                 wrapBaseColor.setVTEnable(True)
                 wrapBaseColor.saveAsset()
@@ -570,22 +584,20 @@ def importStaticmeshs(datas:list,sceneName=None):
                 ARMSPath = TexturePath['refl_metalness']
             else:
                 ARMSPath = TexturePath['refl_roughness']
-            WrapARMS = textureImport(ARMSPath)
+            WrapARMS = textureImport(ARMSPath,os.path.join(rootPath,"Texture"))
             WrapARMS.setAsLinerColor()
             WrapARMS.setVTEnable(True)
             WrapARMS.saveAsset()
             wrapMaterialIns.setTextureParameter("ARMS_Map",WrapARMS.asset)
-            
-            
             if TexturePath['bump_input'] != None:
-                wrapNormal = textureImport(TexturePath['bump_input'])
+                wrapNormal = textureImport(TexturePath['bump_input'],os.path.join(rootPath,"Texture"))
                 wrapNormal.setAsNormal()
                 wrapNormal.setVTEnable(True)
                 wrapNormal.saveAsset()
                 wrapMaterialIns.setTextureParameter("Normal_Map",wrapNormal.asset)
 
             if TexturePath['emission_color'] != None:
-                WrapEmissive = textureImport(TexturePath['emission_color'])
+                WrapEmissive = textureImport(TexturePath['emission_color'],os.path.join(rootPath,"Texture"))
                 WrapEmissive.setAsColor()
                 WrapEmissive.setVTEnable(True)
                 WrapEmissive.saveAsset()
@@ -597,6 +609,13 @@ def importStaticmeshs(datas:list,sceneName=None):
 
 
 
+
+
+        
+
+        
+        
+ 
 class MyTexture2D(object):
     def __init__(self):
         self.sloatname = None
@@ -977,14 +996,63 @@ def MakeEntry(name:str,label:str,command:str = "",toolTip:str = "") -> unreal.To
     entry.set_tool_tip(toolTip)
     entry.set_string_command(unreal.ToolMenuStringCommandType.PYTHON,"",command)
     return entry
+
+
+
+def importAssetPipline(AssetData:dict):
+    currentPath = unreal.EditorUtilityLibrary.get_current_content_browser_path()
+    rootPath = os.path.join(currentPath,f"MyBridge/{AssetData['name']}_{AssetData['AssetID']}")
+    wrapMaterial = WrapMaterial(unreal.load_asset(globalConfig.get().SceneDefaultMaterial))
+    if AssetData["assetFormat"] == 'FBX':# 当类型为FBX资产
+        #导入贴图
+        t_arm = WrapTexture.importTexture(AssetData["arm"],os.path.join(rootPath,f"Textures"))
+        t_arm.saveAsset()
+        t_arm.setAsLinerColor()
+        t_arm.setVTEnable(False)
+        t_arm.saveAsset()
+
+        t_baseColor = WrapTexture.importTexture(AssetData["baseColor"],os.path.join(rootPath,f"Textures"))
+        t_baseColor.setAsColor()
+        t_baseColor.setVTEnable(False)
+        t_baseColor.saveAsset()
+
+
+        t_normal = WrapTexture.importTexture(AssetData["normal"],os.path.join(rootPath,f"Textures"))
+        t_normal.setAsNormal()
+        t_normal.setVTEnable(False)
+        t_normal.saveAsset()
+
+
+
+        
+        
+        wrapMaterialIns = WrapMaterialInstance.create(os.path.normpath(os.path.join(rootPath,f"Materials/MI_{AssetData['name']}_{AssetData['AssetID']}")))
+        wrapMaterialIns.setParent(wrapMaterial.asset)
+        wrapMaterialIns.setTextureParameter("BaseColor_Map",t_baseColor.asset)
+        wrapMaterialIns.setTextureParameter("Normal_Map",t_normal.asset)
+        wrapMaterialIns.setTextureParameter("ARMS_Map",t_arm.asset)
+        wrapMaterialIns.saveAsset()
+        if AssetData["assetType"] == '3D Assets':
+            #导入静态网格体
+            wrapSM = WrapStaticMesh.importFromFbx(AssetData["mesh"],rootPath,1) 
+            wrapSM.setMaterialByIndex(0,wrapMaterialIns.asset)
+            wrapSM.saveAsset()
+        elif AssetData["assetType"] == 'Surface':
+            pass
+        else:
+            pass
+    else:
+        pass
+def getAllScenesName(rootFolder="/Game/Assets/Scenes"):
+    dirs = unrealAssetsSubsystem.list_assets(rootFolder,False,True)
+    return [dir.split("/")[-2] for dir in dirs]
+
 if __name__ == "__main__":
-    print(unrealEditorSybsystem.get_level_viewport_camera_info())
-
-
-
-
-    # NormalizeExport(r"E:\HuaWiProject\Output")
-    # #FoliageToSMActor()
+    from UnrealPipeline import reloadModule
+    reloadModule()
+    data = {"name": "Kettle", "AssetID": "FHrTH9X", "assetFormat": "FBX", "assetType": "3D Assets", "baseColor": "C:\\Users\\zhaocunxi\\Documents\\MyBridge\\Temp\\FHrTH9X_Albedo.png", "normal": "C:\\Users\\zhaocunxi\\Documents\\MyBridge\\Temp\\FHrTH9X_Normal.png", "arm": "C:\\Users\\zhaocunxi\\Documents\\MyBridge\\Temp\\gen_ARM.png", "mesh": "E:\\AssetLibrary\\Assets\\Kettle_FHrTH9X\\FHrTH9X.fbx"}
+    #importAssetPipline(data)
+    unreal.PythonExtensionBPLibrary.launch_script_on_game_thread(f"import UnrealPipeline.core.UnrealHelper as UH;UH.importAssetPipline({json.dumps(data)})")
     pass
 
     

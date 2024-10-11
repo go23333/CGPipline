@@ -10,6 +10,7 @@ import os
 from PIL import Image, ImageOps
 import json
 
+import UnrealPipeline.core.UnrealHelper as UH
 
 CameraPathMacros = [
     "$ep",
@@ -18,6 +19,11 @@ CameraPathMacros = [
     "$frameStart",
     "$frameEnd",
     "$fullName",
+]
+
+StaticMeshMacros = [
+    "$name",
+    "$scenename"
 ]
 
 CameraHeader = [
@@ -217,12 +223,11 @@ class ConvertTexture:
         pattern = re.compile(r'\.\d{4}\.')
         SearchResult = pattern.search(InputPath)
         if SearchResult == None:
-            Newpath = InputPath.split('.')[0] + '_' + Type + formate
+            Newpath = "_".join(InputPath.split('_')[:-1]) + '_' + Type + formate
         else:
-            Newpath = InputPath.split('.')[0] + '_' + Type + SearchResult.group() + formate
+            Newpath = "_".join(InputPath.split('_')[:-1])  + '_' + Type + SearchResult.group() + formate
         Newpath = Newpath.replace('..','.')
         return(Newpath)
-
 
     def MakeArmsTexture(self,RoughnessTexture,MetallicTexture,AOTexture=None,ROUC=0,METC=0,AOC=0) -> Image:
         if AOTexture == None:
@@ -254,7 +259,7 @@ class ConvertTexture:
         try:
             Img.save(TexturePath)
         except PermissionError:
-            os.chmod( TexturePath, stat.S_IWRITE )
+            os.chmod( TexturePath, os.stat.S_IWRITE )
             Img.save(TexturePath)
     @staticmethod
     def resizerTextures(TexturePathList):
@@ -302,12 +307,8 @@ def analyseJson(jsondata):
             if value == {}:
                 #不包含贴图
                 materialinfoDict['CreateMaterial'] = False
-
-            else:
-                materialinfoDict['HasTex'] = True
             #判断是否是RSM材质球
             if materialType == 'RedshiftMaterial':
-
                 materialinfoDict['TexturePath'] = MTexturePath
                 for TextureTpye in value.keys():
                     if TextureTpye in MTexturePath.keys():
@@ -360,18 +361,6 @@ def calcMD5(text):
 def NormalizePath(path:str) -> str:
     path = os.path.normpath(path)
     return(path.replace('\\','/'))
-def parseCameraName(name):
-    parseResult = {}
-    nameSlpitList = name.split("_")
-    if len(nameSlpitList) < 5:
-        return False # 如果名称不合法返回假
-    parseResult["ep"] = name.split("_")[0]
-    parseResult["sc"] = name.split("_")[1]
-    parseResult["number"] = name.split("_")[2]
-    parseResult["frameStart"] = name.split("_")[3]
-    parseResult["frameEnd"] = name.split("_")[4]
-    parseResult["fullName"] = name.split(".")[0]
-    return parseResult
 def ConvertSizeToStr(size):
     unittype = ["KB","MB","GB"]
     reslut = ""
@@ -393,18 +382,6 @@ def applyMacro(parten,parseresult):
     for key in parseresult:
         parten = parten.replace(f"${key}",parseresult[key])
     return parten
-def parseCameraName(name):
-    parseResult = {}
-    nameSlpitList = name.split("_")
-    if len(nameSlpitList) < 5:
-        return False # 如果名称不合法返回假
-    parseResult["ep"] = name.split("_")[0]
-    parseResult["sc"] = name.split("_")[1]
-    parseResult["number"] = name.split("_")[2]
-    parseResult["frameStart"] = name.split("_")[3]
-    parseResult["frameEnd"] = name.split("_")[4]
-    parseResult["fullName"] = name.split(".")[0]
-    return parseResult
 def getFilesDataFrompath(path,extension=None):
     files = getfilesFromPath(path,extension)
     Datas = []
@@ -442,7 +419,21 @@ def isPathValid(path):
         return False
     return True
 
+
+def importAssetByJsonPath(jsonPath:str):
+    with open(jsonPath,'r',encoding='utf-8') as f:
+        assetData = json.loads(f.read())
+    
+def parseStaticMeshName(name,sceneName):
+    parseResult = {}
+    parseResult["name"] = name
+    if sceneName:
+        parseResult["scenename"] = sceneName
+    else:
+        parseResult["scenename"] = ""
+    return parseResult
+
+
 if __name__ == "__main__":
-    print(NormalizePath(r"D:\Documents\ZCXCode\CGPipline\unreal\scripts\UnrealPipeline\Import\CameraImporter\camera_importer.json"))
-
-
+    from UnrealPipeline import reloadModule
+    reloadModule()

@@ -55,11 +55,12 @@ class StaticMeshImporter(QtWidgets.QWidget):
         btnImport.clicked.connect(
             functools.partial(self.importCameras,False)
             )
-        cbSceneName = MComboBox()
-        cbSceneName.setDisabled(True)
+        self.cbSceneName = MComboBox()
+        self.cbSceneName.addItems(UH.getAllScenesName())
+        self.cbSceneName.setMinimumWidth(100)
 
 
-        layImport.addWidget(cbSceneName,alignment=QtCore.Qt.AlignLeft)
+        layImport.addWidget(self.cbSceneName,alignment=QtCore.Qt.AlignLeft)
         layImport.addWidget(btnImport,alignment=QtCore.Qt.AlignRight)
         # 依次添加布局
         layMain.addLayout(self.folderSelectGroup)
@@ -81,7 +82,7 @@ class StaticMeshImporter(QtWidgets.QWidget):
             for data in self.wCamera.datas:
                 if not data["imported"]:
                     waitImportedQueue.append(data)
-        UH.importStaticmeshs(waitImportedQueue)
+        UH.importStaticmeshs(waitImportedQueue,self.cbSceneName.currentText())
 
 def Start():
     with application() as app:

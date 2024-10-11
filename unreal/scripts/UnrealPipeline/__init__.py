@@ -37,5 +37,7 @@ def InstallMenu():
     InstallMenu(toolbar)
 
     menus.refresh_all_widgets()
+    from UnrealPipeline.core.socketHelper import ThreadSocket
+    ThreadSocket.StartListening()
     
 

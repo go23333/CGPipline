@@ -11,6 +11,7 @@ class globalConfig():
     def __init__(self) -> None:
         # paths
         self.LogFilePath = r'D:\Documents\CGPipline\log\unreal.log'
+        self.tempFolder = r'D:\Documents\CGPipline\temp'
         self.configFilePath = r"d:\Documents\CGPipline\save\config.config"
         # paramater Camera Import
         self.CameraImportPathPatten = "/Game/Shots/Sequence/$ep/$sc/$ep_$sc_$number"
@@ -21,17 +22,24 @@ class globalConfig():
         self.cameraPlaybackStartOffset = 0
         self.cameraPlaybackEndOffset = 0
         # paramater Mesh Import
-        self.StaticMeshImportPathPatten = "/Game/Assets/Scene/Mesh/"
+        self.StaticMeshImportPathPatten = "/Game/Assets/Scenes/$scenename/"
+        self.StaticmeshImportScale = 1
         # paramater Texture Import
-        self.TextureImportPathPatten = "/Game/Assets/Scene/Texture/"
         self.TextureEnableVT = 1 #0:关闭,1:启用,2:自动
         # paramater Material Create
-        self.MaterialInstancePath = "/Game/Assets/Scene/Material/"
-        self.LocalSceneDefaultMaterial = "/Game/Assets/Scene/Common/Material/M_BG_ARM"
-        self.SceneDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_BG_ARM"
+        self.SceneDefaultVTMaterial = "/ZYNNPlugins/Assets/Material/M_ARM_VT.M_ARM_VT"
+        self.SceneDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_ARM.M_ARM"
+        # MyBridge Settings
+        self.connectHost = "127.0.0.1"
+        self.connectPort = 54321
         # engine version
         self.engine_version = unreal.SystemLibrary.get_engine_version().split("-")[-1]
         self.loadConfig()
+        self.createFolders()
+    def createFolders(self):
+        import os 
+        if not os.path.exists(self.tempFolder):
+            os.makedirs(self.tempFolder)
     def saveConfig(self):
         import json
         import os 
