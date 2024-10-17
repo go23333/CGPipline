@@ -1,24 +1,10 @@
 #coding=utf-8
-#auther=zcx
-#data=20220721
 
-import math
-from imp import reload
 
-#导入自定义模块
-import lib.mayaLibrary as ML
 #导入标准模块
 import maya.cmds as cmds
 import pymel.core as pm
-import pymel.core.datatypes as dt
 from pymel.all import *
-
-reload(ML)
-import lib.pathLibrary as PL
-
-reload(PL)
-from functools import partial
-
 
 class editPiplineToolsUI:
     def __init__(self):
@@ -34,7 +20,6 @@ class editPiplineToolsUI:
         cmds.separator(p = rowlayout_PicPath,h = 1,width = 10,horizontal=False)
         cmds.button(l =u'底部中心点', p = rowlayout_PicPath,c=lambda *arg: self.toOrigin(0))
         cmds.separator(p = MainLayout,h = 20)
-        cmds.button(l=u'说明文档',p=MainLayout,c = partial(PL.openWeb,r'http://192.168.6.19/?p=723'))
     def show(self):
         cmds.showWindow(self.window)
     def toOrigin(self,pos,*arg):
@@ -52,6 +37,14 @@ class editPiplineToolsUI:
             pm.makeIdentity( apply=True )
             pass
         pass
-def editPiplineToolsMain():
+
+
+def showUI():
     UI = editPiplineToolsUI()
     UI.show()
+
+
+if __name__ == "__main__":
+    from mayaTools import reloadModule
+    reloadModule()
+    showUI()

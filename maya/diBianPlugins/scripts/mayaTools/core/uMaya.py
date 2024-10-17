@@ -5,6 +5,7 @@
 # Email  : 978654313@qq.com
 ##################################################################
 import pymel.core as pm
+import pymel.all as pma
 
 import json
 
@@ -299,3 +300,24 @@ def getFileName():
 def getRootPath():
     current_file_path = pm.system.sceneName()
     return(os.path.dirname(current_file_path))
+def addCutomAOV(defaultShaderTypeName,AOVName):
+    try:
+        pm.loadPlugin("redshift4maya.mll")
+    except:
+        print("RedShift plugin not find")
+        return
+    if  pm.objExists("rsAov_{0}".format(AOVName)):
+        return m
+    pm.rsCreateAov(type="Custom")
+    #在创建AOV之后需要运行命令刷新AOV列表
+    pm.Mel.eval("redshiftUpdateActiveAovList()")
+    #默认情况下Aov创建后的名字就是他的类型
+    pm.setAttr("rsAov_Custom.name",AOVName,type="string")#更改AOV的名称
+    pm.rename("rsAov_Custom","rsAov_{0}".format(AOVName))#更改AO节点的名称
+    node = pm.createNode(defaultShaderTypeName)
+    pm.connectAttr("{0}.outColor".format(node),"rsAov_{0}.defaultShader".format(AOVName))
+if __name__ == "__main__":
+    addCutomAOV("RedshiftFresnel","custom_Rim")
+    addCutomAOV("RedshiftAmbientOcclusion","custom_AO")
+    
+    pass

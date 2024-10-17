@@ -1,19 +1,10 @@
 #coding=utf-8
-
-
-from imp import reload
-
-#导入自定义模块
-import lib.mayaLibrary as ML
 #导入标准模块
 import maya.cmds as cmds
+import os
 
-reload(ML)
-import lib.pathLibrary as PL
-
-reload(PL)
-
-
+import mayaTools.core.mayaLibrary as ML
+import mayaTools.core.pathLibrary as PL
 
 class ConnectTexturexUI:
     def __init__(self):
@@ -156,6 +147,8 @@ class ConnectTexturexUI:
         cmds.sets(sl,e=True, forceElement= sg)
         for key in self.MTFdic.keys():
             Path = cmds.textField(self.MTFdic[key],text=1,q=1)
+            if Path == "":
+                continue
             if not PL.isPath(Path):
                 Path = []
             else:
@@ -176,9 +169,10 @@ class ConnectTexturexUI:
         Paths = PL.getOtherChannelTexture(FilePath,'BaseColor')
         #判定是不是UDIM
         if PL.IsUDIMFormate(FilePath) and PL.calUDIMCount(FilePath) > 1:
-            FilePath = FilePath .replace(PL.IsUDIMFormate(FilePath),'.<UDIM>.')
+            FilePath = FilePath.replace(PL.IsUDIMFormate(FilePath),'.<UDIM>.')
             for key in Paths.keys():
-                Paths[key] = Paths[key].replace(PL.IsUDIMFormate(Paths[key]),'.<UDIM>.')
+                if Paths[key] != "":
+                    Paths[key] = Paths[key].replace(PL.IsUDIMFormate(Paths[key]),'.<UDIM>.')
         cmds.textField(self.tf_baseColorPath,text=FilePath,e=1)
         #填充到列表中
         cmds.textField(self.tf_roughnessPath,text=Paths['Roughness'],e=1)
@@ -194,6 +188,7 @@ class ConnectTexturexUI:
         cmds.textField(self.tf_SpecularPath,text=Paths['Specular'],e=1)
 
     def clearManualText(self):
+        cmds.textField(self.tf_baseColorPath,text='',e=1)
         cmds.textField(self.tf_roughnessPath,text='',e=1)
         cmds.textField(self.tf_metallicPath,text='',e=1)
         cmds.textField(self.tf_AOPath,text='',e=1)
@@ -210,7 +205,7 @@ class ConnectTexturexUI:
         FilePath = ML.fileDialog(u'选择贴图路径',1,Des)
     def ConnectTextures(self,arg):
         path = cmds.textField(self.tf_AutoPickPath,text=1,q=1)
-        if not PL.isPath(path):
+        if not os.path.isdir(path):
                 cmds.warning(u'路径不合法')
                 return False
         path = PL.normailizePath(path)
@@ -220,10 +215,12 @@ class ConnectTexturexUI:
             cmds.warning(u'没有选择任何物体')
             return False
         shapes = ML.getshapes(slTransformNodes)
+
         materials = ML.getMaterials(shapes)
         max = len(materials)
         cur = 0
         ML.progressWidow(title=u'贴图连接中',currentamout=cur)
+
         for material in materials:
             #删除原有连接的节点
             ML.DelAllInputConnections(material)
@@ -248,8 +245,8 @@ class ConnectTexturexUI:
                 if ML.getScenename() != '':
                     keyWord = keyWord.replace(ML.getScenename() + '_','')
                 keyWord = '_' + keyWord + '_'
-
             TexturePaths = PL.getFilesByKeyWords(path,keyWord)
+
             #判断是否是RSMaterial
             if cmds.nodeType(material) != 'RedshiftMaterial':
                 sgs = cmds.listConnections(material,type='shadingEngine')
@@ -293,7 +290,13 @@ class ConnectTexturexUI:
                     
 
 
-def ConnectTextureMain():
+def showUI():
     UI = ConnectTexturexUI()
     UI.show()
 
+
+
+if __name__ == "__main__":
+    from mayaTools import reloadModule
+    reloadModule()
+    showUI()

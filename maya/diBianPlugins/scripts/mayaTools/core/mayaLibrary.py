@@ -135,6 +135,8 @@ def connectMaterial(material,TexturePaths,Type):
     if len(TexturePaths) > 1:
         TexturePath = TexturePath.replace(PL.IsUDIMFormate(TexturePath),'.<UDIM>.')
         UDIMMode = 3
+    if ".<UDIM>." in TexturePath:
+        UDIMMode = 3
     fileName = TexturePath.split('/')[-1].split('.')[0]
     if Type == 'BaseColor':
         TexNode = createFileTexture(fileName+'_File',fileName+'_Place2D')

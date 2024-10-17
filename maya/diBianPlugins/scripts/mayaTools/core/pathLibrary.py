@@ -82,15 +82,7 @@ def getUDIMTextures(TexturePath):
         textures.append(path)
         i = i+1
 
-# NOTE 判断给定的字符串是否为路径
-def isPath(Path):
-    return True
-    pattern = re.compile(r'[\w]\:[/[\w\s]*]*')
-    SearchResult = pattern.search(Path)
-    if SearchResult != None:
-        return True
-    else:
-        return False
+
 def getOtherChannelTexture(filePath,attr):
     keys = ['ARMS','Normal','Anisotropy','Mask','Opacity','Emissive','Occlusion','Roughness','Cavity','Metallic','Specular']
     info = {}

@@ -1,9 +1,7 @@
 #coding=utf-8
 #Init maya menu
 
-from mayaTools import reloadModule
-reloadModule()
-
+# 将本插件的vendor目录插入到python环境的第一位
 import sys
 for path in sys.path:
     if "vendor" in path:
@@ -13,25 +11,8 @@ sys.path.insert(0,path)
 
 from pymel.core.general import evalDeferred
 
-def installMenu():
-    
-    import mayaTools.menu
-    mayaTools.install()
-
-    import mayaTools.export.menu
-    mayaTools.export.menu.install()
-
-
-    import mayaTools.optimize.menu
-    mayaTools.optimize.menu.install()
-
-    import mayaTools.pipline.menu
-    mayaTools.pipline.menu.install()
-
-    import mayaTools.thirdpart.menu
-    mayaTools.thirdpart.menu.install()
-    
-evalDeferred(installMenu)
+from mayaTools import install
+evalDeferred(install)
 
 
 
