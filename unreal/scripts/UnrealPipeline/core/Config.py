@@ -29,6 +29,8 @@ class globalConfig():
         # paramater Material Create
         self.SceneDefaultVTMaterial = "/ZYNNPlugins/Assets/Material/M_ARM_VT.M_ARM_VT"
         self.SceneDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_ARM.M_ARM"
+        self.DefaultDecalMaterial = "/ZYNNPlugins/Assets/Material/M_Decal.M_Decal"
+        self.DefaultFoliageMaterial = "/ZYNNPlugins/Assets/Material/M_Foliage.M_Foliage"
         # MyBridge Settings
         self.connectHost = "127.0.0.1"
         self.connectPort = 54321

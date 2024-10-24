@@ -1001,8 +1001,8 @@ def MakeEntry(name:str,label:str,command:str = "",toolTip:str = "") -> unreal.To
 
 def importAssetPipline(AssetData:dict):
     currentPath = unreal.EditorUtilityLibrary.get_current_content_browser_path()
-    rootPath = os.path.join(currentPath,f"MyBridge/{AssetData['name']}_{AssetData['AssetID']}")
-    wrapMaterial = WrapMaterial(unreal.load_asset(globalConfig.get().SceneDefaultMaterial))
+    rootPath = os.path.join(currentPath,f"MyBridge/{AssetData['assetType'].replace(' ','_')}/{AssetData['name']}_{AssetData['AssetID']}")
+
     if AssetData["assetFormat"] == 'FBX':# 当类型为FBX资产
         #导入贴图
         t_arm = WrapTexture.importTexture(AssetData["arm"],os.path.join(rootPath,f"Textures"))
@@ -1012,35 +1012,44 @@ def importAssetPipline(AssetData:dict):
         t_arm.saveAsset()
 
         t_baseColor = WrapTexture.importTexture(AssetData["baseColor"],os.path.join(rootPath,f"Textures"))
+        t_baseColor.saveAsset()
         t_baseColor.setAsColor()
         t_baseColor.setVTEnable(False)
         t_baseColor.saveAsset()
 
 
         t_normal = WrapTexture.importTexture(AssetData["normal"],os.path.join(rootPath,f"Textures"))
+        t_normal.saveAsset()
         t_normal.setAsNormal()
         t_normal.setVTEnable(False)
         t_normal.saveAsset()
 
-
-
         
         
         wrapMaterialIns = WrapMaterialInstance.create(os.path.normpath(os.path.join(rootPath,f"Materials/MI_{AssetData['name']}_{AssetData['AssetID']}")))
-        wrapMaterialIns.setParent(wrapMaterial.asset)
-        wrapMaterialIns.setTextureParameter("BaseColor_Map",t_baseColor.asset)
-        wrapMaterialIns.setTextureParameter("Normal_Map",t_normal.asset)
-        wrapMaterialIns.setTextureParameter("ARMS_Map",t_arm.asset)
-        wrapMaterialIns.saveAsset()
         if AssetData["assetType"] == '3D Assets':
+            wrapMaterial = WrapMaterial(unreal.load_asset(globalConfig.get().SceneDefaultMaterial))
             #导入静态网格体
             wrapSM = WrapStaticMesh.importFromFbx(AssetData["mesh"],rootPath,1) 
             wrapSM.setMaterialByIndex(0,wrapMaterialIns.asset)
             wrapSM.saveAsset()
         elif AssetData["assetType"] == 'Surface':
+            wrapMaterial = WrapMaterial(unreal.load_asset(globalConfig.get().SceneDefaultMaterial))
             pass
-        else:
+        elif AssetData["assetType"] == 'Decal':
+            wrapMaterial = WrapMaterial(unreal.load_asset(globalConfig.get().DefaultDecalMaterial))    
             pass
+        elif AssetData["assetType"] == 'Plant':
+            wrapMaterial = WrapMaterial(unreal.load_asset(globalConfig.get().DefaultFoliageMaterial))    
+            wrapSM = WrapStaticMesh.importFromFbx(AssetData["mesh"],rootPath,1) 
+            wrapSM.setMaterialByIndex(0,wrapMaterialIns.asset)
+            wrapSM.saveAsset()
+            pass
+        wrapMaterialIns.setParent(wrapMaterial.asset)
+        wrapMaterialIns.setTextureParameter("BaseColor_Map",t_baseColor.asset)
+        wrapMaterialIns.setTextureParameter("Normal_Map",t_normal.asset)
+        wrapMaterialIns.setTextureParameter("ARMS_Map",t_arm.asset)
+        wrapMaterialIns.saveAsset()
     else:
         pass
 def getAllScenesName(rootFolder="/Game/Assets/Scenes"):
