@@ -5,8 +5,10 @@ import unreal
 import os
 import json
 import sys
+from importlib import reload
 
 import UnrealPipeline.core.uSTools as uSTools
+reload(uSTools)
 
 from Qt import QtCore
 from Qt import QtWidgets
@@ -91,7 +93,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             unreal.EditorAssetLibrary.make_directory('/Game/Assets/Character/'+self.mesh_folder_name+'/Material')
             unreal.EditorAssetLibrary.make_directory('/Game/Assets/Character/'+self.mesh_folder_name+'/Texture')
 
-            uSTools.fbxImport.staticMeshImport(fbx,fbx_create_path,'sataic_mesh')
+            uSTools.fbxImport.staticMeshImport(fbx,fbx_create_path)
             #设置进度
             self.error_lable.setText('')
             self.progress.setValue(35)

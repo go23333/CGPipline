@@ -12,10 +12,14 @@ import json
 class fbxImport():
     
     @classmethod
-    def staticMeshImport(cls,fbx,fbx_create_path,mesh_class:str):
-        if mesh_class=='sataic_mesh':
-            sataic_mesh_task=cls.buildImportTask(cls,fbx,fbx_create_path,cls.buildStaticMeshImportOptions(cls))
-            cls.executeImportTasks(cls,[sataic_mesh_task])
+    def staticMeshImport(cls,fbx,fbx_create_path):
+        sataic_mesh_task=cls.buildImportTask(cls,fbx,fbx_create_path,cls.buildStaticMeshImportOptions(cls))
+        cls.executeImportTasks(cls,[sataic_mesh_task])
+
+    @classmethod
+    def animSequenceImport(cls,fbx,fbx_create_path,skeleton_mesh):       
+        anim_sequence_task=cls.buildImportTask(cls,fbx,fbx_create_path,cls.buildAnimSequenceImportOptions(cls,skeleton_mesh))
+        cls.executeImportTasks(cls,[anim_sequence_task])
 
     @classmethod
     def matICreate(cls,Common_path,fbx_path,matI_tar_path):
@@ -127,6 +131,14 @@ class fbxImport():
                         else:
                             continue
 
+                    elif '_Hair' in fbx_mat_name :
+                        if mat_name=='M_Character_HairMaster1':
+                            matI_create=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=fbx_mat_name,package_path=matI_tar_path,asset_class=unreal.MaterialInstanceConstant,factory=unreal.MaterialInstanceConstantFactoryNew())
+                            matI_create.set_editor_property('parent',mat_asset)
+                            switch=1
+                        else:
+                            continue
+
                     #其他材质球统一使用MI_MaterialBlender_Cloth材质球
                     elif not unreal.EditorAssetSubsystem().does_asset_exist(matI_tar_path+'/'+fbx_mat_name) and mat_name=='MI_MaterialBlender_Cloth':
                         matI_create=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=fbx_mat_name,package_path=matI_tar_path,asset_class=unreal.MaterialInstanceConstant,factory=unreal.MaterialInstanceConstantFactoryNew())
@@ -183,11 +195,11 @@ class fbxImport():
                         texture_obj.srgb = True
 
                     elif texture_type=='n':
-                        texture_obj.compression_settings = unreal.TextureCompressionSettings.TC_MASKS
+                        texture_obj.compression_settings = unreal.TextureCompressionSettings.TC_NORMALMAP
                         texture_obj.srgb = False
 
                     elif texture_type=='arms':
-                        texture_obj.compression_settings = unreal.TextureCompressionSettings.TC_DEFAULT
+                        texture_obj.compression_settings = unreal.TextureCompressionSettings.TC_MASKS
                         texture_obj.srgb = False
 
                     elif texture_type=='sp':
@@ -261,6 +273,32 @@ class fbxImport():
         options.static_mesh_import_data.set_editor_property('combine_meshes',True)
         options.static_mesh_import_data.set_editor_property('generate_lightmap_u_vs',True)
         options.static_mesh_import_data.set_editor_property('auto_generate_collision',True)
+
+        return options
+    
+    def buildAnimSequenceImportOptions(self,skeleton_mesh):
+        options=unreal.FbxImportUI()
+
+        #动画序列导入设置
+        options.import_animations=True
+        options.skeleton=skeleton_mesh
+
+        options.import_materials=False
+        options.import_textures=False
+        options.import_as_skeletal=False
+
+        options.anim_sequence_import_data.set_editor_property('import_translation',unreal.Vector(0,0,0))
+        options.anim_sequence_import_data.set_editor_property('import_rotation',unreal.Rotator(0,0,0))
+        options.anim_sequence_import_data.set_editor_property('import_uniform_scale',1)
+
+        options.anim_sequence_import_data.set_editor_property('import_meshes_in_bone_hierarchy',True)
+        options.anim_sequence_import_data.set_editor_property('import_bone_tracks',True)
+        options.anim_sequence_import_data.set_editor_property('remove_redundant_keys',True)
+        options.anim_sequence_import_data.set_editor_property('do_not_import_curve_with_zero',True)
+        options.anim_sequence_import_data.set_editor_property('convert_scene',True)
+        options.anim_sequence_import_data.set_editor_property('convert_scene',True)
+
+     
 
         return options
     

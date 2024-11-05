@@ -1,7 +1,5 @@
 
 import unreal
-import openpyxl as op
-import functools
 
 from Qt import QtCore
 from Qt import QtWidgets
@@ -20,11 +18,23 @@ from dayu_widgets.browser import MClickBrowserFolderToolButton
 from dayu_widgets.text_edit import MTextEdit
 from dayu_widgets.splitter import MSplitter
 from dayu_widgets.item_view import MTreeView
+from dayu_widgets.check_box import MCheckBox
+from dayu_widgets.spin_box import MSpinBox
+from dayu_widgets.theme import MTheme
+
 from dayu_widgets import dayu_theme
 from dayu_widgets.qt import application
 
 
 print('AAI')
+
+
+
+
+class MCheckSpinBoxGroup(MCheckBoxGroup):
+    def create_button(self, data_dict):
+        return MCheckBox()
+
    
 
 class mw(QtWidgets.QWidget, MFieldMixin):
@@ -77,7 +87,6 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         self.resize(1000,420)
 
         
-
         lay=QtWidgets.QVBoxLayout()
         
 
@@ -102,28 +111,35 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         self.ch_path_text.returnPressed.connect(self.chQueryClicked)
         ch_path_text_button.clicked.connect(self.chQueryClicked)
 
-        self.radio_group_ch = MCheckBoxGroup(orientation=QtCore.Qt.Vertical)
-        self.radio_group_ch.set_button_list(self.k)
-        self.radio_group_ch.set_spacing(1)
+        # #设置按钮组
+        # self.radio_group_ch = MCheckBoxGroup(orientation=QtCore.Qt.Vertical)
+        # self.radio_group_ch.set_button_list(self.k)
+        # self.radio_group_ch.set_spacing(1)
         
 
-        label_ch = MLabel()
-        label_ch.setWordWrap(True)
-        label_ch.setMaximumWidth(200)
-        label_ch.setMinimumHeight(36)
+        self.label_ch = MLabel()
+        self.label_ch.setWordWrap(True)
+        self.label_ch.setMaximumWidth(200)
+        self.label_ch.setMinimumHeight(36)
         
-        self.register_field("asset_CH_app")
-        self.register_field(
-            "asset_CH_app_text",lambda: " 、 ".join(self.field("asset_CH_app")) if self.field("asset_CH_app") else None
-        )
-        self.bind(
-            "asset_CH_app", self.radio_group_ch, "dayu_checked", signal="sig_checked_changed"
-        )
-        self.bind("asset_CH_app_text", label_ch, "text")
+        # self.register_field("asset_CH_app")
+        # self.register_field(
+        #     "asset_CH_app_text",lambda: " 、 ".join(self.field("asset_CH_app")) if self.field("asset_CH_app") else None
+        # )
+        # self.bind(
+        #     "asset_CH_app", self.radio_group_ch, "dayu_checked", signal="sig_checked_changed"
+        # )
+        # self.bind("asset_CH_app_text", label_ch, "text")
+
         
-        scroll_ch=QtWidgets.QScrollArea()
-        scroll_ch.setMinimumWidth(100)
-        scroll_ch.setWidget(self.radio_group_ch)
+        
+        check_spin_box_ch = self.checkSpinBox(self.k)
+        self.checkSpinData(check_spin_box_ch)
+        
+        self.scroll_ch=QtWidgets.QScrollArea()
+        self.scroll_ch.setMinimumWidth(100)
+        self.scroll_ch.setWidget(check_spin_box_ch)
+        # scroll_ch.setWidget(self.radio_group_ch)
 
 
 
@@ -136,28 +152,16 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         self.pro_path_text.returnPressed.connect(self.proQueryClicked)
         pro_path_text_button.clicked.connect(self.proQueryClicked)
 
-        self.radio_group_pro = MCheckBoxGroup(orientation=QtCore.Qt.Vertical)
-        self.radio_group_pro.set_button_list(self.k)
-        self.radio_group_pro.set_spacing(1)
+        self.label_pro = MLabel()
+        self.label_pro.setWordWrap(True)
+        self.label_pro.setMaximumWidth(200)
+        self.label_pro.setMinimumHeight(36)
 
-        label_pro = MLabel()
-        label_pro.setWordWrap(True)
-        label_pro.setMaximumWidth(200)
-        label_pro.setMinimumHeight(36)
-        self.register_field("asset_pro_app")
-        self.register_field(
-            
-            "asset_pro_app_text",lambda: " 、 ".join(self.field("asset_pro_app")) if self.field("asset_pro_app") else None
-        )
-        self.bind(
-            "asset_pro_app", self.radio_group_pro, "dayu_checked", signal="sig_checked_changed"
-        )
-        self.bind("asset_pro_app_text", label_pro, "text")
+        check_spin_box_pro = self.checkSpinBox(self.k)
+        self.checkSpinData(check_spin_box_pro)
+        self.scroll_pro=QtWidgets.QScrollArea()
+        self.scroll_pro.setWidget(check_spin_box_pro)
 
-
-        scroll_pro=QtWidgets.QScrollArea()
-        scroll_pro.setMinimumWidth(100)
-        scroll_pro.setWidget(self.radio_group_pro)
 
 
         #场景列表
@@ -197,14 +201,14 @@ class mw(QtWidgets.QWidget, MFieldMixin):
 
         lay1_1.addWidget(MDivider("角色"))
         lay1_1.addWidget(self.ch_path_text)
-        lay1_1.addWidget(scroll_ch)
-        lay1_1.addWidget(label_ch)
+        lay1_1.addWidget(self.scroll_ch)
+        lay1_1.addWidget(self.label_ch)
         
 
         lay1_2.addWidget(MDivider("道具"))
         lay1_2.addWidget(self.pro_path_text)
-        lay1_2.addWidget(scroll_pro)
-        lay1_2.addWidget(label_pro)
+        lay1_2.addWidget(self.scroll_pro)
+        lay1_2.addWidget(self.label_pro)
         
 
         lay1_3.addWidget(MDivider("场景"))
@@ -308,15 +312,92 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         self.setLayout(lay)
 
 
-    def createCliced(self):
+    #创建check和Spin的集合widget
+    def checkSpinBox(self,button_list:list):
+        lay_zz = QtWidgets.QVBoxLayout()
+        check_spin_box = QtWidgets.QGroupBox()
+        for button_name in button_list: 
+            lay_cs = QtWidgets.QHBoxLayout()
+            checkBox = MCheckBox()
+            checkBox.setMinimumSize(20,20)
+            checkBox.setText(button_name)
+            checkBox.stateChanged.connect(self.updateLable)
+            spin_box1 = MSpinBox()
+            spin_box1.setStyleSheet("QSpinBox::up-button { width: 15px; height: 4px; }\n"
+                                "QSpinBox::down-button { width: 15px; height: 4px; }")
+            spin_box1.setRange(1, 255)
+            spin_box1.setMaximumSize(30,13)
+            spin_box1.set_dayu_size(dayu_theme.badge_dot)
+            spin_box1.setObjectName('spin_'+str(button_name))
+            spin_box1.valueChanged.connect(self.updateLable)
+            
+            lay_cs.addWidget(spin_box1)
+            lay_cs.addWidget(checkBox)
+            lay_cs.setContentsMargins(0, 0, 0, 0)
+            lay_cs.setSpacing(1)
 
+            lay_zz.addLayout(lay_cs)
+        lay_zz.setContentsMargins(0, 0, 0, 0)
+        lay_zz.setSpacing(1)
+        check_spin_box.setLayout(lay_zz)
+
+        return check_spin_box
+
+    #返回Check名称和Spin数量的字典数据
+    def checkSpinData(self,check_spin_box:QtWidgets.QGroupBox):
+        lay_box = check_spin_box.layout()
+        check_spin_dict = {}
+        for sub_lay in lay_box.children():
+                #遍历子layout中的widget
+                switch = False
+                for i in range(sub_lay.count()):
+                    widget = sub_lay.itemAt(i).widget()
+                    if isinstance(widget,MCheckBox):
+                        switch = widget.isChecked()
+                        check_box = widget.text()
+                    if isinstance(widget,MSpinBox):
+                        spin_box = widget.objectName()
+                        spin_box_value = widget.value()
+                if switch == True:
+                    check_spin_dict[check_box] = spin_box_value
+                
+        return check_spin_dict
+
+    #更新角色道具的label信息
+    def updateLable(self):
+        asset_ch_names_dict = self.checkSpinData(self.scroll_ch.widget())
+        asset_pro_names_dict = self.checkSpinData(self.scroll_pro.widget())
+        label_ch_text = ''
+        label_pro_text = ''
+        for asset_ch_name,value in asset_ch_names_dict.items():
+            if value>1:
+                label_ch_text += asset_ch_name+f'*{value}、'
+            else:
+                label_ch_text += asset_ch_name+'、'
+        label_ch_text = label_ch_text.rsplit('、',1)[0]
+
+        for asset_pro_name,value in asset_pro_names_dict.items():
+            if value>1:
+                label_pro_text += asset_pro_name+f'*{value}、'
+            else:
+                label_pro_text += asset_pro_name+'、'
+        label_pro_text = label_pro_text.rsplit('、',1)[0]
+
+        self.label_ch.setText(label_ch_text)
+        self.label_pro.setText(label_pro_text)
+
+
+
+    def createCliced(self):
 
         world_asset_find_list=[]
         sequnence_asset_find_list=[]
 
         #获取UI选项名称
-        asset_ch_names=self.field("asset_CH_app")
-        asset_pro_names=self.field("asset_pro_app")
+        # asset_ch_names=self.field("asset_CH_app")
+        asset_ch_names_dict = self.checkSpinData(self.scroll_ch.widget())
+        # asset_pro_names=self.field("asset_pro_app")
+        asset_pro_names_dict = self.checkSpinData(self.scroll_pro.widget())
         asset_level_names=self.field("asset_level_app")
         ep_name=self.field("ep_app")
 
@@ -350,17 +431,35 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             #对动画关卡序列添加资产
             for sequnence_asset_find in sequnence_asset_find_list:
                 #添加道具
-                if asset_pro_names:
+                if asset_pro_names_dict:
                     for find_pro_asset in self.find_pro_assets:   
-                        for asset_pro_name in asset_pro_names:  
-                            if asset_pro_name==find_pro_asset.get_asset().get_name():
-                                sequnence_asset_find.get_asset().add_spawnable_from_instance(find_pro_asset.get_asset())
+                        for asset_pro_name,value in asset_pro_names_dict.items():  
+                            if value > 1:
+                                if asset_pro_name==find_pro_asset.get_asset().get_name():
+                                    for i in range(value):
+                                        sequnence_asset_find.get_asset().add_spawnable_from_instance(find_pro_asset.get_asset())
+                            else:
+                                if asset_pro_name==find_pro_asset.get_asset().get_name():
+                                    sequnence_asset_find.get_asset().add_spawnable_from_instance(find_pro_asset.get_asset())
+                # #添加角色
+                # if asset_ch_names:
+                #     for find_ch_asset in self.find_ch_assets:   
+                #         for asset_ch_name in asset_ch_names:  
+                #             if asset_ch_name==find_ch_asset.get_asset().get_name():
+                #                 sequnence_asset_find.get_asset().add_spawnable_from_instance(find_ch_asset.get_asset())
                 #添加角色
-                if asset_ch_names:
+                if asset_ch_names_dict:
                     for find_ch_asset in self.find_ch_assets:   
-                        for asset_ch_name in asset_ch_names:  
-                            if asset_ch_name==find_ch_asset.get_asset().get_name():
-                                sequnence_asset_find.get_asset().add_spawnable_from_instance(find_ch_asset.get_asset())
+                        for asset_ch_name,value in asset_ch_names_dict.items():  
+                            
+                            if value > 1:
+                                if asset_ch_name==find_ch_asset.get_asset().get_name():
+                                    for i in range(value):
+                                        sequnence_asset_find.get_asset().add_spawnable_from_instance(find_ch_asset.get_asset())
+                            else:
+                                if asset_ch_name==find_ch_asset.get_asset().get_name():
+                                    # print(asset_ch_name,value)
+                                    sequnence_asset_find.get_asset().add_spawnable_from_instance(find_ch_asset.get_asset())
             unreal.EditorAssetLibrary.save_directory('/Game/Shots')
 
 
@@ -492,9 +591,11 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                     if unreal.EditorAssetLibrary.find_asset_data(ch_name).get_asset().get_class().get_name()=='Blueprint':
                         self.find_ch_assets.append(unreal.EditorAssetLibrary.find_asset_data(ch_name))
                         asset_ch_list_name.append(unreal.EditorAssetLibrary.find_asset_data(ch_name).get_asset().get_name())               
-                self.radio_group_ch.set_button_list(asset_ch_list_name) 
-                self.radio_group_ch.setMaximumHeight(len(asset_ch_list_name)*16)
-                self.radio_group_ch.setMinimumSize(300,len(asset_ch_list_name)*16)
+                # self.radio_group_ch.set_button_list(asset_ch_list_name) 
+                # self.radio_group_ch.setMaximumHeight(len(asset_ch_list_name)*16)
+                # self.radio_group_ch.setMinimumSize(300,len(asset_ch_list_name)*16)
+                check_spin_box_ch = self.checkSpinBox(asset_ch_list_name)
+                self.scroll_ch.setWidget(check_spin_box_ch)
                      
             else:
                 pass
@@ -506,9 +607,9 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                     if unreal.EditorAssetLibrary.find_asset_data(pro_name).get_asset().get_class().get_name()=='Blueprint':
                         self.find_pro_assets.append(unreal.EditorAssetLibrary.find_asset_data(pro_name))
                         asset_pro_list_name.append(unreal.EditorAssetLibrary.find_asset_data(pro_name).get_asset().get_name())
-                self.radio_group_pro.set_button_list(asset_pro_list_name)
-                self.radio_group_pro.setMaximumHeight(len(asset_pro_list_name)*16)
-                self.radio_group_pro.setMinimumSize(300,len(asset_pro_list_name)*16)
+                
+                check_spin_box_pro = self.checkSpinBox(asset_pro_list_name)
+                self.scroll_pro.setWidget(check_spin_box_pro)
         
                 
         if path_class=='level':
