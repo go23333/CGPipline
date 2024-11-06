@@ -24,7 +24,7 @@ from dayu_widgets.qt import application
 
 
 
-print('ShadeCreate1.1')
+print('ShadeCreate1.2')
 
 
 
@@ -84,6 +84,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         self.mesh_folder_name=self.fbx_name.split('_CH_')[0]+'_CH'
         fbx_create_path='/Game/Assets/Character/'+self.mesh_folder_name+'/Mesh'
         if fbx.rsplit('.')[-1]=='fbx':
+            self.error_lable.setText('')
             #显示进度条
             self.progress.show()
             self.progress.setValue(10)
@@ -95,7 +96,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
 
             uSTools.fbxImport.staticMeshImport(fbx,fbx_create_path)
             #设置进度
-            self.error_lable.setText('')
+            
             self.progress.setValue(35)
 
             json_path=fbx.rsplit('.')[0]+'.json'
@@ -109,7 +110,9 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             #生成并赋予材质实例
             self.materialInstance()
 
-            self.progress.setValue(100)      
+            self.progress.setValue(100)  
+            self.error_lable.setStyleSheet("color: white")
+            self.error_lable.setText('导入成功')    
 
         else :
             self.progress.hide()

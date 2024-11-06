@@ -171,9 +171,10 @@ class fbxImport():
     @classmethod
     def importTexture(cls,texture_dict:dict,destination_path):
         
+        texture_objs=[]
         for shade_name,type_dict in texture_dict.items():
             for texture_type,textures in type_dict.items():
-                
+                                
                 texture =textures[0]
                 #构建贴图导入任务
                 task=cls.buildImportTask(cls,texture,destination_path)
@@ -205,6 +206,11 @@ class fbxImport():
                     elif texture_type=='sp':
                         texture_obj.compression_settings = unreal.TextureCompressionSettings.TC_DEFAULT
                         texture_obj.srgb = True
+                    
+                    texture_objs.append(texture_obj)
+
+        #打开所有贴图资产以确保贴图正常更新
+        unreal.AssetToolsHelpers.get_asset_tools().open_editor_for_assets(texture_objs)
 
 
     @classmethod
