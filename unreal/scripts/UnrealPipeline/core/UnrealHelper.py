@@ -161,6 +161,8 @@ class WrapTexture(WrapBaseAsset):
     def setAsNormal(self):
         self.asset.compression_settings = unreal.TextureCompressionSettings.TC_NORMALMAP
         self.asset.srgb = False
+    def ExportTexture(self,dir:str)->list[str]:
+        return(ExportTextureNew(self.asset,dir))
     @classmethod
     def importTexture(cls,sourcePath:str,destinationPath:str):
         importData = unreal.AutomatedAssetImportData()
@@ -172,6 +174,7 @@ class WrapTexture(WrapBaseAsset):
             return(WrapTexture(unreal.AssetToolsHelpers.get_asset_tools().import_assets_automated(importData)[0]))
         except IndexError:
             return False
+    
 
 class WrapMaterial(WrapBaseAsset):
     def __init__(self,asset:unreal.Material) -> None:
@@ -1056,17 +1059,70 @@ def getAllScenesName(rootFolder="/Game/Assets/Scenes"):
     dirs = unrealAssetsSubsystem.list_assets(rootFolder,False,True)
     return [dir.split("/")[-2] for dir in dirs]
 
+
+def ExportTextureNew(Texture:unreal.Texture2D,dir:str)->list[str]:
+    TextureCount = 1
+    if Texture.virtual_texture_streaming:
+        size_x = Texture.blueprint_get_size_x()
+        size_y = Texture.blueprint_get_size_y()
+        TextureCount = size_x//size_y
+    textures = []
+    if TextureCount == 1:
+        textures.append(ExportTexture(Texture,dir))
+    else:
+        textureName = ExportTexture(Texture,dir)
+        s,ext = os.path.splitext(textureName)
+        for i in range(TextureCount):
+            textures.append("{}.1{:03}{}".format(s,i+1,ext))
+    return textures
+
+
+def addWaterMarkToSelectedTextures():
+    from UnrealPipeline.core.WTHelper import addWatermark
+    selectedAssets = unreal.EditorUtilityLibrary.get_selected_assets()
+    icpath = os.path.join(__file__.removesuffix(r"core\UnrealHelper.py"),r"Data\wm_ZYNN.png")
+    for asset in selectedAssets:
+        asset:unreal.Texture2D
+        vt = asset.virtual_texture_streaming
+        if asset.get_name().endswith("_1001"):
+            asset.rename(asset.get_name().replace("_1001",""))
+        exportTextures = ExportTextureNew(asset,globalConfig.get().tempFolder)
+        for tex in exportTextures:
+            if os.path.exists(tex):
+                addWatermark('DCT',tex,tex,icpath)
+        newTexture = WrapTexture.importTexture(exportTextures[0],os.path.dirname(asset.get_path_name()))
+        if newTexture:
+            newTexture.setVTEnable(vt)
+            newTexture.saveAsset()
+        for tex in exportTextures:
+            if os.path.exists(tex):
+                os.remove(tex)
+
 if __name__ == "__main__":
     from UnrealPipeline import reloadModule
     reloadModule()
-    data = {"name": "Kettle", "AssetID": "FHrTH9X", "assetFormat": "FBX", "assetType": "3D Assets", "baseColor": "C:\\Users\\zhaocunxi\\Documents\\MyBridge\\Temp\\FHrTH9X_Albedo.png", "normal": "C:\\Users\\zhaocunxi\\Documents\\MyBridge\\Temp\\FHrTH9X_Normal.png", "arm": "C:\\Users\\zhaocunxi\\Documents\\MyBridge\\Temp\\gen_ARM.png", "mesh": "E:\\AssetLibrary\\Assets\\Kettle_FHrTH9X\\FHrTH9X.fbx"}
-    #importAssetPipline(data)
-    unreal.PythonExtensionBPLibrary.launch_script_on_game_thread(f"import UnrealPipeline.core.UnrealHelper as UH;UH.importAssetPipline({json.dumps(data)})")
-    pass
+    from UnrealPipeline.core.WTHelper import addWatermark
+    selectedAssets = unreal.EditorUtilityLibrary.get_selected_assets()
+    for asset in selectedAssets:
+        asset:unreal.Texture2D
+        vt = asset.virtual_texture_streaming
+        if asset.get_name().endswith("_1001"):
+            asset.rename(asset.get_name().replace("_1001",""))
+        exportTextures = ExportTextureNew(asset,r"d:\Desktop\Test")
+        for tex in exportTextures:
+            if os.path.exists(tex):
+                addWatermark('DCT',tex,tex,r"D:\Documents\ZCXCode\CGPipline\unreal\scripts\UnrealPipeline\Data\wm_ZYNN.png")
+        newTexture = WrapTexture.importTexture(exportTextures[0],os.path.dirname(asset.get_path_name()))
+        if newTexture:
+            newTexture.setVTEnable(vt)
+            newTexture.saveAsset()
+        for tex in exportTextures:
+            if os.path.exists(tex):
+                os.remove(tex)
 
-    
 
-          
+
+
 
 
 
