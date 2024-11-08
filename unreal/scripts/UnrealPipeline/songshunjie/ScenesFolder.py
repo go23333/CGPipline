@@ -187,8 +187,8 @@ class ScenesMeshImporter(QtWidgets.QWidget):
         self.TextureImportPathPatten = "/Game/Assets/Scenes/%s/Texture/"%scene_name
         # paramater Material Create
         self.MaterialInstancePath = "/Game/Assets/Scenes/%s/Material/"%scene_name
-        self.LocalSceneDefaultMaterial = "/Game/Assets/Scenes/%s/Common/Material/M_BG_ARM"%scene_name
-        self.SceneDefaultMaterial = "/ZynnPlugin/Assets/Material/M_BG_ARM"
+        self.LocalSceneDefaultMaterial = "/Game/Assets/Scenes/%s/Common/Material/M_ARM_VT"%scene_name
+        self.SceneDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_ARM_VT"
         self.error_lable.setText('') 
 
 
@@ -218,12 +218,18 @@ class ScenesMeshImporter(QtWidgets.QWidget):
         self.TextureImportPathPatten = '/Game/Assets/Pro/'+ep+'/'+pro_name+'/Texture/'
         # paramater Material Create
         self.MaterialInstancePath = '/Game/Assets/Pro/'+ep+'/'+pro_name+'/Material/'
-        self.LocalSceneDefaultMaterial ='/Game/Assets/Pro/'+ep+'/'+pro_name+'/Common/Material/M_BG_ARM'
-        self.SceneDefaultMaterial = "/ZynnPlugin/Assets/Material/M_BG_ARM"
+        self.LocalSceneDefaultMaterial ='/Game/Assets/Pro/'+ep+'/'+pro_name+'/Common/Material/M_ARM_VT'
+        self.SceneDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_ARM_VT"
         self.error_lable.setText('') 
 
         
 
+    def parseStaticMeshName(self,name,sceneName):
+        parseResult = {}
+        parseResult["name"] = name
+        if sceneName:
+            parseResult["scenename"] = sceneName
+        return parseResult
 
     def importStaticmeshs(self,datas:list,sceneName=None):
 
@@ -234,6 +240,7 @@ class ScenesMeshImporter(QtWidgets.QWidget):
             name = data["name"]
             path = data["path"]
             parseReslut = util.parseStaticMeshName(name,sceneName)
+            # parseReslut = self.parseStaticMeshName(name,sceneName)
             destinationPath = util.applyMacro(self.StaticMeshImportPathPatten,parseReslut)
             wrapSM = UU.WrapStaticMesh.importFromFbx(path,destinationPath,1) #导入静态网格体
             JsonPath = path.replace('.fbx','.json')
@@ -252,12 +259,14 @@ class ScenesMeshImporter(QtWidgets.QWidget):
                     wrapBaseColor.setVTEnable(True)
                     wrapBaseColor.saveAsset()
                     wrapMaterialIns.setTextureParameter("BaseColor_Map",wrapBaseColor.asset)
+                    print("BaseColor_Map")
 
                 if TexturePath['refl_roughness'] == None:
                     ARMSPath = TexturePath['refl_metalness']
                 else:
                     ARMSPath = TexturePath['refl_roughness']
                 WrapARMS = self.textureImport(ARMSPath)
+                UU.saveAll()
                 WrapARMS.setAsLinerColor()
                 WrapARMS.setVTEnable(True)
                 WrapARMS.saveAsset()
@@ -283,6 +292,7 @@ class ScenesMeshImporter(QtWidgets.QWidget):
             wrapSM.saveAsset()
 
     def textureImport(self,texturePaths:list):
+        UU.saveAll()          # 保存所有资产,防止导入过程中崩溃
         wrapTex = UU.WrapTexture.importTexture( texturePaths[0],self.TextureImportPathPatten)
         if len(texturePaths) == 1:
             return wrapTex
