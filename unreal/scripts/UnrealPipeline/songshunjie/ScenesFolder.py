@@ -22,7 +22,7 @@ import functools
 from dayu_widgets import dayu_theme
 from dayu_widgets.qt import application
 
-print('ScenesFolder')
+print('ScenesFolder1.1')
 
 
 class ScenesMeshImporter(QtWidgets.QWidget):
@@ -199,16 +199,14 @@ class ScenesMeshImporter(QtWidgets.QWidget):
         #获取ep名称
         ep=self.ep_text.text()
         #设置名称列表
-        basefloder_names=['/Map','/Common','/Material','/Mesh','/Groom','/SkeletalMash','/Texture','/Behavior']
+        basefloder_names=['/Material','/Mesh','/Texture']
         #保存所有文件
         unreal.EditorAssetLibrary.save_directory('/Game')
 
         #创建基础文件夹
         for basefloder_name in basefloder_names:
             unreal.EditorAssetLibrary.make_directory('/Game/Assets/Pro/'+ep+'/'+pro_name+basefloder_name)
-        #创建主关卡
-        if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Pro/'+ep+'/'+pro_name+'/Map/'+pro_name+'_Pro_Shade'):
-            unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=pro_name+'_Pro_Shade',package_path='/Game/Assets/Pro/'+ep+'/'+pro_name+'/Map',asset_class=unreal.World,factory=unreal.WorldFactory())
+        
 
         #保存所有文件
         unreal.EditorAssetLibrary.save_directory('/Game')
@@ -234,8 +232,8 @@ class ScenesMeshImporter(QtWidgets.QWidget):
     def importStaticmeshs(self,datas:list,sceneName=None):
 
         UU.saveAll()          # 保存所有资产,防止导入过程中崩溃
-        UU.duplicate_asset(self.SceneDefaultMaterial,self.LocalSceneDefaultMaterial)
-        wrapMaterial = UU.WrapMaterial(unreal.load_asset(self.LocalSceneDefaultMaterial))
+        # UU.duplicate_asset(self.SceneDefaultMaterial,self.LocalSceneDefaultMaterial)
+        wrapMaterial = UU.WrapMaterial(unreal.load_asset(self.SceneDefaultMaterial))
         for data in datas: # 遍历所有传入的资产数据
             name = data["name"]
             path = data["path"]
