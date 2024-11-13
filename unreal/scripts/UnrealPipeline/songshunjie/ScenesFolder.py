@@ -27,6 +27,8 @@ print('ScenesFolder1.1')
 
 class ScenesMeshImporter(QtWidgets.QWidget):
 
+    import_type=''
+
     def __init__(self,parent=None):
         super().__init__(parent)
         self.setWindowTitle("场景模型导入")
@@ -122,7 +124,8 @@ class ScenesMeshImporter(QtWidgets.QWidget):
                 for data in self.wCamera.datas:
                     if not data["imported"]:
                         waitImportedQueue.append(data)
-            self.scenesCreate()
+            self.import_type = 'scenes'
+            
             self.importStaticmeshs(waitImportedQueue)
         
 
@@ -138,7 +141,7 @@ class ScenesMeshImporter(QtWidgets.QWidget):
                 for data in self.wCamera.datas:
                     if not data["imported"]:
                         waitImportedQueue.append(data)
-            self.proCreate()
+            self.import_type = 'pro'
             self.importStaticmeshs(waitImportedQueue)
 
         
@@ -160,13 +163,16 @@ class ScenesMeshImporter(QtWidgets.QWidget):
 
 
 
-    def scenesCreate(self):
+    def scenesCreate(self,name):
         sub_level_names=['_Shade','_Shade_Light','_Shade_VFX']
         basefloder_names=['/Map/Level','/Common','/Material','/Mesh','/Other','/BP','/VFX','/Texture']
         #保存所有文件
         unreal.EditorAssetLibrary.save_directory('/Game')
 
-        scene_name= self.scene_name_text.text()
+        if not self.scene_name_text.text():
+            scene_name = name
+        else:
+            scene_name = self.scene_name_text.text()
 
         #创建基础文件夹
         for basefloder_name in basefloder_names:
@@ -193,11 +199,14 @@ class ScenesMeshImporter(QtWidgets.QWidget):
 
 
 
-    def proCreate(self):
+    def proCreate(self,name):
         #获取FBX名称
         pro_name=self.pro_name_text.text()
         #获取ep名称
-        ep=self.ep_text.text()
+        if self.ep_text.text():
+            ep=self.ep_text.text()
+        else:
+            ep=name
         #设置名称列表
         basefloder_names=['/Material','/Mesh','/Texture']
         #保存所有文件
@@ -232,11 +241,15 @@ class ScenesMeshImporter(QtWidgets.QWidget):
     def importStaticmeshs(self,datas:list,sceneName=None):
 
         UU.saveAll()          # 保存所有资产,防止导入过程中崩溃
-        # UU.duplicate_asset(self.SceneDefaultMaterial,self.LocalSceneDefaultMaterial)
-        wrapMaterial = UU.WrapMaterial(unreal.load_asset(self.SceneDefaultMaterial))
+        
         for data in datas: # 遍历所有传入的资产数据
             name = data["name"]
             path = data["path"]
+            if self.import_type == 'scenes':
+                self.scenesCreate(name)
+            elif self.import_type == 'pro':
+                self.proCreate(name)
+            wrapMaterial = UU.WrapMaterial(unreal.load_asset(self.SceneDefaultMaterial))
             parseReslut = util.parseStaticMeshName(name,sceneName)
             # parseReslut = self.parseStaticMeshName(name,sceneName)
             destinationPath = util.applyMacro(self.StaticMeshImportPathPatten,parseReslut)
