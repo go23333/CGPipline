@@ -578,22 +578,24 @@ def importStaticmeshs(datas:list,sceneName=None):
             TexturePath = MaterialInfo['TexturePath']
             if TexturePath['diffuse_color'] != None:
                 wrapBaseColor = textureImport(TexturePath['diffuse_color'],os.path.join(rootPath,"Texture"))
+                wrapBaseColor.saveAsset()
                 wrapBaseColor.setAsColor()
                 wrapBaseColor.setVTEnable(True)
                 wrapBaseColor.saveAsset()
                 wrapMaterialIns.setTextureParameter("BaseColor_Map",wrapBaseColor.asset)
-
             if TexturePath['refl_roughness'] == None:
                 ARMSPath = TexturePath['refl_metalness']
             else:
                 ARMSPath = TexturePath['refl_roughness']
             WrapARMS = textureImport(ARMSPath,os.path.join(rootPath,"Texture"))
+            WrapARMS.saveAsset()
             WrapARMS.setAsLinerColor()
             WrapARMS.setVTEnable(True)
             WrapARMS.saveAsset()
             wrapMaterialIns.setTextureParameter("ARMS_Map",WrapARMS.asset)
             if TexturePath['bump_input'] != None:
                 wrapNormal = textureImport(TexturePath['bump_input'],os.path.join(rootPath,"Texture"))
+                wrapNormal.saveAsset()
                 wrapNormal.setAsNormal()
                 wrapNormal.setVTEnable(True)
                 wrapNormal.saveAsset()
@@ -601,6 +603,7 @@ def importStaticmeshs(datas:list,sceneName=None):
 
             if TexturePath['emission_color'] != None:
                 WrapEmissive = textureImport(TexturePath['emission_color'],os.path.join(rootPath,"Texture"))
+                WrapEmissive.saveAsset()
                 WrapEmissive.setAsColor()
                 WrapEmissive.setVTEnable(True)
                 WrapEmissive.saveAsset()
