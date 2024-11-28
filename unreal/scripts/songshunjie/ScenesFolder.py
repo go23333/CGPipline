@@ -1,13 +1,17 @@
 import unreal
 import os
+import re
+from importlib import reload
 
 from Qt import QtCore
 from Qt import QtWidgets
 
-import uUnreal as UU
-import uCommon as UC
-import uGlobalConfig as UG
-import Pages
+import UnrealPipeline.core.UnrealHelper as UU
+import UnrealPipeline.core.utilis as util
+import UnrealPipeline.core.Config as UC
+reload(UC)
+from UnrealPipeline.core.CommonWidget import folderSelectGroup,DateTableView
+
 
 from dayu_widgets.push_button import MPushButton
 from dayu_widgets.push_button import MPushButton
@@ -22,10 +26,12 @@ import functools
 from dayu_widgets import dayu_theme
 from dayu_widgets.qt import application
 
-print('ScenesFolder')
+print('ScenesFolder1.1')
 
 
 class ScenesMeshImporter(QtWidgets.QWidget):
+
+    import_type=''
 
     def __init__(self,parent=None):
         super().__init__(parent)
@@ -36,8 +42,8 @@ class ScenesMeshImporter(QtWidgets.QWidget):
 
         layMain = QtWidgets.QVBoxLayout()   #定义主布局
 
-        self.folderSelectGroup = Pages.folderSelectGroup("网格体文件路径:") #定义路径选择组
-        self.wCamera = Pages.DateTableView(UC.CameraHeader)  #定义相机数据表格
+        self.folderSelectGroup = folderSelectGroup("网格体文件路径:") #定义路径选择组
+        self.wCamera = DateTableView(util.CameraHeader)  #定义相机数据表格
 
         self.folderSelectGroup.setOnTextChanged(self.wCamera.fetchCamera)        # 文字框改变时刷新
         self.folderSelectGroup.setOnTextChanged(self.importName)  
@@ -94,7 +100,7 @@ class ScenesMeshImporter(QtWidgets.QWidget):
 
         box_pro.setLayout(lay_pro)
         #创建抽屉名称
-        btn_tab.add_tab(box_scene,{"text": "场景"})
+        # btn_tab.add_tab(box_scene,{"text": "场景"})
         btn_tab.add_tab(box_pro,{"text": "道具"})
 
         layImport.addWidget(btn_tab)
@@ -122,7 +128,8 @@ class ScenesMeshImporter(QtWidgets.QWidget):
                 for data in self.wCamera.datas:
                     if not data["imported"]:
                         waitImportedQueue.append(data)
-            self.scenesCreate()
+            self.import_type = 'scenes'
+            
             self.importStaticmeshs(waitImportedQueue)
         
 
@@ -138,7 +145,7 @@ class ScenesMeshImporter(QtWidgets.QWidget):
                 for data in self.wCamera.datas:
                     if not data["imported"]:
                         waitImportedQueue.append(data)
-            self.proCreate()
+            self.import_type = 'pro'
             self.importStaticmeshs(waitImportedQueue)
 
         
@@ -160,85 +167,108 @@ class ScenesMeshImporter(QtWidgets.QWidget):
 
 
 
-    def scenesCreate(self):
-        sub_level_names=['_Shade','_Shade_Light','_Shade_VFX']
-        basefloder_names=['/Map/Level','/Common','/Material','/Mesh','/Other','/BP','/VFX','/Texture']
-        #保存所有文件
-        unreal.EditorAssetLibrary.save_directory('/Game')
+    # def scenesCreate(self,name):
+    #     sub_level_names=['_Shade','_Shade_Light','_Shade_VFX']
+    #     basefloder_names=['/Map/Level','/Common','/Material','/Mesh','/Other','/BP','/VFX','/Texture']
+    #     #保存所有文件
+    #     unreal.EditorAssetLibrary.save_directory('/Game')
 
-        scene_name= self.scene_name_text.text()
+    #     if not self.scene_name_text.text():
+    #         scene_name = name
+    #     else:
+    #         scene_name = self.scene_name_text.text()
 
-        #创建基础文件夹
-        for basefloder_name in basefloder_names:
-            unreal.EditorAssetLibrary.make_directory('/Game/Assets/Scenes/'+scene_name+basefloder_name)
-        #创建主关卡
-        if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Scenes/'+scene_name+'/Map/'+scene_name+'_Main'):
-            main_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=scene_name+'_Main',package_path='/Game/Assets/Scenes/'+scene_name+'/Map',asset_class=unreal.World,factory=unreal.WorldFactory())
-        #创建子关卡
-        for sub_level_name in sub_level_names:
-            if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Scenes/'+scene_name+'/Map/Level/'+scene_name+sub_level_name):
-                sub_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=scene_name+sub_level_name,package_path='/Game/Assets/Scenes/'+scene_name+'/Map/Level',asset_class=unreal.World,factory=unreal.WorldFactory())
-                unreal.EditorLevelUtils().add_level_to_world(main_level,level_package_name=sub_level.get_path_name(),level_streaming_class=unreal.LevelStreamingAlwaysLoaded)
-        #保存所有文件
-        unreal.EditorAssetLibrary.save_directory('/Game')
-        #生成路径
-        self.StaticMeshImportPathPatten ="/Game/Assets/Scenes/%s/Mesh/"%scene_name
-        # paramater Texture Import
-        self.TextureImportPathPatten = "/Game/Assets/Scenes/%s/Texture/"%scene_name
-        # paramater Material Create
-        self.MaterialInstancePath = "/Game/Assets/Scenes/%s/Material/"%scene_name
-        self.LocalSceneDefaultMaterial = "/Game/Assets/Scenes/%s/Common/Material/M_BG_ARM"%scene_name
-        self.SceneDefaultMaterial = "/ZynnPlugin/Assets/Material/M_BG_ARM"
-        self.error_lable.setText('') 
+    #     #创建基础文件夹
+    #     for basefloder_name in basefloder_names:
+    #         unreal.EditorAssetLibrary.make_directory('/Game/Assets/Scenes/'+scene_name+basefloder_name)
+    #     #创建主关卡
+    #     if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Scenes/'+scene_name+'/Map/'+scene_name+'_Main'):
+    #         main_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=scene_name+'_Main',package_path='/Game/Assets/Scenes/'+scene_name+'/Map',asset_class=unreal.World,factory=unreal.WorldFactory())
+    #     #创建子关卡
+    #     for sub_level_name in sub_level_names:
+    #         if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Scenes/'+scene_name+'/Map/Level/'+scene_name+sub_level_name):
+    #             sub_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=scene_name+sub_level_name,package_path='/Game/Assets/Scenes/'+scene_name+'/Map/Level',asset_class=unreal.World,factory=unreal.WorldFactory())
+    #             unreal.EditorLevelUtils().add_level_to_world(main_level,level_package_name=sub_level.get_path_name(),level_streaming_class=unreal.LevelStreamingAlwaysLoaded)
+    #     #保存所有文件
+    #     unreal.EditorAssetLibrary.save_directory('/Game')
+    #     #生成路径
+    #     self.StaticMeshImportPathPatten ="/Game/Assets/Scenes/%s/Mesh/"%scene_name
+    #     # paramater Texture Import
+    #     self.TextureImportPathPatten = "/Game/Assets/Scenes/%s/Texture/"%scene_name
+    #     # paramater Material Create
+    #     self.MaterialInstancePath = "/Game/Assets/Scenes/%s/Material/"%scene_name
+    #     self.LocalSceneDefaultMaterial = "/Game/Assets/Scenes/%s/Common/Material/M_ARM_VT"%scene_name
+    #     self.ProDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_ARM_VT"
+    #     self.error_lable.setText('') 
 
 
 
-    def proCreate(self):
+    def proCreate(self,name):
+        
+        # '/Game/Assets/Scenes/$ep/$proname/'
+        # pattern = r'\$[\w]+'
+        # pro_texts = re.findall(pattern, pro_root_path)
         #获取FBX名称
         pro_name=self.pro_name_text.text()
         #获取ep名称
-        ep=self.ep_text.text()
+        if self.ep_text.text():
+            ep=self.ep_text.text()
+        else:
+            ep=name
+        pro_root_path = UC.globalConfig.get().ProMeshImportPathPatten
+        file_root = pro_root_path.replace('$ep',ep).replace('$proname',pro_name)
         #设置名称列表
-        basefloder_names=['/Map','/Common','/Material','/Mesh','/Groom','/SkeletalMash','/Texture','/Behavior']
+        basefloder_names=['Material','Mesh','Texture']
         #保存所有文件
         unreal.EditorAssetLibrary.save_directory('/Game')
 
         #创建基础文件夹
         for basefloder_name in basefloder_names:
-            unreal.EditorAssetLibrary.make_directory('/Game/Assets/Pro/'+ep+'/'+pro_name+basefloder_name)
-        #创建主关卡
-        if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Pro/'+ep+'/'+pro_name+'/Map/'+pro_name+'_Pro_Shade'):
-            unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=pro_name+'_Pro_Shade',package_path='/Game/Assets/Pro/'+ep+'/'+pro_name+'/Map',asset_class=unreal.World,factory=unreal.WorldFactory())
+            unreal.EditorAssetLibrary.make_directory(file_root+basefloder_name)
+        
 
         #保存所有文件
         unreal.EditorAssetLibrary.save_directory('/Game')
         #生成路径
-        self.StaticMeshImportPathPatten ='/Game/Assets/Pro/'+ep+'/'+pro_name+'/Mesh/'
+        self.StaticMeshImportPathPatten =file_root+'Mesh/'
         # paramater Texture Import
-        self.TextureImportPathPatten = '/Game/Assets/Pro/'+ep+'/'+pro_name+'/Texture/'
+        self.TextureImportPathPatten = file_root+'Texture/'
         # paramater Material Create
-        self.MaterialInstancePath = '/Game/Assets/Pro/'+ep+'/'+pro_name+'/Material/'
-        self.LocalSceneDefaultMaterial ='/Game/Assets/Pro/'+ep+'/'+pro_name+'/Common/Material/M_BG_ARM'
-        self.SceneDefaultMaterial = "/ZynnPlugin/Assets/Material/M_BG_ARM"
+        self.MaterialInstancePath = file_root+'Material/'
+        self.LocalSceneDefaultMaterial = file_root+'/Common/Material/M_ARM_VT'
+        self.ProDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_ARM_VT"
         self.error_lable.setText('') 
+
+        # rootPath = UC.globalConfig.get().StaticMeshImportPathPatten
 
         
 
+    def parseStaticMeshName(self,name,sceneName):
+        parseResult = {}
+        parseResult["name"] = name
+        if sceneName:
+            parseResult["scenename"] = sceneName
+        return parseResult
 
     def importStaticmeshs(self,datas:list,sceneName=None):
 
         UU.saveAll()          # 保存所有资产,防止导入过程中崩溃
-        UU.duplicate_asset(self.SceneDefaultMaterial,self.LocalSceneDefaultMaterial)
-        wrapMaterial = UU.WrapMaterial(unreal.load_asset(self.LocalSceneDefaultMaterial))
+        
         for data in datas: # 遍历所有传入的资产数据
             name = data["name"]
             path = data["path"]
-            parseReslut = UC.parseStaticMeshName(name,sceneName)
-            destinationPath = UC.applyMacro(self.StaticMeshImportPathPatten,parseReslut)
+            if self.import_type == 'scenes':
+                self.scenesCreate(name)
+            elif self.import_type == 'pro':
+                self.proCreate(name)
+            wrapMaterial = UU.WrapMaterial(unreal.load_asset(UC.globalConfig.get().SceneDefaultVTMaterial))
+            parseReslut = util.parseStaticMeshName(name,sceneName)
+            # parseReslut = self.parseStaticMeshName(name,sceneName)
+            destinationPath = util.applyMacro(self.StaticMeshImportPathPatten,parseReslut)
             wrapSM = UU.WrapStaticMesh.importFromFbx(path,destinationPath,1) #导入静态网格体
             JsonPath = path.replace('.fbx','.json')
-            Json_file = UC.ReadJsonFile(JsonPath)
-            MaterialInfoList = UC.analyseJson(Json_file)
+            Json_file = util.ReadJsonFile(JsonPath)
+            MaterialInfoList = util.analyseJson(Json_file)
             for MaterialInfo in MaterialInfoList:
                 # 判断是否创建材质
                 if not MaterialInfo['CreateMaterial']:
@@ -252,12 +282,14 @@ class ScenesMeshImporter(QtWidgets.QWidget):
                     wrapBaseColor.setVTEnable(True)
                     wrapBaseColor.saveAsset()
                     wrapMaterialIns.setTextureParameter("BaseColor_Map",wrapBaseColor.asset)
+                    print("BaseColor_Map")
 
                 if TexturePath['refl_roughness'] == None:
                     ARMSPath = TexturePath['refl_metalness']
                 else:
                     ARMSPath = TexturePath['refl_roughness']
                 WrapARMS = self.textureImport(ARMSPath)
+                UU.saveAll()
                 WrapARMS.setAsLinerColor()
                 WrapARMS.setVTEnable(True)
                 WrapARMS.saveAsset()
@@ -283,11 +315,12 @@ class ScenesMeshImporter(QtWidgets.QWidget):
             wrapSM.saveAsset()
 
     def textureImport(self,texturePaths:list):
+        UU.saveAll()          # 保存所有资产,防止导入过程中崩溃
         wrapTex = UU.WrapTexture.importTexture( texturePaths[0],self.TextureImportPathPatten)
         if len(texturePaths) == 1:
             return wrapTex
-        if not (wrapTex.setVTEnable(UG.globalConfig.get().TextureEnableVT) and UG.globalConfig.get().TextureEnableVT):
-            UC.ConvertTexture.resizerTextures(texturePaths)
+        if not (wrapTex.setVTEnable(UC.globalConfig.get().TextureEnableVT) and UC.globalConfig.get().TextureEnableVT):
+            util.ConvertTexture.resizerTextures(texturePaths)
             wrapTex = UU.WrapTexture.importTexture(texturePaths[0],self.TextureImportPathPatten)
         return wrapTex
 
@@ -312,3 +345,5 @@ if __name__ == "__main__":
         dayu_theme.apply(test)
         test.show()
         unreal.parent_external_window_to_slate(int(test.winId()))
+    
+
