@@ -31,6 +31,8 @@ class globalConfig():
         self.SceneDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_ARM.M_ARM"
         self.DefaultDecalMaterial = "/ZYNNPlugins/Assets/Material/M_Decal.M_Decal"
         self.DefaultFoliageMaterial = "/ZYNNPlugins/Assets/Material/M_Foliage.M_Foliage"
+        # Pro Mesh Import
+        self.ProMeshImportPathPatten = "/Game/Assets/Pro/$ep/$proname/"
         # MyBridge Settings
         self.connectHost = "127.0.0.1"
         self.connectPort = 54321
