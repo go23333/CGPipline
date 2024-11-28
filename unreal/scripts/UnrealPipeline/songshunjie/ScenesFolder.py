@@ -1,5 +1,7 @@
 import unreal
 import os
+import re
+from importlib import reload
 
 from Qt import QtCore
 from Qt import QtWidgets
@@ -7,7 +9,9 @@ from Qt import QtWidgets
 import UnrealPipeline.core.UnrealHelper as UU
 import UnrealPipeline.core.utilis as util
 import UnrealPipeline.core.Config as UC
+reload(UC)
 from UnrealPipeline.core.CommonWidget import folderSelectGroup,DateTableView
+
 
 from dayu_widgets.push_button import MPushButton
 from dayu_widgets.push_button import MPushButton
@@ -96,7 +100,7 @@ class ScenesMeshImporter(QtWidgets.QWidget):
 
         box_pro.setLayout(lay_pro)
         #创建抽屉名称
-        btn_tab.add_tab(box_scene,{"text": "场景"})
+        # btn_tab.add_tab(box_scene,{"text": "场景"})
         btn_tab.add_tab(box_pro,{"text": "道具"})
 
         layImport.addWidget(btn_tab)
@@ -163,43 +167,47 @@ class ScenesMeshImporter(QtWidgets.QWidget):
 
 
 
-    def scenesCreate(self,name):
-        sub_level_names=['_Shade','_Shade_Light','_Shade_VFX']
-        basefloder_names=['/Map/Level','/Common','/Material','/Mesh','/Other','/BP','/VFX','/Texture']
-        #保存所有文件
-        unreal.EditorAssetLibrary.save_directory('/Game')
+    # def scenesCreate(self,name):
+    #     sub_level_names=['_Shade','_Shade_Light','_Shade_VFX']
+    #     basefloder_names=['/Map/Level','/Common','/Material','/Mesh','/Other','/BP','/VFX','/Texture']
+    #     #保存所有文件
+    #     unreal.EditorAssetLibrary.save_directory('/Game')
 
-        if not self.scene_name_text.text():
-            scene_name = name
-        else:
-            scene_name = self.scene_name_text.text()
+    #     if not self.scene_name_text.text():
+    #         scene_name = name
+    #     else:
+    #         scene_name = self.scene_name_text.text()
 
-        #创建基础文件夹
-        for basefloder_name in basefloder_names:
-            unreal.EditorAssetLibrary.make_directory('/Game/Assets/Scenes/'+scene_name+basefloder_name)
-        #创建主关卡
-        if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Scenes/'+scene_name+'/Map/'+scene_name+'_Main'):
-            main_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=scene_name+'_Main',package_path='/Game/Assets/Scenes/'+scene_name+'/Map',asset_class=unreal.World,factory=unreal.WorldFactory())
-        #创建子关卡
-        for sub_level_name in sub_level_names:
-            if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Scenes/'+scene_name+'/Map/Level/'+scene_name+sub_level_name):
-                sub_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=scene_name+sub_level_name,package_path='/Game/Assets/Scenes/'+scene_name+'/Map/Level',asset_class=unreal.World,factory=unreal.WorldFactory())
-                unreal.EditorLevelUtils().add_level_to_world(main_level,level_package_name=sub_level.get_path_name(),level_streaming_class=unreal.LevelStreamingAlwaysLoaded)
-        #保存所有文件
-        unreal.EditorAssetLibrary.save_directory('/Game')
-        #生成路径
-        self.StaticMeshImportPathPatten ="/Game/Assets/Scenes/%s/Mesh/"%scene_name
-        # paramater Texture Import
-        self.TextureImportPathPatten = "/Game/Assets/Scenes/%s/Texture/"%scene_name
-        # paramater Material Create
-        self.MaterialInstancePath = "/Game/Assets/Scenes/%s/Material/"%scene_name
-        self.LocalSceneDefaultMaterial = "/Game/Assets/Scenes/%s/Common/Material/M_ARM_VT"%scene_name
-        self.SceneDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_ARM_VT"
-        self.error_lable.setText('') 
+    #     #创建基础文件夹
+    #     for basefloder_name in basefloder_names:
+    #         unreal.EditorAssetLibrary.make_directory('/Game/Assets/Scenes/'+scene_name+basefloder_name)
+    #     #创建主关卡
+    #     if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Scenes/'+scene_name+'/Map/'+scene_name+'_Main'):
+    #         main_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=scene_name+'_Main',package_path='/Game/Assets/Scenes/'+scene_name+'/Map',asset_class=unreal.World,factory=unreal.WorldFactory())
+    #     #创建子关卡
+    #     for sub_level_name in sub_level_names:
+    #         if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Assets/Scenes/'+scene_name+'/Map/Level/'+scene_name+sub_level_name):
+    #             sub_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=scene_name+sub_level_name,package_path='/Game/Assets/Scenes/'+scene_name+'/Map/Level',asset_class=unreal.World,factory=unreal.WorldFactory())
+    #             unreal.EditorLevelUtils().add_level_to_world(main_level,level_package_name=sub_level.get_path_name(),level_streaming_class=unreal.LevelStreamingAlwaysLoaded)
+    #     #保存所有文件
+    #     unreal.EditorAssetLibrary.save_directory('/Game')
+    #     #生成路径
+    #     self.StaticMeshImportPathPatten ="/Game/Assets/Scenes/%s/Mesh/"%scene_name
+    #     # paramater Texture Import
+    #     self.TextureImportPathPatten = "/Game/Assets/Scenes/%s/Texture/"%scene_name
+    #     # paramater Material Create
+    #     self.MaterialInstancePath = "/Game/Assets/Scenes/%s/Material/"%scene_name
+    #     self.LocalSceneDefaultMaterial = "/Game/Assets/Scenes/%s/Common/Material/M_ARM_VT"%scene_name
+    #     self.ProDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_ARM_VT"
+    #     self.error_lable.setText('') 
 
 
 
     def proCreate(self,name):
+        
+        # '/Game/Assets/Scenes/$ep/$proname/'
+        # pattern = r'\$[\w]+'
+        # pro_texts = re.findall(pattern, pro_root_path)
         #获取FBX名称
         pro_name=self.pro_name_text.text()
         #获取ep名称
@@ -207,27 +215,31 @@ class ScenesMeshImporter(QtWidgets.QWidget):
             ep=self.ep_text.text()
         else:
             ep=name
+        pro_root_path = UC.globalConfig.get().ProMeshImportPathPatten
+        file_root = pro_root_path.replace('$ep',ep).replace('$proname',pro_name)
         #设置名称列表
-        basefloder_names=['/Material','/Mesh','/Texture']
+        basefloder_names=['Material','Mesh','Texture']
         #保存所有文件
         unreal.EditorAssetLibrary.save_directory('/Game')
 
         #创建基础文件夹
         for basefloder_name in basefloder_names:
-            unreal.EditorAssetLibrary.make_directory('/Game/Assets/Pro/'+ep+'/'+pro_name+basefloder_name)
+            unreal.EditorAssetLibrary.make_directory(file_root+basefloder_name)
         
 
         #保存所有文件
         unreal.EditorAssetLibrary.save_directory('/Game')
         #生成路径
-        self.StaticMeshImportPathPatten ='/Game/Assets/Pro/'+ep+'/'+pro_name+'/Mesh/'
+        self.StaticMeshImportPathPatten =file_root+'Mesh/'
         # paramater Texture Import
-        self.TextureImportPathPatten = '/Game/Assets/Pro/'+ep+'/'+pro_name+'/Texture/'
+        self.TextureImportPathPatten = file_root+'Texture/'
         # paramater Material Create
-        self.MaterialInstancePath = '/Game/Assets/Pro/'+ep+'/'+pro_name+'/Material/'
-        self.LocalSceneDefaultMaterial ='/Game/Assets/Pro/'+ep+'/'+pro_name+'/Common/Material/M_ARM_VT'
-        self.SceneDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_ARM_VT"
+        self.MaterialInstancePath = file_root+'Material/'
+        self.LocalSceneDefaultMaterial = file_root+'/Common/Material/M_ARM_VT'
+        self.ProDefaultMaterial = "/ZYNNPlugins/Assets/Material/M_ARM_VT"
         self.error_lable.setText('') 
+
+        # rootPath = UC.globalConfig.get().StaticMeshImportPathPatten
 
         
 
@@ -249,7 +261,7 @@ class ScenesMeshImporter(QtWidgets.QWidget):
                 self.scenesCreate(name)
             elif self.import_type == 'pro':
                 self.proCreate(name)
-            wrapMaterial = UU.WrapMaterial(unreal.load_asset(self.SceneDefaultMaterial))
+            wrapMaterial = UU.WrapMaterial(unreal.load_asset(UC.globalConfig.get().SceneDefaultVTMaterial))
             parseReslut = util.parseStaticMeshName(name,sceneName)
             # parseReslut = self.parseStaticMeshName(name,sceneName)
             destinationPath = util.applyMacro(self.StaticMeshImportPathPatten,parseReslut)
@@ -333,3 +345,5 @@ if __name__ == "__main__":
         dayu_theme.apply(test)
         test.show()
         unreal.parent_external_window_to_slate(int(test.winId()))
+    
+
