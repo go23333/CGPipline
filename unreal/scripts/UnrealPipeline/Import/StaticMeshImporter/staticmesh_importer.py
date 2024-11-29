@@ -13,6 +13,7 @@ import unreal
 
 from dayu_widgets.push_button import MPushButton
 from dayu_widgets.combo_box import MComboBox
+from dayu_widgets.line_edit import MLineEdit
 from dayu_widgets.qt import application
 from dayu_widgets import dayu_theme
 
@@ -55,9 +56,12 @@ class StaticMeshImporter(QtWidgets.QWidget):
         btnImport.clicked.connect(
             functools.partial(self.importCameras,False)
             )
-        self.cbSceneName = MComboBox()
-        self.cbSceneName.addItems(UH.getAllScenesName())
-        self.cbSceneName.setMinimumWidth(100)
+        # self.cbSceneName = MComboBox()
+        # self.cbSceneName.addItems(UH.getAllScenesName())
+        # self.cbSceneName.setMinimumWidth(100)
+        self.cbSceneName=MLineEdit().medium()
+        self.cbSceneName.setPlaceholderText(self.tr("输入资产文件夹名称,不输入则使用网格自身名称"))
+        self.cbSceneName.setMinimumWidth(280)
 
 
         layImport.addWidget(self.cbSceneName,alignment=QtCore.Qt.AlignLeft)
@@ -82,7 +86,7 @@ class StaticMeshImporter(QtWidgets.QWidget):
             for data in self.wCamera.datas:
                 if not data["imported"]:
                     waitImportedQueue.append(data)
-        UH.importStaticmeshs(waitImportedQueue,self.cbSceneName.currentText())
+        UH.importStaticmeshs(waitImportedQueue,self.cbSceneName.text())
 
 def Start():
     with application() as app:

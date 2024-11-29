@@ -554,6 +554,17 @@ def textureImport(texturePaths:list,path):
 
 
 def importStaticmeshs(datas:list,sceneName=None):
+
+
+    sub_level_names=['_Shade','_Shade_Light','_Shade_VFX']
+    basefloder_names=['Map/Level','Common','Material','Mesh','Other','BP','VFX','Texture']
+
+    #判断输入名称是否为空
+    if sceneName:
+        scene_null = False
+    else:
+        scene_null = True
+
     saveAll()          # 保存所有资产,防止导入过程中崩溃
     #duplicate_asset(globalConfig.get().SceneDefaultMaterial,globalConfig.get().LocalSceneDefaultMaterial)
     # 载入对应母球
@@ -561,8 +572,35 @@ def importStaticmeshs(datas:list,sceneName=None):
     for data in datas: # 遍历所有传入的资产数据
         name = data["name"]
         path = data["path"]
+        
+        #未获取到场景名称时,使用导入的网格名称
+        if scene_null:
+            sceneName = name
+
+        print(sceneName)
+
+        scene_root_name = globalConfig.get().StaticMeshImportPathPatten
+        scene_root_name = scene_root_name.replace('$scenename',sceneName)
+
+        #创建基础文件夹
+        for basefloder_name in basefloder_names:
+            unreal.EditorAssetLibrary.make_directory(scene_root_name+basefloder_name)
+        #创建主关卡
+        if not unreal.EditorAssetSubsystem().does_asset_exist(scene_root_name+'Map/'+sceneName+'_Main'):
+            main_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=sceneName+'_Main',package_path=scene_root_name+'Map',asset_class=unreal.World,factory=unreal.WorldFactory())
+        #创建子关卡
+        for sub_level_name in sub_level_names:
+            if not unreal.EditorAssetSubsystem().does_asset_exist(scene_root_name+'Map/Level/'+sceneName+sub_level_name):
+                sub_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=sceneName+sub_level_name,package_path=scene_root_name+'Map/Level',asset_class=unreal.World,factory=unreal.WorldFactory())
+                unreal.EditorLevelUtils().add_level_to_world(main_level,level_package_name=sub_level.get_path_name(),level_streaming_class=unreal.LevelStreamingAlwaysLoaded)
+
+
+
         parseReslut = UT.parseStaticMeshName(name,sceneName)
         rootPath = UT.applyMacro(globalConfig.get().StaticMeshImportPathPatten,parseReslut)
+
+
+
         wrapSM = WrapStaticMesh.importFromFbx(path,os.path.join(rootPath,"Mesh"),1) #导入静态网格体
         
         JsonPath = path.replace('.fbx','.json')
@@ -612,6 +650,7 @@ def importStaticmeshs(datas:list,sceneName=None):
             wrapMaterialIns.saveAsset()
             wrapSM.setMaterialBySloatName(MaterialInfo["Materialname"],wrapMaterialIns.asset)
         wrapSM.saveAsset()
+    saveAll()
 
 
 
