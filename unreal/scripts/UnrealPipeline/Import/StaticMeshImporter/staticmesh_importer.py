@@ -56,12 +56,35 @@ class StaticMeshImporter(QtWidgets.QWidget):
         btnImport.clicked.connect(
             functools.partial(self.importCameras,False)
             )
+        
+
         # self.cbSceneName = MComboBox()
-        # self.cbSceneName.addItems(UH.getAllScenesName())
-        # self.cbSceneName.setMinimumWidth(100)
-        self.cbSceneName=MLineEdit().medium()
-        self.cbSceneName.setPlaceholderText(self.tr("输入资产文件夹名称,不输入则使用网格自身名称"))
-        self.cbSceneName.setMinimumWidth(280)
+
+        self.cbSceneName = QtWidgets.QComboBox()
+        self.cbSceneName.addItems(UH.getAllScenesName())
+        self.cbSceneName.setMinimumWidth(100)
+        self.cbSceneName.setMinimumHeight(30)
+        self.cbSceneName.setEditable(True)
+
+        self.cbSceneName.setStyleSheet(
+                                    "QComboBox{"
+                                    "border-style: solid;" 
+                                    "border-width: 1px;" 
+                                    "border-color: #222222;"
+                                    "}"
+                                    "QComboBox::drop-down {"
+                                    "border-style: none;"
+                                    "subcontrol-position: top right;"
+                                    "}"
+                                    "QComboBox QAbstractItemView{"
+                                    "border-radius:0px 0px 5px 5px;"
+                                    "}"
+                                    )
+        
+        # self.cbSceneName=MLineEdit().medium()
+        # self.cbSceneName.setPlaceholderText(self.tr("输入资产文件夹名称,不输入则使用网格自身名称"))
+        # self.cbSceneName.setMinimumWidth(280)
+
 
 
         layImport.addWidget(self.cbSceneName,alignment=QtCore.Qt.AlignLeft)
@@ -86,7 +109,7 @@ class StaticMeshImporter(QtWidgets.QWidget):
             for data in self.wCamera.datas:
                 if not data["imported"]:
                     waitImportedQueue.append(data)
-        UH.importStaticmeshs(waitImportedQueue,self.cbSceneName.text())
+        UH.importStaticmeshs(waitImportedQueue,self.cbSceneName.currentText())
 
 def Start():
     with application() as app:
