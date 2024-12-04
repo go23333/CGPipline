@@ -14,6 +14,8 @@ import unreal
 from dayu_widgets.push_button import MPushButton
 from dayu_widgets.combo_box import MComboBox
 from dayu_widgets.line_edit import MLineEdit
+from dayu_widgets.switch import MSwitch
+from dayu_widgets.label import MLabel
 from dayu_widgets.qt import application
 from dayu_widgets import dayu_theme
 
@@ -72,10 +74,6 @@ class StaticMeshImporter(QtWidgets.QWidget):
                                     "border-width: 1px;" 
                                     "border-color: #222222;"
                                     "}"
-                                    "QComboBox::drop-down {"
-                                    "border-style: none;"
-                                    "subcontrol-position: top right;"
-                                    "}"
                                     "QComboBox QAbstractItemView{"
                                     "border-radius:0px 0px 5px 5px;"
                                     "}"
@@ -85,9 +83,15 @@ class StaticMeshImporter(QtWidgets.QWidget):
         # self.cbSceneName.setPlaceholderText(self.tr("输入资产文件夹名称,不输入则使用网格自身名称"))
         # self.cbSceneName.setMinimumWidth(280)
 
+        self.switch = MSwitch()
+        self.switch.setChecked(False)
+        switch_lay = QtWidgets.QFormLayout()
+        switch_lay.addRow(MLabel("导入时是否创建关卡"), self.switch)    #关卡创建开关
+        
 
 
         layImport.addWidget(self.cbSceneName,alignment=QtCore.Qt.AlignLeft)
+        layImport.addLayout(switch_lay,alignment=QtCore.Qt.AlignLeft)
         layImport.addWidget(btnImport,alignment=QtCore.Qt.AlignRight)
         # 依次添加布局
         layMain.addLayout(self.folderSelectGroup)
@@ -109,7 +113,7 @@ class StaticMeshImporter(QtWidgets.QWidget):
             for data in self.wCamera.datas:
                 if not data["imported"]:
                     waitImportedQueue.append(data)
-        UH.importStaticmeshs(waitImportedQueue,self.cbSceneName.currentText())
+        UH.importStaticmeshs(waitImportedQueue,self.cbSceneName.currentText(),self.switch.isChecked())
 
 def Start():
     with application() as app:

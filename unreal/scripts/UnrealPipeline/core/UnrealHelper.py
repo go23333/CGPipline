@@ -553,7 +553,7 @@ def textureImport(texturePaths:list,path):
 
 
 
-def importStaticmeshs(datas:list,sceneName=None):
+def importStaticmeshs(datas:list,sceneName=None,createSwitch=False):
 
 
     sub_level_names=['_Shade','_Shade_Light','_Shade_VFX']
@@ -577,22 +577,21 @@ def importStaticmeshs(datas:list,sceneName=None):
         if scene_null:
             sceneName = name
 
-        print(sceneName)
-
         scene_root_name = globalConfig.get().StaticMeshImportPathPatten
         scene_root_name = scene_root_name.replace('$scenename',sceneName)
 
-        #创建基础文件夹
-        for basefloder_name in basefloder_names:
-            unreal.EditorAssetLibrary.make_directory(scene_root_name+basefloder_name)
-        #创建主关卡
-        if not unreal.EditorAssetSubsystem().does_asset_exist(scene_root_name+'Map/'+sceneName+'_Main'):
-            main_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=sceneName+'_Main',package_path=scene_root_name+'Map',asset_class=unreal.World,factory=unreal.WorldFactory())
-        #创建子关卡
-        for sub_level_name in sub_level_names:
-            if not unreal.EditorAssetSubsystem().does_asset_exist(scene_root_name+'Map/Level/'+sceneName+sub_level_name):
-                sub_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=sceneName+sub_level_name,package_path=scene_root_name+'Map/Level',asset_class=unreal.World,factory=unreal.WorldFactory())
-                unreal.EditorLevelUtils().add_level_to_world(main_level,level_package_name=sub_level.get_path_name(),level_streaming_class=unreal.LevelStreamingAlwaysLoaded)
+        if createSwitch == True:    #判断是否创建关卡
+            #创建基础文件夹
+            for basefloder_name in basefloder_names:
+                unreal.EditorAssetLibrary.make_directory(scene_root_name+basefloder_name)
+            #创建主关卡
+            if not unreal.EditorAssetSubsystem().does_asset_exist(scene_root_name+'Map/'+sceneName+'_Main'):
+                main_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=sceneName+'_Main',package_path=scene_root_name+'Map',asset_class=unreal.World,factory=unreal.WorldFactory())
+            #创建子关卡
+            for sub_level_name in sub_level_names:
+                if not unreal.EditorAssetSubsystem().does_asset_exist(scene_root_name+'Map/Level/'+sceneName+sub_level_name):
+                    sub_level=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=sceneName+sub_level_name,package_path=scene_root_name+'Map/Level',asset_class=unreal.World,factory=unreal.WorldFactory())
+                    unreal.EditorLevelUtils().add_level_to_world(main_level,level_package_name=sub_level.get_path_name(),level_streaming_class=unreal.LevelStreamingAlwaysLoaded)
 
 
 
