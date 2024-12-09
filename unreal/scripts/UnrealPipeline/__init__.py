@@ -44,7 +44,7 @@ def InstallMenu():
     texContextMenu = menus.find_menu("ContentBrowser.AssetContextMenu.Texture2D")
     from UnrealPipeline.core.UnrealHelper import MakeEntry
 
-    entry = MakeEntry("addWaterMark","添加水印",toolTip="",command="from UnrealPipeline.core.UnrealHelper import addWaterMarkToSelectedTextures;addWaterMarkToSelectedTextures()")
+    entry = MakeEntry("addWaterMark","添加大模型标签",toolTip="",command="from UnrealPipeline.core.UnrealHelper import addWaterMarkToSelectedTextures;addWaterMarkToSelectedTextures()")
     texContextMenu.add_menu_entry("",entry)
     
 
