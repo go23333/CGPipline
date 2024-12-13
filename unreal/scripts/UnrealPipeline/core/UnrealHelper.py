@@ -1044,9 +1044,7 @@ def MakeEntry(name:str,label:str,command:str = "",toolTip:str = "") -> unreal.To
 
 
 def importAssetPipline(AssetData:dict):
-    currentPath = unreal.EditorUtilityLibrary.get_current_content_browser_path()
-    rootPath = os.path.join(currentPath,f"MyBridge/{AssetData['assetType'].replace(' ','_')}/{AssetData['name']}_{AssetData['AssetID']}")
-
+    rootPath = os.path.join(globalConfig.get().MyBridgeTargetPath,f"{AssetData['assetType'].replace(' ','_')}/{AssetData['name']}_{AssetData['AssetID']}")
     if AssetData["assetFormat"] == 'FBX':# 当类型为FBX资产
         #导入贴图
         t_arm = WrapTexture.importTexture(AssetData["arm"],os.path.join(rootPath,f"Textures"))
