@@ -26,7 +26,7 @@ from dayu_widgets import dayu_theme
 from dayu_widgets.qt import application
 
 
-print('AAI')
+print('AAI 1.1')
 
 
 
@@ -401,8 +401,10 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         asset_level_names=self.field("asset_level_app")
         ep_name=self.field("ep_app")
 
-
         
+        
+
+
 
         if self.select_world_names:
 
@@ -414,8 +416,11 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                             world_asset_find_list.append(world_asset_find)
             #通过选择的关卡序列获取对应的关卡序列
                     for sequnence_find_asset in self.sequnence_find_assets:
-                        if select_world_name==sequnence_find_asset.get_asset().get_name().rsplit('_',1)[0] and sequnence_find_asset.get_asset().get_name().rsplit('_',1)[-1]=='an':
+                        # print(sequnence_find_asset)
+                        if select_world_name.replace('_lt','')==sequnence_find_asset.get_asset().get_name().rsplit('_',1)[0] and sequnence_find_asset.get_asset().get_name().rsplit('_',1)[-1]=='an':
                             sequnence_asset_find_list.append(sequnence_find_asset)
+
+            
 
             #对场景添加资产
             if asset_level_names:
@@ -458,7 +463,6 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                                         sequnence_asset_find.get_asset().add_spawnable_from_instance(find_ch_asset.get_asset())
                             else:
                                 if asset_ch_name==find_ch_asset.get_asset().get_name():
-                                    # print(asset_ch_name,value)
                                     sequnence_asset_find.get_asset().add_spawnable_from_instance(find_ch_asset.get_asset())
             unreal.EditorAssetLibrary.save_directory('/Game/Shots')
 
@@ -525,12 +529,13 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                     #确定world资产
                     world_asset=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
                     world_asset_name=world_asset.get_asset().get_name()
-                    #获取灯光路径名
-                    light_flie_sc_name=world_asset.get_asset().get_path_name().rsplit('/',3)[-3]
-                    #添加信息到列表
-                    self.world_asset_names.append(world_asset_name)
-                    self.world_find_assets.append(world_asset)
-                    light_sc_flie_lists.append(light_flie_sc_name)
+                    if '_lt' in world_asset_name:
+                        #获取灯光路径名
+                        light_flie_sc_name=world_asset.get_asset().get_path_name().rsplit('/',4)[-4]
+                        #添加信息到列表
+                        self.world_asset_names.append(world_asset_name)
+                        self.world_find_assets.append(world_asset)
+                        light_sc_flie_lists.append(light_flie_sc_name)
                 
                 if light_asset_class=='LevelSequence':
                     #收集sequnence资产
@@ -553,7 +558,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                 for light_sc in self.light_sc_flie_list:
                     tree_1=QtGui.QStandardItem(light_sc)
                     for world_assets_name in self.world_find_assets:
-                        if light_sc==world_assets_name.get_asset().get_path_name().rsplit('/',3)[-3]:
+                        if light_sc==world_assets_name.get_asset().get_path_name().rsplit('/',4)[-4]:
                             tree_2=QtGui.QStandardItem(world_assets_name.get_asset().get_name())
                             tree_1.appendRow(tree_2)
                     self.model_map.appendRow(tree_1) 
