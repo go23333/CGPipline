@@ -417,7 +417,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             #通过选择的关卡序列获取对应的关卡序列
                     for sequnence_find_asset in self.sequnence_find_assets:
                         # print(sequnence_find_asset)
-                        if select_world_name.replace('_lt','')==sequnence_find_asset.get_asset().get_name().rsplit('_',1)[0] and sequnence_find_asset.get_asset().get_name().rsplit('_',1)[-1]=='an':
+                        if select_world_name.replace('_Map','')==sequnence_find_asset.get_asset().get_name().rsplit('_',1)[0] and sequnence_find_asset.get_asset().get_name().rsplit('_',1)[-1]=='an':
                             sequnence_asset_find_list.append(sequnence_find_asset)
 
             
@@ -529,9 +529,10 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                     #确定world资产
                     world_asset=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
                     world_asset_name=world_asset.get_asset().get_name()
-                    if '_lt' in world_asset_name:
+                    world_asset_path=world_asset.get_asset().get_path_name()
+                    if '_Map' in world_asset_name and 'Preview' not in world_asset_path:
                         #获取灯光路径名
-                        light_flie_sc_name=world_asset.get_asset().get_path_name().rsplit('/',4)[-4]
+                        light_flie_sc_name=world_asset_path.rsplit('/')[-3]
                         #添加信息到列表
                         self.world_asset_names.append(world_asset_name)
                         self.world_find_assets.append(world_asset)
@@ -556,9 +557,10 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             self.model_map.setHorizontalHeaderLabels([self.tr("目标场景目录")])
             if self.light_sc_flie_list:
                 for light_sc in self.light_sc_flie_list:
+                    #创建一级菜单
                     tree_1=QtGui.QStandardItem(light_sc)
                     for world_assets_name in self.world_find_assets:
-                        if light_sc==world_assets_name.get_asset().get_path_name().rsplit('/',4)[-4]:
+                        if light_sc==world_assets_name.get_asset().get_path_name().rsplit('/',3)[-3]:
                             tree_2=QtGui.QStandardItem(world_assets_name.get_asset().get_name())
                             tree_1.appendRow(tree_2)
                     self.model_map.appendRow(tree_1) 
