@@ -307,7 +307,7 @@ def addCutomAOV(defaultShaderTypeName,AOVName):
         print("RedShift plugin not find")
         return
     if  pm.objExists("rsAov_{0}".format(AOVName)):
-        return m
+        return 
     pm.rsCreateAov(type="Custom")
     #在创建AOV之后需要运行命令刷新AOV列表
     pm.Mel.eval("redshiftUpdateActiveAovList()")
@@ -316,6 +316,23 @@ def addCutomAOV(defaultShaderTypeName,AOVName):
     pm.rename("rsAov_Custom","rsAov_{0}".format(AOVName))#更改AO节点的名称
     node = pm.createNode(defaultShaderTypeName)
     pm.connectAttr("{0}.outColor".format(node),"rsAov_{0}.defaultShader".format(AOVName))
+
+
+def xgmCreateCurvesFromGuidesOption(obj,guideState,lockLength,group):
+    """
+    This function will create Maya NURBS curves from the current selection.
+    
+    guideStat(int):Actions taken to the guides after the curves are created 0 - Keep; 1 - Hide; 2 - Delete
+
+    lockLength(int):If true, lock the length of the NURBS curves
+
+    group(string):The group name for the new curves.If empty, a default name will be provided
+    """
+    pm.select(clear=1)
+    pm.select(obj)
+    curves = pm.Mel.eval('xgmCreateCurvesFromGuidesOption({0},{1},"{2}")'.format(guideState,lockLength,group))
+    return curves
+
 if __name__ == "__main__":
     addCutomAOV("RedshiftFresnel","custom_Rim")
     addCutomAOV("RedshiftAmbientOcclusion","custom_AO")
