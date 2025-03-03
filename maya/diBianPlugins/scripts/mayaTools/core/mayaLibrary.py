@@ -7,12 +7,16 @@ import maya.mel as mel
 import pymel.core as pm
 import maya.api.OpenMaya as om
 
+import xgenm as xg
+import xgenm.xgGlobal as xgg
+
+
 import mayaTools.core.pathLibrary as PL
 from mayaTools.core.log import log
 import os
 
-
-
+GROOM_GROUP_ID_NAME = 'groom_group_id'
+GROOM_GUIDE_NAME = 'groom_guide'
 
 class TextureNode(object):
     def __init__(self):
@@ -21,7 +25,6 @@ class TextureNode(object):
         self.TextureDir = None
         self.TextureValue = None
         self.TextureList = []
- 
 
 
 materialNodeNames = ['lambert','blinn','RedshiftMaterial','RedshiftArchitectural']
@@ -247,7 +250,7 @@ def exportABC(object,sFrame,eFrane,path):
 def exportABC_gromm(objects,sFrame,eFrane,path):
     cmds.loadPlugin( 'AbcExport.mll' )
     cmds.loadPlugin( 'AbcImport.mll' )
-    command = "-frameRange " + str(sFrame) + " " + str(eFrane) +" -attr groom_group_id -uvWrite -writeFaceSets -dataFormat ogawa -root " + objects + " -file " + path
+    command = "-frameRange " + str(sFrame) + " " + str(eFrane) +" -attr groom_group_id -attr groom_guide -uvWrite -writeFaceSets -dataFormat ogawa -root " + objects + " -file " + path
     cmds.AbcExport ( j = command )
 
 def exportxgenABC(filepath,nodes=None,start_frame=1, end_frame=1):
@@ -464,8 +467,244 @@ def GetMeshBaseFileNode(filenode):
     return transfroms
 
 
+
+
+
+def sortHairStrandsGroup(groupName):
+    index = groupName.find("_Hair")
+
+    return int(groupName[index+5:index+7])
+
+def regroupHair():
+    id_attr_name = 'groom_group_id'
+    # 获取选择的节点
+    selections = cmds.ls(sl=1)
+
+    xgGroom = None
+    hairStrands = []
+    # 分离xgGroom和毛发条
+    for selection in selections:
+        if selection == "xgGroom":
+            xgGroom = selection
+        else:
+            hairStrands.append(selection)
+    # 如果没有找到xgGroom节点则返回
+    if not xgGroom:
+        return
+    # 按照组名排序毛发条
+    hairStrands = sorted(hairStrands,key=sortHairStrandsGroup)
+
+    # 创建用于存放新毛发的组
+    Hair_Strands_Groups = cmds.createNode('transform', name='Strands_Export_Groups')
+    Hair_Guide_Groups = cmds.createNode('transform', name='Hair_Guide_Groups')
+
+    # 获取xgGroom下的所有transform节点
+    guide_groups = cmds.listRelatives(xgGroom,type='transform')
+
+    # 遍历每个guide组
+    for guide_group in guide_groups:
+        # 跳过非xgCurvesFromGuides节点
+        if not "xgCurvesFromGuides" in guide_group:
+            continue
+        # 获取guide组的ID
+        try:
+            guide_id_index = cmds.getAttr(guide_group +".{}".format('groom_group_id'))
+        except:
+            guide_id_index = 0
+    
+        # 将毛发曲线按照ID分组
+        guide_idx = eval(guide_group.replace("xgCurvesFromGuides",""))
+        hairStrand = hairStrands[guide_idx-1]
+
+        #将毛发的变换重命名,赋予ID,并附加到毛发组中
+        strands_group = cmds.listRelatives(hairStrand,type='transform',f=1)[0]
+        cmds.addAttr(strands_group, longName=id_attr_name, attributeType='short', defaultValue=guide_id_index, keyable=True)
+        cmds.addAttr(strands_group, longName='{}_AbcGeomScope'.format(id_attr_name), dataType='string', keyable=True)
+        cmds.setAttr('{}.{}_AbcGeomScope'.format(strands_group, id_attr_name), 'con', type='string')
+        strands_group = cmds.rename(strands_group,"Strands_Group_{}".format(guide_idx))
+        cmds.parent(strands_group,Hair_Strands_Groups)
+        
+
+
+        guides_name = "guides_group_{}".format(guide_id_index)
+        if not cmds.objExists(guides_name):
+            guides_group = cmds.createNode('transform', name=guides_name,p=Hair_Guide_Groups)
+            cmds.addAttr(guides_group, longName=id_attr_name, attributeType='short', defaultValue=guide_id_index, keyable=True)
+            cmds.addAttr(guides_group, longName='{}_AbcGeomScope'.format(id_attr_name), dataType='string', keyable=True)
+            cmds.setAttr('{}.{}_AbcGeomScope'.format(guides_group, id_attr_name), 'con', type='string')
+        else:
+            guides_group = guides_name
+
+        guide_group_new_name = "Hair_Guide_{}".format(guide_idx)
+        cmds.rename(guide_group,guide_group_new_name)
+        cmds.parent(guide_group_new_name,guides_group)
+        cmds.delete(hairStrand)
+    
+    # 删除原始的xgGroom节点
+    cmds.delete(xgGroom)
+
+
+def exportHair():
+    guide_attr_name = 'groom_guide'
+    id_attr_name = 'groom_group_id'
+
+    guide_group = cmds.ls(sl=1)[0]
+    guide_export_group = cmds.createNode('transform', name="Guide_Export_Group")
+    guide_groups = cmds.listRelatives(guide_group,type="transform",f=1)
+    for guide_group in guide_groups:
+        group_id_index = cmds.getAttr(guide_group+".{}".format(id_attr_name))
+        for sub_guide_group in cmds.listRelatives(guide_group,typ="transform",f=1):
+            new_guides_group = cmds.createNode('transform', name= sub_guide_group + "Guide_E",p=guide_export_group)
+            cmds.addAttr(new_guides_group, longName=guide_attr_name, attributeType='short', defaultValue=1, keyable=True)
+            cmds.addAttr(new_guides_group, longName='riCurves', attributeType='bool', defaultValue=1, keyable=True)
+            cmds.addAttr(new_guides_group, longName='{}_AbcGeomScope'.format(guide_attr_name), dataType='string', keyable=True)
+            cmds.setAttr('{}.{}_AbcGeomScope'.format(new_guides_group, guide_attr_name), 'con', type='string')
+            cmds.addAttr(new_guides_group, longName=id_attr_name, attributeType='short', defaultValue=group_id_index, keyable=True)
+            cmds.addAttr(new_guides_group, longName='{}_AbcGeomScope'.format(id_attr_name), dataType='string', keyable=True)
+            cmds.setAttr('{}.{}_AbcGeomScope'.format(new_guides_group, id_attr_name), 'con', type='string')
+
+            curves_shape = []
+            curves_no_sim_shape = []
+            guide_or_follicle_group = cmds.listRelatives(sub_guide_group,typ="transform")
+            for guide_or_follicle in guide_or_follicle_group:
+                if "follicle" in guide_or_follicle:
+                    curve_transforom = cmds.listConnections(guide_or_follicle+".outCurve")
+                    curves_shape += cmds.listRelatives(curve_transforom, ad=True, type='nurbsCurve',f=1)
+                else:
+                    curves_no_sim_shape += cmds.listRelatives(guide_or_follicle, ad=True, type='nurbsCurve',f=1)
+            for curve in curves_shape:
+                cmds.parent(curve, new_guides_group, shape=True, relative=True)
+            if curves_no_sim_shape != []:
+                new_guides_group_no_sim = cmds.createNode('transform', name= sub_guide_group + "Guide_E_nosim",p=guide_export_group)
+                cmds.addAttr(new_guides_group_no_sim, longName=guide_attr_name, attributeType='short', defaultValue=1, keyable=True)
+                cmds.addAttr(new_guides_group_no_sim, longName='riCurves', attributeType='bool', defaultValue=1, keyable=True)
+                cmds.addAttr(new_guides_group_no_sim, longName='{}_AbcGeomScope'.format(guide_attr_name), dataType='string', keyable=True)
+                cmds.setAttr('{}.{}_AbcGeomScope'.format(new_guides_group_no_sim, guide_attr_name), 'con', type='string')
+                cmds.addAttr(new_guides_group_no_sim, longName=id_attr_name, attributeType='short', defaultValue=group_id_index, keyable=True)
+                cmds.addAttr(new_guides_group_no_sim, longName='{}_AbcGeomScope'.format(id_attr_name), dataType='string', keyable=True)
+                cmds.setAttr('{}.{}_AbcGeomScope'.format(new_guides_group_no_sim, id_attr_name), 'con', type='string')
+            for curve in curves_no_sim_shape:
+                cmds.parent(curve, new_guides_group_no_sim, shape=True, relative=True)
+
+
+
+
+def convert_xgen_guides_to_curves(description_name):
+    cmds.select(description_name,r=1)
+    curve_group_name = description_name+"_guide_curves"
+    mel.eval('xgmCreateCurvesFromGuidesOption(0, 0, "{}")'.format(curve_group_name))
+    return curve_group_name
+
+
+def get_attr(node,attrName,defaultValue):
+    try:
+        return cmds.getAttr(node+".{}".format(attrName))
+    except:
+        return defaultValue
+
+def add_groom_id_attr(node,value):
+    cmds.addAttr(node, longName=GROOM_GROUP_ID_NAME, attributeType='short', defaultValue=value, keyable=True)
+    cmds.addAttr(node, longName='{}_AbcGeomScope'.format(GROOM_GROUP_ID_NAME), dataType='string', keyable=True)
+    cmds.setAttr('{}.{}_AbcGeomScope'.format(node, GROOM_GROUP_ID_NAME), 'con', type='string')
+
+def add_guide_attr(node):
+    cmds.addAttr(node, longName=GROOM_GUIDE_NAME, attributeType='short', defaultValue=1, keyable=True)
+    cmds.addAttr(node, longName='riCurves', attributeType='bool', defaultValue=1, keyable=True)
+    cmds.addAttr(node, longName='{}_AbcGeomScope'.format(GROOM_GUIDE_NAME), dataType='string', keyable=True)
+    cmds.setAttr('{}.{}_AbcGeomScope'.format(node, GROOM_GUIDE_NAME), 'con', type='string')
+
+
+
+def make_guide(origin_guide_group,parent,copy=False):
+    guide_groups = cmds.listRelatives(origin_guide_group,type='transform')
+    #遍历每个包含曲线的组
+    for guide_group in guide_groups:
+        #为每个包含曲线的组在用于导出的组内创建一个,曲线父组
+        new_guide_group = cmds.createNode('transform',name="{}_Export".format(guide_group),p=parent)
+
+        #为这个新组赋予属性
+        groom_group_id = get_attr(guide_group,GROOM_GROUP_ID_NAME,0)
+        add_groom_id_attr(new_guide_group,groom_group_id)
+        add_guide_attr(new_guide_group)
+
+        curves_shape = []
+        curves_no_sim_shape = []
+        guide_or_follicle_group = cmds.listRelatives(guide_group,typ="transform")
+        for guide_or_follicle in guide_or_follicle_group:
+            if "follicle" in guide_or_follicle:
+                curve_transforom = cmds.listConnections(guide_or_follicle+".outCurve")
+                curves_shape += cmds.listRelatives(curve_transforom, ad=True, type='nurbsCurve',f=1)
+            else:
+                if copy:
+                    guide_or_follicle = cmds.duplicate(guide_or_follicle)
+                curves_no_sim_shape += cmds.listRelatives(guide_or_follicle, ad=True, type='nurbsCurve',f=1)
+        for curve in curves_shape:
+            cmds.parent(curve, new_guide_group, shape=True, relative=True)
+
+        if curves_shape == []:
+            cmds.delete(new_guide_group)
+
+        if curves_no_sim_shape != []:
+            new_guide_group = cmds.createNode('transform',name="{}_nosim_Export".format(guide_group),p=parent)
+            add_groom_id_attr(new_guide_group,groom_group_id)
+            add_guide_attr(new_guide_group)
+            for curve in curves_no_sim_shape:
+                cmds.parent(curve, new_guide_group, shape=True, relative=True)
+
+
+def export_static_gromm(export_path,tempABC = r"d:\temp.abc"):
+    
+    descriptions = xg.descriptions()#获取所有xgen描述
+    #将毛发描述转换为交互式,并转换为曲线
+    interactives = []
+    for description in descriptions:
+        interactive_shape = cmds.xgmGroomConvert(description)
+        interactives.append(cmds.listRelatives(interactive_shape,ap=1,type='transform')[0])
+    exportxgenABC(tempABC,interactives,0,0) #直接导出交互式毛发
+    #删除交互式
+    for interactive in interactives:
+        cmds.delete(interactive)
+
+    newnodes = importgroomabc(tempABC)
+    curveNodes = []
+    for node in newnodes:
+        if cmds.nodeType(node) == 'transform' and cmds.listRelatives(node,type = 'nurbsCurve'):
+            curveNodes.append(node)
+    print(curveNodes)
+    for_export_group = cmds.createNode('transform', name="For_Export_Group")
+
+    for i,curveNode in enumerate(curveNodes):
+        parent = cmds.listRelatives(curveNode,ap=1,type="transform")[0]
+        description_name = parent.replace("temp_","").replace("_splineDescription","")
+        groom_group_id = get_attr(description_name,GROOM_GROUP_ID_NAME,0)
+        add_groom_id_attr(curveNode,groom_group_id)
+        curveNode = cmds.rename(curveNode,"Hair_Strands_{}".format(i))
+        cmds.parent(curveNode,for_export_group)
+        cmds.delete(parent)
+    #将毛发描述的导线转换为曲线
+    Guide_Curves = cmds.createNode('transform', name="Guide_Curves") #创建一个组用来保存导线组
+    for description in descriptions:
+        curves = convert_xgen_guides_to_curves(description)
+        groom_group_id = get_attr(description,GROOM_GROUP_ID_NAME,0)
+        add_groom_id_attr(curves,groom_group_id)
+        cmds.parent(curves,Guide_Curves)
+    try:
+        cmds.delete("xgGroom")
+    except:
+        pass
+
+    make_guide(Guide_Curves,for_export_group,True)
+
+    exportABC_gromm(for_export_group,0,0,export_path)
+
+def export_groom_guide_cache(guides,export_path,sFrame,eFrame):
+    for_export_group = cmds.createNode('transform', name="For_Export_Group")
+    make_guide(guides,for_export_group)
+    exportABC_gromm(for_export_group,sFrame,eFrame,export_path)
+
 if __name__ == "__main__":
     from mayaTools import reloadModule
     reloadModule()
-    
-    GetMeshBaseFileNode(pm.ls(selection=1)[0])
+    export_static_gromm(r"d:\Desktop\Test.abc")
+
+
