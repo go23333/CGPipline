@@ -673,14 +673,24 @@ def export_static_gromm(export_path,tempABC = r"d:\temp.abc"):
     print(curveNodes)
     for_export_group = cmds.createNode('transform', name="For_Export_Group")
 
+    parents = []
     for i,curveNode in enumerate(curveNodes):
         parent = cmds.listRelatives(curveNode,ap=1,type="transform")[0]
+        if parent not in parents:
+            parents.append(parent)
         description_name = parent.replace("temp_","").replace("_splineDescription","")
         groom_group_id = get_attr(description_name,GROOM_GROUP_ID_NAME,0)
         add_groom_id_attr(curveNode,groom_group_id)
         curveNode = cmds.rename(curveNode,"Hair_Strands_{}".format(i))
         cmds.parent(curveNode,for_export_group)
-        cmds.delete(parent)
+
+    for parent in parents:
+        try:
+            cmds.delete(parent)
+        except:
+            parent
+
+            
     #将毛发描述的导线转换为曲线
     Guide_Curves = cmds.createNode('transform', name="Guide_Curves") #创建一个组用来保存导线组
     for description in descriptions:
