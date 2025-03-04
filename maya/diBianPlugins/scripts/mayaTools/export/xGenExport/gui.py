@@ -46,6 +46,12 @@ class XgenTool(MayaQWidgetDockableMixin,QWidget):
 
         mainLayout.addWidget(widgets.QLine.HLine(self))
 
+        pb_prepare_for_export = MPushButton("整理毛发准备导出")
+        pb_prepare_for_export.clicked.connect(self.prepare_for_export)
+        mainLayout.addWidget(pb_prepare_for_export)
+
+        mainLayout.addWidget(widgets.QLine.HLine(self))
+
 
 
 
@@ -67,7 +73,7 @@ class XgenTool(MayaQWidgetDockableMixin,QWidget):
         layout_select_folder.addWidget(self.lle_select_folder)
         layout_select_folder.addWidget(pbSelectfolder)
 
-        pb_export_static_groom = MPushButton("导出静态毛发")
+        pb_export_static_groom = MPushButton("导出选中的静态毛发")
         pb_export_static_groom.clicked.connect(self.export_static_groom)
         mainLayout.addWidget(pb_export_static_groom)
 
@@ -117,6 +123,9 @@ class XgenTool(MayaQWidgetDockableMixin,QWidget):
     def refreshIDs(self):
         for id in self.currentIDs:
             self.lab_ids.setText(u"当前选择的ID:" + str(id) + ',')
+    def prepare_for_export(self):
+        ML.prepare_export_groom()
+        pass
     def export_static_groom(self):
         fileName = self.lle_file_name.text()
         if fileName == "":
@@ -127,7 +136,8 @@ class XgenTool(MayaQWidgetDockableMixin,QWidget):
         if exportPath == "":
             MMessage.warning(parent=self,text="路径为空")
             return 
-        ML.export_static_gromm(os.path.join(exportPath,fileName))
+        sl = cmds.ls(sl=1)[0]
+        ML.exportABC_gromm(sl,0,0,os.path.join(exportPath,fileName))
     def assign_group_id(self):
         currentID = self.le_idInput.value()
         print(currentID)
