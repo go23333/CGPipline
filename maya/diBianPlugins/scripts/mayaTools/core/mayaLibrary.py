@@ -652,7 +652,7 @@ def make_guide(origin_guide_group,parent,copy=False):
                 cmds.parent(curve, new_guide_group, shape=True, relative=True)
 
 
-def export_static_gromm(export_path,tempABC = r"d:\temp.abc"):
+def prepare_export_groom(tempABC = r"d:\temp.abc"):
     
     descriptions = xg.descriptions()#获取所有xgen描述
     #将毛发描述转换为交互式,并转换为曲线
@@ -704,8 +704,8 @@ def export_static_gromm(export_path,tempABC = r"d:\temp.abc"):
         pass
 
     make_guide(Guide_Curves,for_export_group,True)
-
-    exportABC_gromm(for_export_group,0,0,export_path)
+    #return for_export_group
+    #exportABC_gromm(for_export_group,0,0,export_path)
 
 def export_groom_guide_cache(guides,export_path,sFrame,eFrame):
     for_export_group = cmds.createNode('transform', name="For_Export_Group")
@@ -715,6 +715,6 @@ def export_groom_guide_cache(guides,export_path,sFrame,eFrame):
 if __name__ == "__main__":
     from mayaTools import reloadModule
     reloadModule()
-    export_static_gromm(r"d:\Desktop\Test.abc")
+    prepare_export_groom()
 
 

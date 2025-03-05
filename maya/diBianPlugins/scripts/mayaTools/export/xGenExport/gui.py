@@ -120,12 +120,8 @@ class XgenTool(MayaQWidgetDockableMixin,QWidget):
                            }
                             ''')
 
-    def refreshIDs(self):
-        for id in self.currentIDs:
-            self.lab_ids.setText(u"当前选择的ID:" + str(id) + ',')
     def prepare_for_export(self):
         ML.prepare_export_groom()
-        pass
     def export_static_groom(self):
         fileName = self.lle_file_name.text()
         if fileName == "":
