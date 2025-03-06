@@ -648,9 +648,14 @@ def make_guide(origin_guide_group,parent,copy=False):
             new_guide_group = cmds.createNode('transform',name="{}_nosim_Export".format(guide_group),p=parent)
             add_groom_id_attr(new_guide_group,groom_group_id)
             add_guide_attr(new_guide_group)
+            original_parents = []
             for curve in curves_no_sim_shape:
+                original_parents.append(cmds.listRelatives(curve,ap=1,type='transform')[0])
                 cmds.parent(curve, new_guide_group, shape=True, relative=True)
-
+            #如果新的曲线是复制出来的,那么删除复制出来的transform节点
+            if copy:
+                for p in original_parents:
+                    cmds.delete(p)
 
 def prepare_export_groom(tempABC = r"d:\temp.abc"):
     
