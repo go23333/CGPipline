@@ -17,6 +17,9 @@ import os
 
 GROOM_GROUP_ID_NAME = 'groom_group_id'
 GROOM_GUIDE_NAME = 'groom_guide'
+GROOM_ID_NAME = "groom_id"
+GROOM_GUIDE_WEIGHTS_NAME = "groom_guide_weights"
+GROOM_CLOSEST_GUIDES_NAME = "groom_closest_guides"
 
 class TextureNode(object):
     def __init__(self):
@@ -250,7 +253,7 @@ def exportABC(object,sFrame,eFrane,path):
 def exportABC_gromm(objects,sFrame,eFrane,path):
     cmds.loadPlugin( 'AbcExport.mll' )
     cmds.loadPlugin( 'AbcImport.mll' )
-    command = "-frameRange " + str(sFrame) + " " + str(eFrane) +" -attr groom_group_id -attr groom_guide -uvWrite -writeFaceSets -dataFormat ogawa -root " + objects + " -file " + path
+    command = "-frameRange " + str(sFrame) + " " + str(eFrane) +" -attr groom_group_id -attr groom_guide -attr groom_id -attr groom_guide_weights -attr groom_closest_guides -uvWrite -writeFaceSets -dataFormat ogawa -root " + objects + " -file " + path
     cmds.AbcExport ( j = command )
 
 def exportxgenABC(filepath,nodes=None,start_frame=1, end_frame=1):
@@ -602,18 +605,34 @@ def get_attr(node,attrName,defaultValue):
     except:
         return defaultValue
 
-def add_groom_id_attr(node,value):
+def add_groom_group_id(node,value):
     cmds.addAttr(node, longName=GROOM_GROUP_ID_NAME, attributeType='short', defaultValue=value, keyable=True)
     cmds.addAttr(node, longName='{}_AbcGeomScope'.format(GROOM_GROUP_ID_NAME), dataType='string', keyable=True)
     cmds.setAttr('{}.{}_AbcGeomScope'.format(node, GROOM_GROUP_ID_NAME), 'con', type='string')
 
-def add_guide_attr(node):
+
+def add_groom_guide(node):
     cmds.addAttr(node, longName=GROOM_GUIDE_NAME, attributeType='short', defaultValue=1, keyable=True)
     cmds.addAttr(node, longName='riCurves', attributeType='bool', defaultValue=1, keyable=True)
     cmds.addAttr(node, longName='{}_AbcGeomScope'.format(GROOM_GUIDE_NAME), dataType='string', keyable=True)
     cmds.setAttr('{}.{}_AbcGeomScope'.format(node, GROOM_GUIDE_NAME), 'con', type='string')
 
+def add_groom_guide_weights(node,value):
+    return
+    cmds.addAttr(node, longName=GROOM_GUIDE_WEIGHTS_NAME, attributeType='float', defaultValue=value, keyable=True)
+    cmds.addAttr(node, longName='{}_AbcGeomScope'.format(GROOM_GUIDE_WEIGHTS_NAME), dataType='string', keyable=True)
+    cmds.setAttr('{}.{}_AbcGeomScope'.format(node, GROOM_GUIDE_WEIGHTS_NAME), 'uni', type='string')
 
+def add_groom_closest_guides(node,value):
+    cmds.addAttr(node, longName=GROOM_CLOSEST_GUIDES_NAME, attributeType='short', defaultValue=value, keyable=True)
+    cmds.addAttr(node, longName='{}_AbcGeomScope'.format(GROOM_CLOSEST_GUIDES_NAME), dataType='string', keyable=True)
+    cmds.setAttr('{}.{}_AbcGeomScope'.format(node, GROOM_CLOSEST_GUIDES_NAME), 'uni', type='string')
+
+
+def add_groom_id(node,value):
+    cmds.addAttr(node, longName=GROOM_ID_NAME, attributeType='short', defaultValue=value, keyable=True)
+    cmds.addAttr(node, longName='{}_AbcGeomScope'.format(GROOM_ID_NAME), dataType='string', keyable=True)
+    cmds.setAttr('{}.{}_AbcGeomScope'.format(node, GROOM_ID_NAME), 'uni', type='string')
 
 def make_guide(origin_guide_group,parent,copy=False):
     guide_groups = cmds.listRelatives(origin_guide_group,type='transform')
@@ -624,9 +643,13 @@ def make_guide(origin_guide_group,parent,copy=False):
 
         #为这个新组赋予属性
         groom_group_id = get_attr(guide_group,GROOM_GROUP_ID_NAME,0)
-        add_groom_id_attr(new_guide_group,groom_group_id)
-        add_guide_attr(new_guide_group)
+        guide_id = get_attr(guide_group,GROOM_ID_NAME,0)
 
+        add_groom_group_id(new_guide_group,groom_group_id)
+        add_groom_guide(new_guide_group)
+        add_groom_id(new_guide_group,guide_id)
+
+        
         curves_shape = []
         curves_no_sim_shape = []
         guide_or_follicle_group = cmds.listRelatives(guide_group,typ="transform")
@@ -646,8 +669,8 @@ def make_guide(origin_guide_group,parent,copy=False):
 
         if curves_no_sim_shape != []:
             new_guide_group = cmds.createNode('transform',name="{}_nosim_Export".format(guide_group),p=parent)
-            add_groom_id_attr(new_guide_group,groom_group_id)
-            add_guide_attr(new_guide_group)
+            add_groom_group_id(new_guide_group,groom_group_id)
+            add_groom_guide(new_guide_group)
             original_parents = []
             for curve in curves_no_sim_shape:
                 original_parents.append(cmds.listRelatives(curve,ap=1,type='transform')[0])
@@ -658,8 +681,29 @@ def make_guide(origin_guide_group,parent,copy=False):
                     cmds.delete(p)
 
 def prepare_export_groom(tempABC = r"d:\temp.abc"):
-    
+    # 创建一个用于导出的组
+    for_export_group = cmds.createNode('transform', name="For_Export_Group")
     descriptions = xg.descriptions()#获取所有xgen描述
+
+
+
+    #将毛发描述的导线转换为曲线
+    Guide_Curves = cmds.createNode('transform', name="Guide_Curves") #创建一个组用来保存导线组
+    for description in descriptions:
+        curves = convert_xgen_guides_to_curves(description)
+        groom_group_id = get_attr(description,GROOM_GROUP_ID_NAME,0)
+        guide_id = int(description[description.index("_Hair")+5:description.index("_Hair")+7])
+        add_groom_group_id(curves,groom_group_id)
+        add_groom_id(curves,guide_id)
+        cmds.parent(curves,Guide_Curves)
+    try:
+        cmds.delete("xgGroom")
+    except:
+        pass
+    make_guide(Guide_Curves,for_export_group,True)
+
+
+
     #将毛发描述转换为交互式,并转换为曲线
     interactives = []
     for description in descriptions:
@@ -670,47 +714,42 @@ def prepare_export_groom(tempABC = r"d:\temp.abc"):
     for interactive in interactives:
         cmds.delete(interactive)
 
+    # 导入之前导出的毛发曲线文件
     newnodes = importgroomabc(tempABC)
     curveNodes = []
     for node in newnodes:
         if cmds.nodeType(node) == 'transform' and cmds.listRelatives(node,type = 'nurbsCurve'):
             curveNodes.append(node)
-    print(curveNodes)
-    for_export_group = cmds.createNode('transform', name="For_Export_Group")
+    
 
     parents = []
-    for i,curveNode in enumerate(curveNodes):
+    for curveNode in curveNodes:
+        # 获取毛发曲线的父节点,供后面删除使用
         parent = cmds.listRelatives(curveNode,ap=1,type="transform")[0]
         if parent not in parents:
             parents.append(parent)
+        # 获取当前曲线组对应的毛发描述的节点的名称
         description_name = parent.replace("temp_","").replace("_splineDescription","")
+        # 获取预先设置的毛发组ID
         groom_group_id = get_attr(description_name,GROOM_GROUP_ID_NAME,0)
-        add_groom_id_attr(curveNode,groom_group_id)
-        curveNode = cmds.rename(curveNode,"Hair_Strands_{}".format(i))
+        guide_id = int(description_name[description_name.index("_Hair")+5:description_name.index("_Hair")+7])
+        # 为曲线组添加毛发组ID属性
+        add_groom_group_id(curveNode,groom_group_id)
+        add_groom_closest_guides(curveNode,guide_id)
+        add_groom_guide_weights(curveNode,1.0)
+
+        # 重命名毛发组并将其附加到用于导出的组中
+        curveNode = cmds.rename(curveNode,"Hair_Strands_{}".format(guide_id))
         cmds.parent(curveNode,for_export_group)
 
     for parent in parents:
         try:
             cmds.delete(parent)
         except:
-            parent
-
+            pass
             
-    #将毛发描述的导线转换为曲线
-    Guide_Curves = cmds.createNode('transform', name="Guide_Curves") #创建一个组用来保存导线组
-    for description in descriptions:
-        curves = convert_xgen_guides_to_curves(description)
-        groom_group_id = get_attr(description,GROOM_GROUP_ID_NAME,0)
-        add_groom_id_attr(curves,groom_group_id)
-        cmds.parent(curves,Guide_Curves)
-    try:
-        cmds.delete("xgGroom")
-    except:
-        pass
 
-    make_guide(Guide_Curves,for_export_group,True)
-    #return for_export_group
-    #exportABC_gromm(for_export_group,0,0,export_path)
+
 
 def export_groom_guide_cache(guides,export_path,sFrame,eFrame):
     for_export_group = cmds.createNode('transform', name="For_Export_Group")
@@ -720,6 +759,9 @@ def export_groom_guide_cache(guides,export_path,sFrame,eFrame):
 if __name__ == "__main__":
     from mayaTools import reloadModule
     reloadModule()
-    prepare_export_groom()
-
+    selections = cmds.ls(sl=1)
+    for sl in selections:
+        add_groom_guide(sl)
+        add_groom_group_id(sl,0)
+    
 
