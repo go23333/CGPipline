@@ -2,7 +2,7 @@
 from pkgutil import extend_path
 import sys
 
-from core.log import log
+from mayaTools.core.log import log
 import pymel.core as pm
 # 确保之后导入mayaTools模块时使用__path__作为路径
 __path__ = extend_path(__path__, __name__)
@@ -27,8 +27,8 @@ def install(menuID="mayaTools"):
     export.install(menuID)
     import mayaTools.optimize as optimize
     optimize.install(menuID)
-    import mayaTools.lightTools as light
-    light.install(menuID)
+    import mayaTools.editTools as edit
+    edit.install(menuID)
     
     
 
@@ -40,4 +40,3 @@ def reloadModule(name="mayaTools",*args):
 
 if __name__ == "__main__":
     reloadModule()
-    install()

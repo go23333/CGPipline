@@ -6,7 +6,7 @@ import pymel.core as pm
 def install(menu_id):
     pm.setParent(menu_id,menu=True)
     pm.menuItem("exportTool",label=u'导出工具',subMenu=True,tearOff=True)
-    pm.menuItem(label=u'腾讯导出工具',command=openNormalizeExport)
+    #pm.menuItem(label=u'腾讯导出工具',command=openNormalizeExport)
     pm.menuItem(label=u'abc导出工具',command=openAbcExport)
     pm.menuItem(label=u'相机导出工具',command=openCameraExport)
     pm.menuItem(label=u'XGen导出工具',command=openxGenExport)
