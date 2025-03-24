@@ -26,6 +26,10 @@ class UnfoldTool(MayaQWidgetDockableMixin,QWidget):
         MayaScriptDir = cmds.internalVar(userScriptDir=True)
         self.ObjectDir = MayaScriptDir + ('RizomUVBridge/') + ('data/RBMObject.fbx')
         self.LoaderDir = MayaScriptDir + ('RizomUVBridge/') + ('data/Loader.lua')
+
+        if not os.path.exists(os.path.dirname(self.ObjectDir)):
+            os.makedirs(os.path.dirname(self.ObjectDir))
+
         self.objects = []
 
     def __initUI(self):
