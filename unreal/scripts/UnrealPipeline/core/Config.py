@@ -37,6 +37,8 @@ class globalConfig():
         self.connectHost = "127.0.0.1"
         self.connectPort = 54321
         self.MyBridgeTargetPath = "/Game/Assets/MyBridge/"
+        self.MyBridgeTargetPathBuildin = "/Game/Assets/MyBridge/"
+        self.backendAddress = "http://192.168.3.133:5050"
         # engine version
         self.engine_version = unreal.SystemLibrary.get_engine_version().split("-")[-1]
         self.loadConfig()

@@ -15,6 +15,7 @@ import UnrealPipeline.core.glbHelper as g
 import shutil
 from UnrealPipeline.core.Config import globalConfig
 import UnrealPipeline.core.utilis as UT
+
 from PIL import Image
 
 #获取一些subsystem
@@ -25,6 +26,9 @@ levelEditorSybsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 levelSequenceEditorSubsystem = unreal.get_editor_subsystem(unreal.LevelSequenceEditorSubsystem)
 unrealEditorSybsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 unrealAssetsSubsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
+
+
+
 
 # 定义一些包裹类
 class WrapBaseAsset():
@@ -511,7 +515,6 @@ def nearClip(value:float):
 
 def saveAll():
     unreal.EditorAssetLibrary.save_directory("/Game/")
-
 def importCameras(datas:list):
     saveAll()          # 保存所有资产,防止导入过程中崩溃
     dataCount = len(datas)
@@ -672,6 +675,18 @@ class TextureType(Enum):
     COLOR = auto()
     LINEARCOLOR = auto()
     NOMRAL = auto()
+
+
+
+
+def convert_unreal_path_to_system_path(path:str)->str:
+    dir = unreal.Paths.project_content_dir()
+    result = dir + path.removeprefix("/Game/")
+    return result
+
+
+
+
 
 def getTextureSize(texture):
     return texture.blueprint_get_size_x()
@@ -1045,32 +1060,39 @@ def MakeEntry(name:str,label:str,command:str = "",toolTip:str = "") -> unreal.To
 
 def importAssetPipline(AssetData:dict):
     rootPath = os.path.join(globalConfig.get().MyBridgeTargetPath,f"{AssetData['assetType'].replace(' ','_')}/{AssetData['name']}_{AssetData['AssetID']}")
+    udim = False
+    if AssetData["udim"] == 'True':
+        udim = True
+    
     if AssetData["assetFormat"] == 'FBX':# 当类型为FBX资产
         #导入贴图
         t_arm = WrapTexture.importTexture(AssetData["arm"],os.path.join(rootPath,f"Textures"))
         t_arm.saveAsset()
         t_arm.setAsLinerColor()
-        t_arm.setVTEnable(False)
+        t_arm.setVTEnable(udim)
         t_arm.saveAsset()
 
         t_baseColor = WrapTexture.importTexture(AssetData["baseColor"],os.path.join(rootPath,f"Textures"))
         t_baseColor.saveAsset()
         t_baseColor.setAsColor()
-        t_baseColor.setVTEnable(False)
+        t_baseColor.setVTEnable(udim)
         t_baseColor.saveAsset()
 
 
         t_normal = WrapTexture.importTexture(AssetData["normal"],os.path.join(rootPath,f"Textures"))
         t_normal.saveAsset()
         t_normal.setAsNormal()
-        t_normal.setVTEnable(False)
+        t_normal.setVTEnable(udim)
         t_normal.saveAsset()
 
         
         
         wrapMaterialIns = WrapMaterialInstance.create(os.path.normpath(os.path.join(rootPath,f"Materials/MI_{AssetData['name']}_{AssetData['AssetID']}")))
         if AssetData["assetType"] == '3D Assets':
-            wrapMaterial = WrapMaterial(unreal.load_asset(globalConfig.get().SceneDefaultMaterial))
+            if udim:
+                wrapMaterial = WrapMaterial(unreal.load_asset(globalConfig.get().SceneDefaultVTMaterial))
+            else:
+                wrapMaterial = WrapMaterial(unreal.load_asset(globalConfig.get().SceneDefaultMaterial))
             #导入静态网格体
             wrapSM = WrapStaticMesh.importFromFbx(AssetData["mesh"],rootPath,1) 
             wrapSM.setMaterialByIndex(0,wrapMaterialIns.asset)
@@ -1092,6 +1114,13 @@ def importAssetPipline(AssetData:dict):
         wrapMaterialIns.setTextureParameter("Normal_Map",t_normal.asset)
         wrapMaterialIns.setTextureParameter("ARMS_Map",t_arm.asset)
         wrapMaterialIns.saveAsset()
+    elif AssetData["assetFormat"] == "Unreal Engine":# 当类型为FBX资产
+        tempPath = globalConfig.get().MyBridgeTargetPathBuildin + AssetData["AssetID"]
+        system_path = convert_unreal_path_to_system_path(tempPath)
+        if not os.path.exists(system_path):
+            shutil.copytree(AssetData["mesh"],system_path)
+        else:
+            print(f"目录{system_path}已经存在跳过导出")
     else:
         pass
 def getAllScenesName(rootFolder="/Game/Assets/Scenes"):
@@ -1137,28 +1166,112 @@ def addWaterMarkToSelectedTextures():
             if os.path.exists(tex):
                 os.remove(tex)
 
-if __name__ == "__main__":
-    from UnrealPipeline import reloadModule
-    reloadModule()
-    from UnrealPipeline.core.WTHelper import addWatermark
+def GetDependenceAssets(asset):
+    options = unreal.AssetRegistryDependencyOptions()
+    options.include_hard_management_references = True
+    options.include_hard_package_references = True
+    options.include_searchable_names = True
+    options.include_soft_management_references = True
+    options.include_soft_package_references = True
+    assetRegistry = unreal.AssetRegistryHelpers.get_asset_registry()
+    references = assetRegistry.get_dependencies(asset.get_package().get_name(),options)
+    return [str(ref) for ref in references]
+
+
+
+
+def MoveMaterialAndDependenceToFolder(material:unreal.Material,rootFolder:str):
+
+    '''
+        注意第二个参数需要传入一个文件夹路径,而且需要以/结尾
+    '''
+    dependencies = GetDependenceAssets(material)
+
+    # 复制材质到指定目录
+    new_material_path = rootFolder + os.path.basename(material.get_path_name())
+    unreal.EditorAssetLibrary.duplicate_asset(material.get_path_name(),new_material_path)
+    material = unreal.load_asset(new_material_path)
+
+    # 遍历所有依赖项
+    for dependency in dependencies:
+        # 过滤引擎和插件中的资源
+        if not dependency.startswith("/Game/"):
+            continue
+        # 复制资源到指定目录
+        new_path = rootFolder + os.path.basename(dependency)
+        unreal.EditorAssetLibrary.duplicate_asset(dependency,new_path)
+
+        old_assets = unreal.load_asset(dependency)
+        new_assets = unreal.load_asset(new_path)
+
+        if type(new_assets)  == unreal.MaterialFunction:# 材质函数
+            unreal.PythonExtensionBPLibrary.replace_material_function_reference_of_material(material,old_assets,new_assets)
+        elif type(new_assets)  == unreal.Texture2D:# 贴图
+            print(f"replace reference of texture {new_assets.get_name()}")
+            unreal.PythonExtensionBPLibrary.replace_texture_reference_of_material(material,old_assets,new_assets)
+
+        unreal.EditorAssetLibrary.save_asset(material.get_path_name())
+        unreal.EditorAssetLibrary.save_asset(new_path)
+    return new_material_path
+
+
+
+def MoveStaticMeshAndDependenceToFolder(staticMesh:unreal.StaticMesh,rootFolder:str):
+    '''
+        注意第二个参数需要传入一个文件夹路径,而且需要以/结尾
+    '''
+    # 复制网格到指定目录
+    new_asset_path = rootFolder + staticMesh.get_name()
+    unreal.EditorAssetLibrary.duplicate_asset(staticMesh.get_path_name(),new_asset_path)
+    staticMesh = unreal.load_asset(new_asset_path)
+    static_materials = staticMesh.static_materials
+    for static_material in static_materials:
+        static_material:unreal.StaticMaterial
+        material = static_material.material_interface
+        material_name = static_material.material_slot_name #获取材质插槽名称
+        if type(material) == unreal.MaterialInstanceConstant:
+            # 复制母材质到指定目录
+            new_master_material_path = MoveMaterialAndDependenceToFolder(material.parent,rootFolder + "Material/")
+            new_master_material = unreal.load_asset(new_master_material_path)
+
+            # 复制材质实例到指定目录
+            new_material_instance_path = rootFolder+"MaterialInstance/"+material.get_name()
+            unreal.EditorAssetLibrary.duplicate_asset(material.get_path_name(),new_material_instance_path)
+            material = unreal.load_asset(new_material_instance_path)
+
+            # 设置母球
+            unreal.MaterialEditingLibrary.set_material_instance_parent(material,new_master_material)
+
+            # 遍历贴图参数
+            texture_parameter_values = material.texture_parameter_values
+            for texture_parameter_value in texture_parameter_values:
+                #复制贴图
+                new_texture_path = rootFolder + "Textures/"+ texture_parameter_value.parameter_value.get_name()
+                unreal.EditorAssetLibrary.duplicate_asset(texture_parameter_value.parameter_value.get_path_name(),new_texture_path)
+                #设置贴图参数
+                unreal.MaterialEditingLibrary.set_material_instance_texture_parameter_value(material,texture_parameter_value.parameter_info.name,unreal.load_asset(new_texture_path))
+                unreal.EditorAssetLibrary.save_asset(new_texture_path)
+            
+        elif type(material) == unreal.Material:
+            new_material_path = MoveMaterialAndDependenceToFolder(material,rootFolder+"Material/")
+            material = unreal.load_asset(new_material_path)
+        # 替换材质
+        staticMesh.set_material(staticMesh.get_material_index(material_name),material)
+        unreal.EditorAssetLibrary.save_asset(material.get_path_name())
+        unreal.EditorAssetLibrary.save_asset(staticMesh.get_path_name())
+
+
+
+def ImportToLibrary():
     selectedAssets = unreal.EditorUtilityLibrary.get_selected_assets()
     for asset in selectedAssets:
-        asset:unreal.Texture2D
-        vt = asset.virtual_texture_streaming
-        if asset.get_name().endswith("_1001"):
-            asset.rename(asset.get_name().replace("_1001",""))
-        exportTextures = ExportTextureNew(asset,r"d:\Desktop\Test")
-        for tex in exportTextures:
-            if os.path.exists(tex):
-                addWatermark('DCT',tex,tex,r"D:\Documents\ZCXCode\CGPipline\unreal\scripts\UnrealPipeline\Data\wm_ZYNN.png")
-        newTexture = WrapTexture.importTexture(exportTextures[0],os.path.dirname(asset.get_path_name()))
-        if newTexture:
-            newTexture.setVTEnable(vt)
-            newTexture.saveAsset()
-        for tex in exportTextures:
-            if os.path.exists(tex):
-                os.remove(tex)
+        if type(asset) == unreal.StaticMesh:
+            unreal.PythonExtensionBPLibrary.bake_mesh_pivot(asset,unreal.PivotPreset.BOUNDING_BOX_CENTER_BOTTOM)
+            MoveStaticMeshAndDependenceToFolder(asset,"/Game/Test/3D_Assets/")
 
+if __name__ == "__main__":
+    data = {'name': 'DaoCao_43_Merge', 'AssetID': 'rhuDnBP', 'assetFormat': 'Unreal Engine', 'assetType': '3D Assets', 'baseColor': None, 'normal': None, 'arm': None, 'mesh': 'E:/AssetLibrary/Assets\\rhuDnBP\\rhuDnBP'}
+    importAssetPipline(data)
 
 
 

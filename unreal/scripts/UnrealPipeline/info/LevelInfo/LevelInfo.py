@@ -10,7 +10,6 @@ from Qt import QtWidgets
 from Qt.QtCore import Qt
 
 
-
 from dayu_widgets.qt import application
 from dayu_widgets import dayu_theme
 from dayu_widgets.item_view import MTableView,MTableModel
@@ -24,22 +23,9 @@ import unreal
 from UnrealPipeline.core.CommonWidget import CommonMenuBar
 import UnrealPipeline.core.UnrealHelper as UH
 
-class CommonMainWindow(QMainWindow):
-    def __init__(self, parent = None)->None:
-        super().__init__(parent)
-        self.__initMenu()
-    def MoveToCenter(self):
-        desktop_width = QApplication.desktop().width()/4
-        desktop_height = QApplication.desktop().height()/2
-        self.move(int(desktop_width-self.width()/2.0),int(desktop_height-self.height()/2.0))
-    def __initMenu(self):
-        menuBar = CommonMenuBar()
-        self.setMenuBar(menuBar)
-        self.menuBar = menuBar
+import UnrealPipeline.core.CommonWidget as cw
 
-
-
-class LevelInfo(CommonMainWindow):
+class LevelInfo(cw.CommonMainWindow):
     def __init__(self, parent = None)->None:
         super().__init__(parent)
         self.resize(800,600)
@@ -47,7 +33,7 @@ class LevelInfo(CommonMainWindow):
 
 
         self.__initDatas()
-        self.__initUI()
+ 
     def __initDatas(self):
         self._objectCountSum = 0
         self._verticesNumberSum = 0

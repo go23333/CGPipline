@@ -36,15 +36,20 @@ def InstallMenu():
     from UnrealPipeline.info import InstallMenu
     InstallMenu(toolbar)
 
-    menus.refresh_all_widgets()
+
     from UnrealPipeline.core.socketHelper import ThreadSocket
     ThreadSocket.StartListening()
 
     #添加一些右键菜单
-    texContextMenu = menus.find_menu("ContentBrowser.AssetContextMenu.Texture2D")
+    texContextMenu = menus.find_menu("ContentBrowser.AssetContextMenu.StaticMesh")
     from UnrealPipeline.core.UnrealHelper import MakeEntry
+    entry = MakeEntry("importAssetsToLibrary","将资产添加到库中",toolTip="将选中的资产添加到库中,目前只支持单资产选择",command="from UnrealPipeline.Library.ExportToAssetLibrary.ExportToAssetLibrary import Start;Start()")
+    texContextMenu.add_menu_entry("CommonAssetActions",entry)
 
-    entry = MakeEntry("addWaterMark","添加大模型标签",toolTip="",command="from UnrealPipeline.core.UnrealHelper import addWaterMarkToSelectedTextures;addWaterMarkToSelectedTextures()")
-    texContextMenu.add_menu_entry("",entry)
-    
+
+    menus.refresh_all_widgets()
+
+if __name__ == "__main__":
+    pass
+
 

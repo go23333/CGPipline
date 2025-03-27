@@ -9,8 +9,38 @@ import time
 import os
 from PIL import Image, ImageOps
 import json
-
+import string
 import UnrealPipeline.core.UnrealHelper as UH
+import random
+import shutil
+
+
+from .backend import Backend
+
+if Backend.Get().isBackendAvailable():
+    category = Backend.Get().getCategories()
+else:
+    category = {}
+
+def GetParentsCategory(name):
+    for p in category.keys():
+        for c in category[p].keys():
+            for cc in category[p][c]:
+                if name == cc:
+                    return p,c,cc
+    return False
+
+def GetCategorys(level:int):
+    if level == 0:
+        return list(category.keys())
+    elif level == 1:
+        return [ele for value in category.values() for ele in value.keys() ]
+    elif level == 2:
+        return [c for value in category.values() for ele in value.keys() for c in value[ele]]
+    else:
+        raise
+def GetSubCategorys(parentIndex:int):
+    return [ele for ele in category[GetCategorys(0)[parentIndex]].keys()]
 
 CameraPathMacros = [
     "$ep",
@@ -433,6 +463,20 @@ def parseStaticMeshName(name,sceneName):
         parseResult["scenename"] = ""
     return parseResult
 
+def generate_random_string(length=10):
+    # 定义生成随机字符串的字符集
+    characters = string.ascii_letters + string.digits
+    # 使用 random.choices 从字符集中随机选择字符，形成指定长度的字符串
+    random_string = ''.join(random.choices(characters, k=length))
+    return random_string
+def generate_unique_string(length=10):
+    while(1):
+        random_string = generate_random_string(length)
+        if Backend.Get().getAsset(random_string) == False:
+            return random_string
+
+def copy_folder(src:str,des:str):
+    shutil.copytree(src,des)
 
 if __name__ == "__main__":
     from UnrealPipeline import reloadModule
