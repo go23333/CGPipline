@@ -223,7 +223,7 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
     def ExportToLibrary(self):
         name = self.lbe_name.text()
         tags = [tag.rstrip() for tag in self.tags_area.tags]
-        tags = tags.append("虚幻引擎")
+        tags.append("虚幻引擎")
         previewImagePath = self.thumbnail_path
         category = self.cb_category.CurrentText()
         subcategory = self.cb_subcategory.CurrentText()
