@@ -1259,6 +1259,7 @@ def MoveStaticMeshAndDependenceToFolder(staticMesh:unreal.StaticMesh,rootFolder:
         staticMesh.set_material(staticMesh.get_material_index(material_name),material)
         unreal.EditorAssetLibrary.save_asset(material.get_path_name())
         unreal.EditorAssetLibrary.save_asset(staticMesh.get_path_name())
+        return staticMesh
 
 
 
