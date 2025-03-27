@@ -478,6 +478,20 @@ def generate_unique_string(length=10):
 def copy_folder(src:str,des:str):
     shutil.copytree(src,des)
 
+
+def CopyFileToFolder(filePath:str,folder:str,newName:str = None,move:bool=False):
+    if not os.path.exists(filePath):
+        return ""
+    newFileName = os.path.basename(filePath)
+    if newName:
+        newFileName = newName
+    newFilePath = os.path.join(folder,newFileName)
+    if move:
+        shutil.move(filePath,newFilePath)
+    else:
+        shutil.copyfile(filePath,newFilePath)
+    return os.path.basename(newFilePath)
+
 if __name__ == "__main__":
     from UnrealPipeline import reloadModule
     reloadModule()

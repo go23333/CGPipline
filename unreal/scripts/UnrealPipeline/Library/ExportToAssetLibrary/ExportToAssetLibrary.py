@@ -229,6 +229,26 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
         subcategory = self.cb_subcategory.CurrentText()
         AssetID = ut.generate_unique_string(7)
         if type(self.asset) == unreal.StaticMesh:
+            tempPath = globalConfig.get().MyBridgeTargetPathBuildin + AssetID + "/"
+            #复制网格体和依赖项到新目录
+            self.asset = uh.MoveStaticMeshAndDependenceToFolder(self.asset,tempPath)
+            #设置枢轴位置
+            unreal.PythonExtensionBPLibrary.bake_mesh_pivot(self.asset,unreal.PivotPreset.BOUNDING_BOX_CENTER_BOTTOM)
+            # 复制并保存预览图片
+            rootpath = Backend.Get().getAssetRootPath() +f"/{AssetID}"
+            _,ext = os.path.splitext(previewImagePath)
+
+            system_path = uh.convert_unreal_path_to_system_path(tempPath)
+            des_path = rootpath + f"/{AssetID}"
+            # 复制资产到对应资产库目录
+            ut.copy_folder(system_path,des_path)
+
+            # 复制预览图到对应目录
+            previewImagePath = ut.CopyFileToFolder(previewImagePath,rootpath,f"{AssetID}_preview_1{ext}",False)
+           
+
+
+
             asset = dict(
                 name           = name,
                 ZbrushFile     = "",
@@ -260,14 +280,7 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
                 AssetIndex     = Backend.Get().getAssetsCount(),
                 OldJson        = ""
             )
-            unreal.PythonExtensionBPLibrary.bake_mesh_pivot(self.asset,unreal.PivotPreset.BOUNDING_BOX_CENTER_BOTTOM)
-            tempPath = globalConfig.get().MyBridgeTargetPathBuildin + AssetID + "/"
-            uh.MoveStaticMeshAndDependenceToFolder(self.asset,tempPath)
-            system_path = uh.convert_unreal_path_to_system_path(tempPath)
-            rootpath = Backend.Get().getAssetRootPath() +f"/{AssetID}"
-            des_path = rootpath + f"/{AssetID}"
-            # 复制资产到对应资产库目录
-            ut.copy_folder(system_path,des_path)
+           
             # 提取放在数据库中的数据
             assetToLibraryData = dict(
                 name        = asset["name"],
@@ -289,7 +302,9 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
             # 保存json文件
             with open(os.path.join(rootpath,asset["JsonUri"]),"w+",encoding='utf-8') as file:
                 file.write(json.dumps(asset))
+        
             Backend.Get().addAssetToDB(assetToLibraryData)
+            #清理文件
             unreal.EditorAssetLibrary.delete_directory(tempPath)
             self.close()
         else:
