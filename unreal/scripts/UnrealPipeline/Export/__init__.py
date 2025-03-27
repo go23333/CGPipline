@@ -8,7 +8,7 @@ def InstallMenu(rootMenu:unreal.ToolMenu):
 
     from UnrealPipeline.Export.NormalizeExporter import InstallMenu
     InstallMenu(submenu)
-
+    
 
     
     entry = MakeEntry("group_export","导出关卡序列群集",toolTip="",command="from UnrealPipeline.songshunjie import QunJiSequenceExport;QunJiSequenceExport.start()")

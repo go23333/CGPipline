@@ -8,6 +8,10 @@
 
 
 from Qt import QtWidgets,QtCore
+
+from Qt.QtGui import QPixmap,QPainter,QColor
+from Qt.QtCore import QRect
+
 from dayu_widgets.label import MLabel
 from dayu_widgets.spin_box import MSpinBox,MDoubleSpinBox
 from dayu_widgets.item_view import MTableView,MTableModel
@@ -23,7 +27,7 @@ import functools
 
 
 import UnrealPipeline.core.utilis as UU
-
+from Qt.QtWidgets import QMainWindow,QApplication,QWidget
 
 
 class FetchCameraDataWorker(QtCore.QThread):
@@ -160,3 +164,46 @@ class DateTableView(QtWidgets.QWidget):
         return self.ContexMenu
     def showContexMenu(self,pos):
         self.ContexMenu.exec_(self.tvMain.mapToGlobal(pos))
+
+
+
+
+class CommonMainWindow(QMainWindow):
+    def __init__(self, parent = None)->None:
+        super().__init__(parent)
+        self.__initMenu()
+    def MoveToCenter(self):
+        desktop_width = QApplication.desktop().width()/4
+        desktop_height = QApplication.desktop().height()/2
+        self.move(int(desktop_width-self.width()/2.0),int(desktop_height-self.height()/2.0))
+    def __initMenu(self):
+        menuBar = CommonMenuBar()
+        self.setMenuBar(menuBar)
+        self.menuBar = menuBar
+
+
+def scaleMap(width:int,height:int,mapPath:str)-> QPixmap:
+    original_pixelmap = QPixmap(mapPath)
+
+    scaled_pixmap = QPixmap(width,height)
+    scaled_pixmap.fill(QColor(80,80,80,0))
+
+
+    painter = QPainter(scaled_pixmap)
+    
+    try:
+        scaled_factor = min(width / float(original_pixelmap.width()+0.1), height / float(original_pixelmap.height()+0.1))
+    except ZeroDivisionError:
+        scaled_factor = 0.3
+        pass
+
+    scaled_size = original_pixelmap.size() * scaled_factor
+
+    x = (width - scaled_size.width()) / 2
+    y = (height - scaled_size.height()) / 2
+    
+    painter.drawPixmap(QRect(int(x), int(y), scaled_size.width(), scaled_size.height()), original_pixelmap)
+
+    painter.end()
+
+    return scaled_pixmap

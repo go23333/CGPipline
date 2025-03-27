@@ -56,9 +56,23 @@ class ThreadSocket(threading.Thread):
         thread.start()
         unreal.register_python_shutdown_callback(lambda:thread.stop())
 
+def sendStringMyBridge(string:str,address:tuple[str,int]):
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        client_socket.connect(address)
+        client_socket.sendall(string.encode())
+        client_socket.close()
+        return True
+    except:
+        return False
 
 
 if __name__ == "__main__":
+    import json
     from UnrealPipeline import reloadModule
     reloadModule()
-    unreal.PythonExtensionBPLibrary.launch_script_on_game_thread("print('Hello world')")
+    message = {
+        "software":"unreal",
+        "command":"print('Hello World')"
+    }
+    sendStringMyBridge(json.dumps(message),("127.0.0.1",45450))
