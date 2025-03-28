@@ -178,7 +178,7 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
         self.cb_category.currentTextChanged.connect(self.__setSubCategory)
 
         self.cb_subcategory = ComboxLineEdit(label="子分类")
-
+        self.__setSubCategory(self.cb_category.CurrentText())
 
 
         layout_info.addWidget(self.lbe_name)   
@@ -245,8 +245,6 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
 
             # 复制预览图到对应目录
             previewImagePath = ut.CopyFileToFolder(previewImagePath,rootpath,f"{AssetID}_preview_1{ext}",False)
-           
-
 
 
             asset = dict(
