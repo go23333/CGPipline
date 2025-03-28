@@ -1061,8 +1061,12 @@ def MakeEntry(name:str,label:str,command:str = "",toolTip:str = "") -> unreal.To
 def importAssetPipline(AssetData:dict):
     rootPath = os.path.join(globalConfig.get().MyBridgeTargetPath,f"{AssetData['assetType'].replace(' ','_')}/{AssetData['name']}_{AssetData['AssetID']}")
     udim = False
-    if AssetData["udim"] == 'True':
-        udim = True
+    # 用来兼容旧版本的MyBridge
+    try:
+        if AssetData["udim"] == 'True':
+            udim = True
+    except:
+        pass
     
     if AssetData["assetFormat"] == 'FBX':# 当类型为FBX资产
         #导入贴图
@@ -1085,7 +1089,6 @@ def importAssetPipline(AssetData:dict):
         t_normal.setVTEnable(udim)
         t_normal.saveAsset()
 
-        
         
         wrapMaterialIns = WrapMaterialInstance.create(os.path.normpath(os.path.join(rootPath,f"Materials/MI_{AssetData['name']}_{AssetData['AssetID']}")))
         if AssetData["assetType"] == '3D Assets':
