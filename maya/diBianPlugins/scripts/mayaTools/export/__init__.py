@@ -11,9 +11,9 @@ def install(menu_id):
     pm.menuItem(label=u'相机导出工具',command=openCameraExport)
     pm.menuItem(label=u'XGen导出工具',command=openxGenExport)
 
-    pm.menuItem(label=u'UE角色材质导出工具',command=openxGenExport)
-    pm.menuItem(label=u'动画烘焙导出工具',command=openxGenExport)
-    pm.menuItem(label=u'动画自动烘焙导出工具',command=openxGenExport)
+    pm.menuItem(label=u'UE角色材质导出工具',command=openchUeExport)
+    pm.menuItem(label=u'动画烘焙导出工具',command=openanimtionExport)
+    pm.menuItem(label=u'动画自动烘焙导出工具',command=openanimtionAutoExport)
 
 
 
@@ -40,16 +40,16 @@ gui.showUI()"""
 
 
 
-openxGenExport = """
+openchUeExport = """
 from mayaTools.export.chUeExport import gui
 gui.showUI()"""
 
 
-openxGenExport = """
+openanimtionExport = """
 from mayaTools.export.animtionExport import gui
 gui.showUI()"""
 
 
-openxGenExport = """
+openanimtionAutoExport = """
 from mayaTools.export.animtionAutoExport import gui
 gui.showUI()"""

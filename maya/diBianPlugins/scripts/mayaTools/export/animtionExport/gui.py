@@ -5,7 +5,7 @@ import os
 
 class win():
     def __init__(self):
-        self.winName="创建动画FBX文件"
+        self.winName=u"创建动画FBX文件"
         if cmds.window(self.winName,q=1,ex=1):
             cmds.deleteUI(self.winName)
         cmds.window(self.winName,widthHeight=(380,180))
@@ -16,22 +16,22 @@ class win():
         self.start=1
         self.end=5
         self.column1=cmds.columnLayout( adjustableColumn=True )
-        cmds.text( label='选择需要烘焙的组',align='left') 
+        cmds.text( label=u'选择需要烘焙的组',align='left') 
         #起始结束帧
         cmds.rowLayout( numberOfColumns=2)
-        cmds.textFieldGrp('start',label='设置烘焙起始帧',text='%s'%self.start,cal=(1,'left'),cw2=(100,50))
-        cmds.textFieldGrp('end',label='设置烘焙结束帧',text='%s'%self.end,cal=(1,'left'),cw2=(100,50))
+        cmds.textFieldGrp('start',label=u'设置烘焙起始帧',text='%s'%self.start,cal=(1,'left'),cw2=(100,50))
+        cmds.textFieldGrp('end',label=u'设置烘焙结束帧',text='%s'%self.end,cal=(1,'left'),cw2=(100,50))
         cmds.setParent(self.column1)
         cmds.text(label='')
         #预留帧
         cmds.rowLayout( numberOfColumns=2)
-        cmds.textFieldGrp('start_offset',label='设置整体偏移帧',text=10,cal=(1,'left'),cw2=(100,50))
-        cmds.textFieldGrp('end_offset',label='设置预留结束帧',text=5,cal=(1,'left'),cw2=(100,50))
+        cmds.textFieldGrp('start_offset',label=u'设置整体偏移帧',text=10,cal=(1,'left'),cw2=(100,50))
+        cmds.textFieldGrp('end_offset',label=u'设置预留结束帧',text=5,cal=(1,'left'),cw2=(100,50))
         cmds.setParent(self.column1)
         
         #cmds.button( label='烘焙所选物体',command=self.bake)
         #cmds.text('',align='left')
-        cmds.text('FBX文件导出位置',align='left')
+        cmds.text(u'FBX文件导出位置',align='left')
         cmds.setParent(self.column1)
         
         cmds.rowLayout( numberOfColumns=2, columnWidth2=(80, 75))
@@ -44,7 +44,7 @@ class win():
         cmds.symbolButton( image='circle.png',w=20,i="navButtonBrowse.xpm",c=self.openFile)
         cmds.setParent(self.column1)
         
-        cmds.button(label='导出FBX到指定位置',command=self.exportFBX)
+        cmds.button(label=u'导出FBX到指定位置',command=self.exportFBX)
         cmds.setParent(self.column1)
         
 
