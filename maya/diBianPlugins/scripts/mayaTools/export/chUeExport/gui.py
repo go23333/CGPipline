@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#coding=utf-8
 
 from maya import cmds,mel
 import os
@@ -391,26 +391,26 @@ def openFile(*args):
     cmds.textField('export',text=file_name_new,e=1)
 
 def openFile_texture(*args):
-    singleFilter="目录"
+    singleFilter=u"目录"
     texture_path=str(cmds.fileDialog2(fileFilter=singleFilter,startingDirectory =str(cmds.file(q=1,sn=1)).rsplit('/',1)[0],fm=3)[0])
     cmds.textField('texture_path',text=texture_path,e=1)
     
     
-def start():
-    winName="创建角色基础材质"
+def showUI():
+    winName=u"创建角色基础材质"
     if cmds.window(winName,q=1,ex=1):
         cmds.deleteUI(winName)
     win = cmds.window(winName,widthHeight=(380,310))
     column1=cmds.columnLayout( adjustableColumn=True )
-    cmds.textFieldGrp('pj', label='项目名称缩写', pht='如DDCT',w=50,cal=(1,'left'),cw2=(80,80))
-    cmds.button( label='检测除毛发外的多边面',command=cleanB)
-    cmds.button( label='创建并赋予基础人体材质球',command=creB)
+    cmds.textFieldGrp('pj', label=u'项目名称缩写', pht=u'如DDCT',w=50,cal=(1,'left'),cw2=(80,80))
+    cmds.button( label=u'检测除毛发外的多边面',command=cleanB)
+    cmds.button( label=u'创建并赋予基础人体材质球',command=creB)
     
     
     cmds.separator( height=30, style='in' )
     
-    cmds.button( label='为RS材质球添加前缀(需先创建基础人体材质球)',command=proPrefix)
-    cmds.text('选择贴图路径',align='left')
+    cmds.button( label=u'为RS材质球添加前缀(需先创建基础人体材质球)',command=proPrefix)
+    cmds.text(u'选择贴图路径',align='left')
     cmds.setParent(column1)
     
     cmds.rowLayout( numberOfColumns=2, columnWidth2=(80, 75))
@@ -418,12 +418,12 @@ def start():
     cmds.symbolButton( image='circle.png',w=20,i="navButtonBrowse.xpm",c=openFile_texture)
     cmds.setParent(column1)
     
-    cmds.button(label='为材质球赋予基础颜色贴图',command=shadeLink)
+    cmds.button(label=u'为材质球赋予基础颜色贴图',command=shadeLink)
     cmds.separator( height=30, style='in' )
     cmds.setParent(column1)
     
     
-    cmds.text('保存为UE使用的FBX文件',align='left')
+    cmds.text(u'保存为UE使用的FBX文件',align='left')
     cmds.setParent(column1)
     
     cmds.rowLayout( numberOfColumns=2, columnWidth2=(80, 75))
@@ -431,7 +431,7 @@ def start():
     cmds.symbolButton( image='circle.png',w=20,i="navButtonBrowse.xpm",c=openFile)
     cmds.setParent(column1)
     
-    cmds.button(label='导出选择的模型到指定位置',command=exportFBX)
+    cmds.button(label=u'导出选择的模型到指定位置',command=exportFBX)
     cmds.setParent(column1)
     
     cmds.showWindow(win)
@@ -439,7 +439,7 @@ def start():
     
 
 if __name__=='__main__':
-    start()
+    showUI()
 
 
 

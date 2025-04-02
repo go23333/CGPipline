@@ -1,11 +1,11 @@
-#cmds.setKeyframe( a[0], attribute='asd2', t=5,v=1 )
+#coding=utf-8
 
 from maya import cmds,mel
 
 
 class win():
 	def __init__(self):
-		self.winName="´´½¨BlendShape"
+		self.winName=u"åˆ›å»ºBlendShape"
 		if cmds.window(self.winName,q=1,ex=1):
 			cmds.deleteUI(self.winName)
 		cmds.window(self.winName,widthHeight=(250,110))
@@ -15,10 +15,10 @@ class win():
 		self.start=1
 		self.end=5
 		self.column1=cmds.columnLayout( adjustableColumn=True )
-		cmds.textFieldGrp('start',label='ÉèÖÃÆğÊ¼Ö¡',text='%s'%self.start,cal=(1,'left'),cw2=(100,50))
-		cmds.textFieldGrp('end',label='ÉèÖÃ½áÊøÖ¡',text='%s'%self.end,cal=(1,'left'),cw2=(100,50))
-		cmds.text( label='Ñ¡ÔñĞèÒªBlendShapeµÄ¶ÔÏóºóµã»÷Ö´ĞĞ', align='left'  )
-		cmds.button( label='Ö´ĞĞ',command=self.bs)
+		cmds.textFieldGrp('start',label=u'è®¾ç½®èµ·å§‹å¸§',text='%s'%self.start,cal=(1,'left'),cw2=(100,50))
+		cmds.textFieldGrp('end',label=u'è®¾ç½®ç»“æŸå¸§',text='%s'%self.end,cal=(1,'left'),cw2=(100,50))
+		cmds.text( label=u'é€‰æ‹©éœ€è¦BlendShapeçš„å¯¹è±¡åç‚¹å‡»æ‰§è¡Œ', align='left'  )
+		cmds.button( label=u'æ‰§è¡Œ',command=self.bs)
 
 		
 		
@@ -74,13 +74,13 @@ class win():
 	
 		
 
-def start():
+def showUI():
 	win()
 	cmds.showWindow()
 
 
 if __name__=='__main__':
-	start()
+	showUI()
 
 
 

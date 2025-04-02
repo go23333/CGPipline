@@ -10,6 +10,8 @@ def InstallMenu(rootMenu:unreal.ToolMenu):
     InstallMenu(submenu)
     from UnrealPipeline.Import.StaticMeshImporter import InstallMenu
     InstallMenu(submenu)
+    from UnrealPipeline.Import.AnimImporter import InstallMenu
+    InstallMenu(submenu)
 
 
 

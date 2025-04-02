@@ -6,232 +6,232 @@ import time
 import os
 
 class win():
-	def __init__(self):
-		self.winName="×Ô¶¯µ¼³ö¶¯»­FBXÎÄ¼ş"
-		if cmds.window(self.winName,q=1,ex=1):
-			cmds.deleteUI(self.winName)
-		cmds.window(self.winName,widthHeight=(400,200))
-		self.UI1()
-		
-		
-	def UI1(self):
-		self.start=1
-		self.end=5
-		self.column1=cmds.columnLayout( adjustableColumn=True )
-		
-		#cmds.textFieldGrp('start',label='ÉèÖÃºæ±ºÆğÊ¼Ö¡',text='%s'%self.start,cal=(1,'left'),cw2=(100,50))
-		#cmds.textFieldGrp('end',label='ÉèÖÃºæ±º½áÊøÖ¡',text='%s'%self.end,cal=(1,'left'),cw2=(100,50))
-		
-		cmds.setParent(self.column1)
-		
-		cmds.text('Ñ¡ÔñExcelÎÄ¼ş',align='left')
-		cmds.rowLayout( numberOfColumns=2, columnWidth2=(80, 75))
-		cmds.textField('excel',w=370)
-		cmds.symbolButton( image='circle.png',w=20,i="navButtonBrowse.xpm",c=self.openExcel)
-		cmds.setParent(self.column1)
-		
-		
-		
-		cmds.text('Ñ¡ÔñÒªÖ´ĞĞµÄÎÄ¼ş¼Ğ',align='left')
-		cmds.rowLayout( numberOfColumns=2, columnWidth2=(80, 75))
-		cmds.textField('export',w=370)
-		cmds.symbolButton( image='circle.png',w=20,i="navButtonBrowse.xpm",c=self.openFile)
-		cmds.setParent(self.column1)
-		
-		cmds.button(label='¼ì²âExcelÎÄ¼şÓëËùÑ¡ÎÄ¼ş¼ĞÊÇ·ñÆ¥Åä',command=self.detectionFile)
-		cmds.setParent(self.column1)
-		cmds.text('detection',label='',align='left',ebg=0,bgc=[1,0,0])
-		
-		cmds.button(label='ºæ±º²¢µ¼³öFBXµ½Ö¸¶¨Î»ÖÃ',command=self.execute)
-		cmds.setParent(self.column1)
-		
-		cmds.text('Ö´ĞĞÇ°ÇëÈ·±£ÒÑ¾­»ñÈ¡ËùÓĞËùĞèµÄÒıÓÃÎÄ¼ş',align='left')
-		cmds.setParent(self.column1)
-		
-		
-	def excelGet(self,*args):
-		
-		#»ñÈ¡Excel±í¸ñĞÅÏ¢
-		excel_path=cmds.textField('excel',text=1,q=1)
-		df=op.load_workbook(excel_path)
-		sheet=df.get_sheet_by_name('¾µÍ·±í')
-		
-		sc=[]
-		cam=[]
-		startK=[]
-		endK=[]
-		start_endK=[]
-		all_list=[]
-		i=0
-		#È·¶¨ĞĞºÍÁĞ
-		rowcount=sheet.max_row
-		colcount=7
-		#¶ÁÈ¡ËùĞèµÄExcelÄÚÈİ
-		for i in range(13,rowcount+1):
-			list=[]
-			for j in range(3,colcount+1):
-			    list.append(sheet.cell(row=i,column=j).value)
-			all_list.append(list)
-		
-		ep=all_list[0][0]
-		self.start_endK_d={}
-		for i in all_list:
-		    if i[0]==ep:
-		    	start_end_c=[]
-		        sc.append(i[1])
-		        cam.append(i[2])
-		        start_end_c.append(i[3])
-		        start_end_c.append(i[4])
-		        start_endK.append(start_end_c)
-		        self.start_endK_d[i[2]]=start_end_c
-		#print(self.start_endK_d)
-		
-			
-	def execute(self,*args):
-		
-		self.excelGet()
-		#»ñÈ¡ÎÄ¼şÂ·¾¶
-		dir_path =cmds.textField('export',text=1,q=1)
-		ma_path=[]
-		for dirpath, dirnames, filenames in os.walk(dir_path):
-			for filename in filenames:
-				if '.ma' in filename or '.mb' in filename:
-					ma_path.append(os.path.join(dirpath, filename))
-					
-		if ma_path:
-			#Í¨¹ıÎÄ¼şÂ·¾¶´ò¿ªmaÎÄ¼ş			
-			for ma in ma_path:
-				cmds.file(modified=0)
-				cmds.file(ma,o=1)
-				time.sleep(5)
-				#»ñÈ¡µ±Ç°³¡¾°µÄ³¡´ÎĞÅÏ¢
-				key=cmds.file(q=1,sn=1).rsplit('/',1)[-1].rsplit('_',1)[0]
-				if key in self.start_endK_d:
-					self.start=self.start_endK_d[key][0]#»ñÈ¡¹Ø¼üÖ¡ÆğÊ¼ĞÅÏ¢
-					self.end=self.start_endK_d[key][1]
+    def __init__(self):
+        self.winName="è‡ªåŠ¨å¯¼å‡ºåŠ¨ç”»FBXæ–‡ä»¶"
+        if cmds.window(self.winName,q=1,ex=1):
+            cmds.deleteUI(self.winName)
+        cmds.window(self.winName,widthHeight=(400,200))
+        self.UI1()
+        
+        
+    def UI1(self):
+        self.start=1
+        self.end=5
+        self.column1=cmds.columnLayout( adjustableColumn=True )
+        
+        #cmds.textFieldGrp('start',label='è®¾ç½®çƒ˜ç„™èµ·å§‹å¸§',text='%s'%self.start,cal=(1,'left'),cw2=(100,50))
+        #cmds.textFieldGrp('end',label='è®¾ç½®çƒ˜ç„™ç»“æŸå¸§',text='%s'%self.end,cal=(1,'left'),cw2=(100,50))
+        
+        cmds.setParent(self.column1)
+        
+        cmds.text('é€‰æ‹©Excelæ–‡ä»¶',align='left')
+        cmds.rowLayout( numberOfColumns=2, columnWidth2=(80, 75))
+        cmds.textField('excel',w=370)
+        cmds.symbolButton( image='circle.png',w=20,i="navButtonBrowse.xpm",c=self.openExcel)
+        cmds.setParent(self.column1)
+        
+        
+        
+        cmds.text('é€‰æ‹©è¦æ‰§è¡Œçš„æ–‡ä»¶å¤¹',align='left')
+        cmds.rowLayout( numberOfColumns=2, columnWidth2=(80, 75))
+        cmds.textField('export',w=370)
+        cmds.symbolButton( image='circle.png',w=20,i="navButtonBrowse.xpm",c=self.openFile)
+        cmds.setParent(self.column1)
+        
+        cmds.button(label='æ£€æµ‹Excelæ–‡ä»¶ä¸æ‰€é€‰æ–‡ä»¶å¤¹æ˜¯å¦åŒ¹é…',command=self.detectionFile)
+        cmds.setParent(self.column1)
+        cmds.text('detection',label='',align='left',ebg=0,bgc=[1,0,0])
+        
+        cmds.button(label='çƒ˜ç„™å¹¶å¯¼å‡ºFBXåˆ°æŒ‡å®šä½ç½®',command=self.execute)
+        cmds.setParent(self.column1)
+        
+        cmds.text('æ‰§è¡Œå‰è¯·ç¡®ä¿å·²ç»è·å–æ‰€æœ‰æ‰€éœ€çš„å¼•ç”¨æ–‡ä»¶',align='left')
+        cmds.setParent(self.column1)
+        
+        
+    def excelGet(self,*args):
+        
+        #è·å–Excelè¡¨æ ¼ä¿¡æ¯
+        excel_path=cmds.textField('excel',text=1,q=1)
+        df=op.load_workbook(excel_path)
+        sheet=df.get_sheet_by_name('é•œå¤´è¡¨')
+        
+        sc=[]
+        cam=[]
+        startK=[]
+        endK=[]
+        start_endK=[]
+        all_list=[]
+        i=0
+        #ç¡®å®šè¡Œå’Œåˆ—
+        rowcount=sheet.max_row
+        colcount=7
+        #è¯»å–æ‰€éœ€çš„Excelå†…å®¹
+        for i in range(13,rowcount+1):
+            list=[]
+            for j in range(3,colcount+1):
+                list.append(sheet.cell(row=i,column=j).value)
+            all_list.append(list)
+        
+        ep=all_list[0][0]
+        self.start_endK_d={}
+        for i in all_list:
+            if i[0]==ep:
+                start_end_c=[]
+                sc.append(i[1])
+                cam.append(i[2])
+                start_end_c.append(i[3])
+                start_end_c.append(i[4])
+                start_endK.append(start_end_c)
+                self.start_endK_d[i[2]]=start_end_c
+        #print(self.start_endK_d)
+        
+            
+    def execute(self,*args):
+        
+        self.excelGet()
+        #è·å–æ–‡ä»¶è·¯å¾„
+        dir_path =cmds.textField('export',text=1,q=1)
+        ma_path=[]
+        for dirpath, dirnames, filenames in os.walk(dir_path):
+            for filename in filenames:
+                if '.ma' in filename or '.mb' in filename:
+                    ma_path.append(os.path.join(dirpath, filename))
+                    
+        if ma_path:
+            #é€šè¿‡æ–‡ä»¶è·¯å¾„æ‰“å¼€maæ–‡ä»¶            
+            for ma in ma_path:
+                cmds.file(modified=0)
+                cmds.file(ma,o=1)
+                time.sleep(5)
+                #è·å–å½“å‰åœºæ™¯çš„åœºæ¬¡ä¿¡æ¯
+                key=cmds.file(q=1,sn=1).rsplit('/',1)[-1].rsplit('_',1)[0]
+                if key in self.start_endK_d:
+                    self.start=self.start_endK_d[key][0]#è·å–å…³é”®å¸§èµ·å§‹ä¿¡æ¯
+                    self.end=self.start_endK_d[key][1]
 
-					#»ñÈ¡È«²¿Ãû³Æ¿Õ¼äÃû
-					space_names=cmds.namespaceInfo( lon=True )
-					for self.space_name in space_names:
-						if cmds.objExists(self.space_name+':Geometry'):
-							cmds.pickWalk(self.space_name+':DeformationSystem', direction='down' )
-							cmds.select(self.space_name+':Geometry',add=1)
-							self.bake()
-							self.exportFBX()
-				else :
-					cmds.text('detection',label='ExcelÊı¾İÓëµ±Ç°³¡¾°²»Æ¥Åä',ebg=1,e=1)
-					break
+                    #è·å–å…¨éƒ¨åç§°ç©ºé—´å
+                    space_names=cmds.namespaceInfo( lon=True )
+                    for self.space_name in space_names:
+                        if cmds.objExists(self.space_name+':Geometry'):
+                            cmds.pickWalk(self.space_name+':DeformationSystem', direction='down' )
+                            cmds.select(self.space_name+':Geometry',add=1)
+                            self.bake()
+                            self.exportFBX()
+                else :
+                    cmds.text('detection',label='Excelæ•°æ®ä¸å½“å‰åœºæ™¯ä¸åŒ¹é…',ebg=1,e=1)
+                    break
 
-	def bake(self,*args):
-		
-		self.obj=cmds.ls(sl=1)
+    def bake(self,*args):
+        
+        self.obj=cmds.ls(sl=1)
 
-		#µ¼ÈëÑ¡¶¨¶ÔÏóÒıÓÃ²¢É¾³ıÑ¡¶¨¶ÔÏóµÄÃû³Æ¿Õ¼ä
-		path_reference=cmds.referenceQuery(self.obj[0], f=True )
-		cmds.file(path_reference, ir=1)
-		cmds.parent(self.obj,world=True)#½â³ı×é
-		self.obj_namespace=str(self.obj[0]).split(':',1)[0]+':'
-		cmds.namespace(removeNamespace = self.obj_namespace, mergeNamespaceWithParent = True)
-		self.obj_new=cmds.ls(sl=1)
-		
-		#Ñ¡ÔñĞèÒªºæ±ºµÄ¶ÔÏó
-		cmds.select(self.obj_new,hi=1)
-		cmds.select(cmds.ls(type= "blendShape"),add=1)
-		
-		#ºæ±º
-		self.obj_bake_l=[]
-		self.obj_list=cmds.ls(sl=1)
-		i=0
-		while i<len(self.obj_list):
-			self.obj_bake_l.append(str(self.obj_list[i]))
-			i+=1
-		self.obj_bake_a=str(self.obj_bake_l)[2:-2]
-		self.obj_bake=self.obj_bake_a.replace("'",'"')
-		#self.start=int(cmds.textFieldGrp('start',text=1,q=1))
-		#self.end=int(cmds.textFieldGrp('end',text=1,q=1))
-		mel.eval('''bakeResults -simulation true -t "%s:%s" -sampleBy 1 -oversamplingRate 1 -disableImplicitControl true -preserveOutsideKeys true -sparseAnimCurveBake false -removeBakedAttributeFromLayer false -removeBakedAnimFromLayer false -bakeOnOverrideLayer false -minimizeRotation true -controlPoints false -shape true {"%s"}'''%(self.start,self.end,self.obj_bake))
-		
-		#É¾³ı¶àÓà½Úµã
-		cmds.select( '*lower*ipBC*','*upper*ipBC*','*lower*ipBC*_*' )
-		cmds.delete()
-		
-		#Ñ¡ÔñËùÓĞĞèÒªµ¼³öµÄ¶ÔÏó
-		cmds.select(self.obj_new,hi=1)
-	
-	
-		
-	def exportFBX(self,*args):
-		
-		#ÉèÖÃFBXÎÄ¼şÃû
-		text_path=str(cmds.file(q=1,sn=1)).rsplit('_',1)[0]+'_FBX'
-		if 'Mb' in text_path:
-			text_path_old=text_path.replace('Mb','FBX',1)
-		elif 'Lighting/File' in text_path:
-			text_path_old=text_path.replace('Lighting/File','Animation/FBX',1)#´´½¨Â·¾¶
-		else :
-			text_path_old=text_path
-		save_file_name='/'+str(cmds.file(q=1,sn=1)).rsplit('_',1)[0].rsplit('/',1)[-1]+'_an_'+self.space_name#´´½¨ÎÄ¼şÃû
-		self.export_path=text_path_old+save_file_name
-		print(self.export_path)
-		#µ¼³öfbx
-		cmds.select(self.obj_new)
-		cmds.FBXResetExport()
-		mel.eval('FBXExportFileVersion -v FBX201300')
-		mel.eval('FBXExportSmoothingGroups -v true')
-		mel.eval('FBXExportSmoothMesh -v true')
-		#´´½¨¶ÔÓ¦FBXÎÄ¼ş¼Ğ
-		if not os.path.exists(self.export_path.rsplit('/',1)[0]):
-			os.makedirs(self.export_path.rsplit('/',1)[0])
-		
-		mel.eval('FBXExport -f "%s" -s'%(self.export_path))
-		
-		#´´½¨ÊÕÄÉ×é
-		collect_g='%s_g'%self.obj_namespace.split(':',1)[0]
-		cmds.group(em=True,n=collect_g)
-		cmds.parent(self.obj_new,collect_g)
+        #å¯¼å…¥é€‰å®šå¯¹è±¡å¼•ç”¨å¹¶åˆ é™¤é€‰å®šå¯¹è±¡çš„åç§°ç©ºé—´
+        path_reference=cmds.referenceQuery(self.obj[0], f=True )
+        cmds.file(path_reference, ir=1)
+        cmds.parent(self.obj,world=True)#è§£é™¤ç»„
+        self.obj_namespace=str(self.obj[0]).split(':',1)[0]+':'
+        cmds.namespace(removeNamespace = self.obj_namespace, mergeNamespaceWithParent = True)
+        self.obj_new=cmds.ls(sl=1)
+        
+        #é€‰æ‹©éœ€è¦çƒ˜ç„™çš„å¯¹è±¡
+        cmds.select(self.obj_new,hi=1)
+        cmds.select(cmds.ls(type= "blendShape"),add=1)
+        
+        #çƒ˜ç„™
+        self.obj_bake_l=[]
+        self.obj_list=cmds.ls(sl=1)
+        i=0
+        while i<len(self.obj_list):
+            self.obj_bake_l.append(str(self.obj_list[i]))
+            i+=1
+        self.obj_bake_a=str(self.obj_bake_l)[2:-2]
+        self.obj_bake=self.obj_bake_a.replace("'",'"')
+        #self.start=int(cmds.textFieldGrp('start',text=1,q=1))
+        #self.end=int(cmds.textFieldGrp('end',text=1,q=1))
+        mel.eval('''bakeResults -simulation true -t "%s:%s" -sampleBy 1 -oversamplingRate 1 -disableImplicitControl true -preserveOutsideKeys true -sparseAnimCurveBake false -removeBakedAttributeFromLayer false -removeBakedAnimFromLayer false -bakeOnOverrideLayer false -minimizeRotation true -controlPoints false -shape true {"%s"}'''%(self.start,self.end,self.obj_bake))
+        
+        #åˆ é™¤å¤šä½™èŠ‚ç‚¹
+        cmds.select( '*lower*ipBC*','*upper*ipBC*','*lower*ipBC*_*' )
+        cmds.delete()
+        
+        #é€‰æ‹©æ‰€æœ‰éœ€è¦å¯¼å‡ºçš„å¯¹è±¡
+        cmds.select(self.obj_new,hi=1)
+    
+    
+        
+    def exportFBX(self,*args):
+        
+        #è®¾ç½®FBXæ–‡ä»¶å
+        text_path=str(cmds.file(q=1,sn=1)).rsplit('_',1)[0]+'_FBX'
+        if 'Mb' in text_path:
+            text_path_old=text_path.replace('Mb','FBX',1)
+        elif 'Lighting/File' in text_path:
+            text_path_old=text_path.replace('Lighting/File','Animation/FBX',1)#åˆ›å»ºè·¯å¾„
+        else :
+            text_path_old=text_path
+        save_file_name='/'+str(cmds.file(q=1,sn=1)).rsplit('_',1)[0].rsplit('/',1)[-1]+'_an_'+self.space_name#åˆ›å»ºæ–‡ä»¶å
+        self.export_path=text_path_old+save_file_name
+        print(self.export_path)
+        #å¯¼å‡ºfbx
+        cmds.select(self.obj_new)
+        cmds.FBXResetExport()
+        mel.eval('FBXExportFileVersion -v FBX201300')
+        mel.eval('FBXExportSmoothingGroups -v true')
+        mel.eval('FBXExportSmoothMesh -v true')
+        #åˆ›å»ºå¯¹åº”FBXæ–‡ä»¶å¤¹
+        if not os.path.exists(self.export_path.rsplit('/',1)[0]):
+            os.makedirs(self.export_path.rsplit('/',1)[0])
+        
+        mel.eval('FBXExport -f "%s" -s'%(self.export_path))
+        
+        #åˆ›å»ºæ”¶çº³ç»„
+        collect_g='%s_g'%self.obj_namespace.split(':',1)[0]
+        cmds.group(em=True,n=collect_g)
+        cmds.parent(self.obj_new,collect_g)
 
-	def openFile(self,*args):
-		#ÌáÊ¾À¸Çå¿Õ
-		cmds.text('detection',label='',align='left',ebg=0,bgc=[1,0,0],e=1)
-		
-		singleFilter="Ä¿Â¼"
-		self.open_path=str(cmds.fileDialog2(fileFilter=singleFilter,startingDirectory =str(cmds.file(q=1,sn=1)).rsplit('/',1)[0],fm=3)[0])
-		cmds.textField('export',text=self.open_path,e=1)
-		
-	def openExcel(self,*args):
-		#ÌáÊ¾À¸Çå¿Õ
-		cmds.text('detection',label='',align='left',ebg=0,bgc=[1,0,0],e=1)
-		
-		singleFilter="*.xlsx"
-		self.open_path=str(cmds.fileDialog2(fileFilter=singleFilter,startingDirectory=str(cmds.file(q=1,sn=1)).rsplit('/',1)[0],fileMode=4)[0])
-		cmds.textField('excel',text=self.open_path,e=1)
-	
-	def detectionFile(self,*args):
-		
-		self.excelGet()
-		#»ñÈ¡ÎÄ¼şÂ·¾¶
-		dir_path =cmds.textField('export',text=1,q=1)
-		ma_file=[]
-		for dirpath, dirnames, filenames in os.walk(dir_path):
-			for filename in filenames:
-				if '.ma' in filename or '.mb' in filename:
-					ma_file.append(filename.rsplit('_',1)[0])
-		for ma_name in ma_file:	
-			if ma_name not in self.start_endK_d:
-				cmds.text('detection',label='ExcelÓëµ±Ç°ËùÑ¡ÎÄ¼ş¼ĞÄÚÈİ²»Æ¥Åä',ebg=1,bgc=[1,0,0],e=1)
-				break
-			else:
-				cmds.text('detection',label='ExcelÓëµ±Ç°ËùÑ¡ÎÄ¼ş¼ĞÄÚÈİÆ¥Åä',ebg=0,bgc=[0,0,0],e=1)
-					
+    def openFile(self,*args):
+        #æç¤ºæ æ¸…ç©º
+        cmds.text('detection',label='',align='left',ebg=0,bgc=[1,0,0],e=1)
+        
+        singleFilter="ç›®å½•"
+        self.open_path=str(cmds.fileDialog2(fileFilter=singleFilter,startingDirectory =str(cmds.file(q=1,sn=1)).rsplit('/',1)[0],fm=3)[0])
+        cmds.textField('export',text=self.open_path,e=1)
+        
+    def openExcel(self,*args):
+        #æç¤ºæ æ¸…ç©º
+        cmds.text('detection',label='',align='left',ebg=0,bgc=[1,0,0],e=1)
+        
+        singleFilter="*.xlsx"
+        self.open_path=str(cmds.fileDialog2(fileFilter=singleFilter,startingDirectory=str(cmds.file(q=1,sn=1)).rsplit('/',1)[0],fileMode=4)[0])
+        cmds.textField('excel',text=self.open_path,e=1)
+    
+    def detectionFile(self,*args):
+        
+        self.excelGet()
+        #è·å–æ–‡ä»¶è·¯å¾„
+        dir_path =cmds.textField('export',text=1,q=1)
+        ma_file=[]
+        for dirpath, dirnames, filenames in os.walk(dir_path):
+            for filename in filenames:
+                if '.ma' in filename or '.mb' in filename:
+                    ma_file.append(filename.rsplit('_',1)[0])
+        for ma_name in ma_file:    
+            if ma_name not in self.start_endK_d:
+                cmds.text('detection',label='Excelä¸å½“å‰æ‰€é€‰æ–‡ä»¶å¤¹å†…å®¹ä¸åŒ¹é…',ebg=1,bgc=[1,0,0],e=1)
+                break
+            else:
+                cmds.text('detection',label='Excelä¸å½“å‰æ‰€é€‰æ–‡ä»¶å¤¹å†…å®¹åŒ¹é…',ebg=0,bgc=[0,0,0],e=1)
+                    
 def start():
-	win()
-	cmds.showWindow()
-	
-	
-	
+    win()
+    cmds.showWindow()
+    
+    
+    
 if __name__=='__main__':
-	win()
-	cmds.showWindow()
+    win()
+    cmds.showWindow()
  
 
 

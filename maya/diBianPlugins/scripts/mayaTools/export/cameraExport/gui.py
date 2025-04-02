@@ -20,6 +20,14 @@ class CameraExporertUI:
         BTN_PickPath = cmds.button(l=u'选择路径',p=rowlayout_PicPath,c=lambda *arg: ML.fileDialog(u'选择贴图路径',3,self.camera_fbx_export_path))
         self.cb_ScaleTenTimes = cmds.checkBox(l = u'放大10倍', p = MainLayout,v=1)
         cmds.button(l =u'导出选择的相机', p = MainLayout,c = self.btnExportCamera)
+
+        #偏移时间轴
+        cmds.button(l =u'对选择的相机偏移时间轴后导出', p = MainLayout,c = self.btnOffsetExportCamera)
+        
+        self.start_offset=10
+        self.end_offset=5
+
+
         cmds.separator(p = MainLayout,h = 20)
 
         cmds.text(l = u'相机修复工具集',p = MainLayout,align = 'left')
@@ -137,6 +145,78 @@ class CameraExporertUI:
                 ML.scaleFrameValue(slnode+'.translateX',0.1)
                 ML.scaleFrameValue(slnode+'.translateY',0.1)
                 ML.scaleFrameValue(slnode+'.translateZ',0.1)
+
+    #偏移时间轴
+    def btnOffsetExportCamera(self,*arg):
+        slnodes = ML.getSelectNodes(False)
+        pm.select(clear=1)
+        nslnodes = []
+        for slnode in slnodes:
+            if cmds.listRelatives(slnode,s=1) == None:
+                nslnodes = nslnodes +ML.recursionGroup([],slnode)
+            else:
+                nslnodes.append(slnode)
+                pass
+                #camera
+        slnodes = nslnodes
+        nslnodes = []
+        # 删除命名空间
+        cmds.namespace( set=':' ) # 设定当前命名
+        for slnode in slnodes:
+            namesplit = slnode.split(':')
+            if len(namesplit) >= 2:
+                nslnodes.append(namesplit[1])
+                cmds.namespace( rm=namesplit[0],mnr=1)
+            else:
+                nslnodes.append(slnode)
+        slnodes = nslnodes
+        # 设置帧率
+        try:
+            cmds.currentUnit(t='25fps')
+        except:
+            pass
+        # 计算最大帧数并设置最大动画帧数
+        cameraNodes = ML.getNodesRelativesByType(slnodes,'camera') #获取相机节点
+        ranges = ()
+        tandc = cameraNodes + slnodes #附加相机节点列表和Transform节点列表
+        for node in tandc:
+            ranges = ranges + ML.getKeyFrameRange(node)
+        ML.setFrameRange(1,max(ranges))
+        #遍历所有节点
+        for slnode in slnodes:
+
+            #偏移摄像机帧数
+            cam_str_split=slnode.split('_')
+            start_frame=int(cam_str_split[-3])
+            end_frame=int(cam_str_split[-2])
+            #偏移帧
+            cmds.keyframe( slnode,relative=True,timeChange=self.start_offset)
+            #烘焙前后帧
+            cmds.bakeResults( slnode, t=(start_frame,start_frame+self.start_offset+1), simulation=True,preserveOutsideKeys=True )
+            cmds.bakeResults( slnode, t=(end_frame,end_frame+self.start_offset+self.end_offset), simulation=True,preserveOutsideKeys=True )
+            #替换结束帧的值
+            cam_str_split[-2] = str(end_frame+self.start_offset+self.end_offset)
+            cam_newname = '_'.join(cam_str_split)
+            cmds.select(slnode)
+            cmds.rename(cam_newname)
+
+            slnode=cam_newname
+
+
+            if cmds.checkBox(self.cb_ScaleTenTimes,q=1,v=1):
+                ML.scaleFrameValue(slnode+'.translateX',10)
+                ML.scaleFrameValue(slnode+'.translateY',10)
+                ML.scaleFrameValue(slnode+'.translateZ',10)
+
+            fbxExportPath = cmds.textField(self.camera_fbx_export_path,q=1,text=1) + str(slnode) + '.fbx'
+            ML.export_fbx_without_dialog(slnode,fbxExportPath)
+            # NOTE 还原缩放
+            if cmds.checkBox(self.cb_ScaleTenTimes,q=1,v=1):
+                ML.scaleFrameValue(slnode+'.translateX',0.1)
+                ML.scaleFrameValue(slnode+'.translateY',0.1)
+                ML.scaleFrameValue(slnode+'.translateZ',0.1)
+
+
     def show(self):
         cmds.showWindow(self.window)
 def showUI():

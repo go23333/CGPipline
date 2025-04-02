@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 from maya import cmds,mel
+import os
 
 
 shade_select=[]
@@ -15,12 +18,12 @@ def udim_shade(shade,Texture_ds):
 		uv_y=int(uv_list[1])
 		uv_xy=uv_y*10+uv_x
 		
-		#´´½¨·ÖÀë²ÄÖÊµÄÌùÍ¼×Öµä
+		#åˆ›å»ºåˆ†ç¦»æè´¨çš„è´´å›¾å­—å…¸
 		texture_path={}
 		for k,v in Texture_ds.items():
 			texture_path[k]=v[uv_xy-1]
 		
-		#Êı×Ö×ª×ÖÄ¸
+		#æ•°å­—è½¬å­—æ¯
 		uv_udim=chr(64+uv_xy)
 		mel.eval('ConvertSelectionToFaces')
 		mel.eval('SelectUVShell')
@@ -44,7 +47,7 @@ def execute(*args):
 	print(shade_names)
 	for shade_name in shade_names:
 		if cmds.objectType(shade_name, isType='transform'):
-			cmds.text('detection',label='ÇëÖ»Ñ¡Ôñ²ÄÖÊ',ebg=1,bgc=[1,0,0],e=1)
+			cmds.text('detection',label=u'è¯·åªé€‰æ‹©æè´¨',ebg=1,bgc=[1,0,0],e=1)
 			i=1
 	if i==0:
 		for shade_name in shade_names:
@@ -55,7 +58,7 @@ def execute(*args):
 					break
 
 
-#´´½¨²ÄÖÊÌùÍ¼½Úµã
+#åˆ›å»ºæè´¨è´´å›¾èŠ‚ç‚¹
 def textureConnect(shade_name,texture_path):
 	
 	attr_names=[['.translateFrame', '.translateFrame'],
@@ -78,13 +81,13 @@ def textureConnect(shade_name,texture_path):
 	 ['.outUvFilterSize', '.uvFilterSize']]
 	
 	for k,v in texture_path.items():
-		#½«1001¸ñÊ½×ª»»ÎªABC¸ñÊ½
+		#å°†1001æ ¼å¼è½¬æ¢ä¸ºABCæ ¼å¼
 		v_ABC=v.split('.')[0]+'_'+chr(64+int(v.split('.')[1])-1000)+'.'+v.rsplit('.')[-1]
-		#ÌùÍ¼ÖØÃüÃû
+		#è´´å›¾é‡å‘½å
 		if not os.path.isfile(v_ABC):
 			os.rename(v,v_ABC)
 		
-		#¸ù¾İÌùÍ¼ÀàĞÍÀ´¸³Óè¶ÔÓ¦ÌùÍ¼½Úµã
+		#æ ¹æ®è´´å›¾ç±»å‹æ¥èµ‹äºˆå¯¹åº”è´´å›¾èŠ‚ç‚¹
 		if k =='c':
 			f_name=shade_name+'_'+k+'_file'
 			t_name=shade_name+'_'+k+'_texture'
@@ -132,11 +135,11 @@ def textureConnect(shade_name,texture_path):
 
 
 
- #»ñÈ¡ÌùÍ¼Â·¾¶
+ #è·å–è´´å›¾è·¯å¾„
 def getTexture(shade_name):
 
 	texture_files={}
-	#¸ù¾İÁ¬½Óµã»ñÈ¡¶ÔÓ¦µÄ½Úµã
+	#æ ¹æ®è¿æ¥ç‚¹è·å–å¯¹åº”çš„èŠ‚ç‚¹
 	if cmds.nodeType( shade_name )=='RedshiftMaterial':
 		mat_c=cmds.connectionInfo(shade_name+'.diffuse_color',sfd=1)
 		mat_n=cmds.connectionInfo(shade_name+'.bump_input',sfd=1)
@@ -146,7 +149,7 @@ def getTexture(shade_name):
 	#elif cmds.nodeType( shade_names[0] )=='lambert':
 	#	mat_class.append(cmds.connectionInfo(shade_names[0]+'.color',sfd=1))
 	
-	#»ñÈ¡ÌùÍ¼½ÚµãÉÏµÄÌùÍ¼Â·¾¶
+	#è·å–è´´å›¾èŠ‚ç‚¹ä¸Šçš„è´´å›¾è·¯å¾„
 	c_name=mat_c.split('.')[0]
 	c_path=[]
 	if c_name:
@@ -185,27 +188,27 @@ def getTexture(shade_name):
 
 
 		
-def start():
-	win="UDIM²ÄÖÊ·ÖÀë"
+def showUI():
+	win=u"UDIMæè´¨åˆ†ç¦»"
 	if cmds.window(win,q=1,ex=1):
 		cmds.deleteUI(win)
 	cmds.window(win,widthHeight=(260,60))
 	column1=cmds.columnLayout( adjustableColumn=True )
-	cmds.text('Ñ¡ÔñĞèÒª·ÖÀëµÄ²ÄÖÊºóµã»÷Ö´ĞĞ',align='left')
-	cmds.button(label='Ö´ĞĞ',c=execute)
+	cmds.text(u'é€‰æ‹©éœ€è¦åˆ†ç¦»çš„æè´¨åç‚¹å‡»æ‰§è¡Œ',align='left')
+	cmds.button(label=u'æ‰§è¡Œ',c=execute)
 	cmds.text('detection',label='',align='left',ebg=0,bgc=[1,0,0])
 	cmds.showWindow()
 
 
 		
 if __name__=='__main__':
-	win="UDIM²ÄÖÊ·ÖÀë"
+	win=u"UDIMæè´¨åˆ†ç¦»"
 	if cmds.window(win,q=1,ex=1):
 		cmds.deleteUI(win)
 	cmds.window(win,widthHeight=(260,60))
 	column1=cmds.columnLayout( adjustableColumn=True )
-	cmds.text('Ñ¡ÔñĞèÒª·ÖÀëµÄ²ÄÖÊºóµã»÷Ö´ĞĞ',align='left')
-	cmds.button(label='Ö´ĞĞ',c=execute)
+	cmds.text(u'é€‰æ‹©éœ€è¦åˆ†ç¦»çš„æè´¨åç‚¹å‡»æ‰§è¡Œ',align='left')
+	cmds.button(label=u'æ‰§è¡Œ',c=execute)
 	cmds.text('detection',label='',align='left',ebg=0,bgc=[1,0,0])
 	cmds.showWindow()
 

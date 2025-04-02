@@ -5,6 +5,9 @@ from UnrealPipeline.core.UnrealHelper import MakeEntry
 def InstallMenu(rootMenu:unreal.ToolMenu):
     submenu = rootMenu.add_sub_menu(rootMenu.get_name(),"","pipelinetool","流程工具")
 
+    from UnrealPipeline.pipeline.AnimToSeq import InstallMenu
+    InstallMenu(submenu)
+
 
 
     entry = MakeEntry("AAI","整合关卡(AAI)",toolTip="",command="from UnrealPipeline.songshunjie import AAI_import;AAI_import.start()")
