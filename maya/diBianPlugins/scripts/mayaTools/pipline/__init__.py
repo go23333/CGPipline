@@ -9,8 +9,8 @@ def install(menu_id):
     pm.menuItem(label=u'贴图整理工具',command=TextureArrange)
     pm.menuItem(label=u'贴图连接工具',command=connectTexture)
     pm.menuItem(label=u'地编用工具',command=edittools)
-    pm.menuItem(label=u'UDIM拆分工具',command=edittools)
-    pm.menuItem(label=u'布料解算BS烘焙工具',command=edittools)
+    pm.menuItem(label=u'UDIM拆分工具',command=udimSplit)
+    pm.menuItem(label=u'布料解算BS烘焙工具',command=blendShapeBake)
 
 
 TextureArrange = """
@@ -30,12 +30,12 @@ gui.showUI()
 
 
 
-edittools = """
+udimSplit = """
 from mayaTools.pipline.udimSplit import gui
 gui.showUI()
 """
 
-edittools = """
+blendShapeBake = """
 from mayaTools.pipline.blendShapeBake import gui
 gui.showUI()
 """
