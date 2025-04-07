@@ -37,9 +37,9 @@ def InstallMenu():
     InstallMenu(toolbar)
 
 
-    from UnrealPipeline.core.socketHelper import ThreadSocket
-    ThreadSocket.StartListening()
-
+    from UnrealPipeline.core.socketHelper import StartSocketServer
+    StartSocketServer()
+    
     #添加一些右键菜单
     texContextMenu = menus.find_menu("ContentBrowser.AssetContextMenu.StaticMesh")
     from UnrealPipeline.core.UnrealHelper import MakeEntry

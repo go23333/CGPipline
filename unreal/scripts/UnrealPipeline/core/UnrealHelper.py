@@ -1059,7 +1059,6 @@ def MakeEntry(name:str,label:str,command:str = "",toolTip:str = "") -> unreal.To
 
 
 def importAssetPipline(AssetData:dict):
-    rootPath = os.path.join(globalConfig.get().MyBridgeTargetPath,f"{AssetData['assetType'].replace(' ','_')}/{AssetData['name']}_{AssetData['AssetID']}")
     udim = False
     # 用来兼容旧版本的MyBridge
     try:
@@ -1067,8 +1066,8 @@ def importAssetPipline(AssetData:dict):
             udim = True
     except:
         pass
-    
     if AssetData["assetFormat"] == 'FBX':# 当类型为FBX资产
+        rootPath = os.path.join(globalConfig.get().MyBridgeTargetPath,f"{AssetData['assetType'].replace(' ','_')}/{AssetData['name']}_{AssetData['AssetID']}")
         #导入贴图
         t_arm = WrapTexture.importTexture(AssetData["arm"],os.path.join(rootPath,f"Textures"))
         t_arm.saveAsset()
@@ -1118,7 +1117,7 @@ def importAssetPipline(AssetData:dict):
         wrapMaterialIns.setTextureParameter("ARMS_Map",t_arm.asset)
         wrapMaterialIns.saveAsset()
     elif AssetData["assetFormat"] == "Unreal Engine":# 当类型为FBX资产
-        tempPath = globalConfig.get().MyBridgeTargetPathBuildin + AssetData["AssetID"]
+        tempPath = globalConfig.get().MyBridgeTargetPathBuildin + "/3D_Assets" + AssetData["AssetID"]
         system_path = convert_unreal_path_to_system_path(tempPath)
         if not os.path.exists(system_path):
             shutil.copytree(AssetData["mesh"],system_path)

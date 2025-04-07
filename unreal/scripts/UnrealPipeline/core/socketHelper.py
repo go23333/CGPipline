@@ -5,6 +5,14 @@ import unreal
 from UnrealPipeline.core.Config import globalConfig
 
 
+lock = threading.Lock()
+
+
+class Shared:
+    messageList = []
+
+
+
 class ThreadSocket(threading.Thread):
     isrunning = True
     def __init__(self, name):
@@ -39,9 +47,11 @@ class ThreadSocket(threading.Thread):
                             break
                         # 打印接收到的数据
                         print(f"Received: {data.decode()}")
-                        unreal.PythonExtensionBPLibrary.launch_script_on_game_thread(f"import UnrealPipeline.core.UnrealHelper as UH;UH.importAssetPipline({data.decode()})")
+
+                        with lock:
+                            Shared.messageList.append(f"import UnrealPipeline.core.UnrealHelper as UH;UH.importAssetPipline({data.decode()})")
                         # 可以选择回显数据给客户端
-                        # conn.sendall(data)
+                        conn.sendall(str(len(Shared.messageList)).encode())
                     except Exception as e:
                         # 捕获异常，可能是连接中断
                         print(f"An error occurred: {e}")
@@ -55,6 +65,34 @@ class ThreadSocket(threading.Thread):
         thread = ThreadSocket("Sockt")
         thread.start()
         unreal.register_python_shutdown_callback(lambda:thread.stop())
+
+
+class MessageQueueThread(threading.Thread):
+    def __init__(self, name):
+        super().__init__(name=name)
+        self.__isListening = True
+    def run(self) -> None:
+        while self.__isListening:
+            if Shared.messageList:
+                message = None
+                # 使用锁来保护共享资源
+                with lock:
+                    message = Shared.messageList.pop(0)
+                if message:
+                    unreal.PythonExtensionBPLibrary.launch_script_on_game_thread(message)
+    def stop(self):
+        self.__isListening = False
+    @classmethod
+    def StartMessageQueue(cls):
+        thread = MessageQueueThread("MessageQueueThread")
+        thread.start()
+        unreal.register_python_shutdown_callback(lambda:thread.stop())
+
+
+def StartSocketServer():
+    ThreadSocket.StartListening()
+    MessageQueueThread.StartMessageQueue()
+
 
 def sendStringMyBridge(string:str,address:tuple[str,int]):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
