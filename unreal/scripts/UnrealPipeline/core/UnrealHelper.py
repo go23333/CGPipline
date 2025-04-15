@@ -1117,7 +1117,7 @@ def importAssetPipline(AssetData:dict):
         wrapMaterialIns.setTextureParameter("ARMS_Map",t_arm.asset)
         wrapMaterialIns.saveAsset()
     elif AssetData["assetFormat"] == "Unreal Engine":# 当类型为FBX资产
-        tempPath = globalConfig.get().MyBridgeTargetPathBuildin + "/3D_Assets" + AssetData["AssetID"]
+        tempPath = globalConfig.get().MyBridgeTargetPathBuildin + "3D_Assets/" + AssetData["AssetID"]
         system_path = convert_unreal_path_to_system_path(tempPath)
         if not os.path.exists(system_path):
             shutil.copytree(AssetData["mesh"],system_path)

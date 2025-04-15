@@ -229,7 +229,7 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
         subcategory = self.cb_subcategory.CurrentText()
         AssetID = ut.generate_unique_string(7)
         if type(self.asset) == unreal.StaticMesh:
-            tempPath = globalConfig.get().MyBridgeTargetPathBuildin + "/3D_Assets" + AssetID + "/"
+            tempPath = globalConfig.get().MyBridgeTargetPathBuildin + "3D_Assets/" + AssetID + "/"
             #复制网格体和依赖项到新目录
             self.asset = uh.MoveStaticMeshAndDependenceToFolder(self.asset,tempPath)
             #设置枢轴位置
