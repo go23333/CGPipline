@@ -305,6 +305,7 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
             #清理文件
             unreal.EditorAssetLibrary.delete_directory(tempPath)
             self.close()
+            self.deleteLater()
         else:
             pass
     def RefreshThumbnail(self):
