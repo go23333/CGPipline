@@ -187,7 +187,7 @@ class win():
                             #cmds.pickWalk(self.space_name+':DeformationSystem', direction='down')
                             
                             try:
-                                cmds.select(self.space_name+':Geometry',add=1)
+                                #cmds.select(self.space_name+':Geometry',add=1)
                                 self.bake()
                                 self.exportFBX()
                                 print('ch',self.space_name)

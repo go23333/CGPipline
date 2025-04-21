@@ -57,7 +57,7 @@ class win():
         if cmds.objExists(space_name+':Root_M'):
             
             cmds.select(space_name+':Root_M')            
-            cmds.select(space_name+':Geometry',add=1)
+            #cmds.select(space_name+':Geometry',add=1)
 
 
             

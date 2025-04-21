@@ -620,12 +620,13 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         
                 
         if path_class=='level':
-            if unreal.EditorAssetLibrary().does_directory_exist(self.level_path_text.text())==1:
+            if unreal.EditorAssetLibrary().does_directory_exist(self.level_path_text.text()):
                 self.asset_level_list=unreal.EditorAssetLibrary.list_assets(self.level_path_text.text())
                 for level_name in self.asset_level_list:
-                    if unreal.EditorAssetLibrary.find_asset_data(level_name).get_asset().get_class().get_name()=='World':
+                    level_asset_name=unreal.EditorAssetLibrary.find_asset_data(level_name).get_asset().get_name()
+                    if unreal.EditorAssetLibrary.find_asset_data(level_name).get_asset().get_class().get_name()=='World' and 'Shade' == level_asset_name.split('_')[-1]:
                         self.find_level_assets.append(unreal.EditorAssetLibrary.find_asset_data(level_name))
-                        asset_level_list_name.append(unreal.EditorAssetLibrary.find_asset_data(level_name).get_asset().get_name())
+                        asset_level_list_name.append(level_asset_name)
                     
                 self.radio_group_level.set_button_list(asset_level_list_name)
                 self.radio_group_level.setMaximumHeight(len(asset_level_list_name)*16)

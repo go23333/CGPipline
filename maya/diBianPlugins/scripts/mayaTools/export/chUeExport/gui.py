@@ -3,7 +3,17 @@
 from maya import cmds,mel
 import os
 
+
 def creB(*args):
+    #判断是否有项目缩写
+    if cmds.textFieldGrp('pj',text=1,q=1):
+        createProjectName()
+        cmds.text('error_text',label='',ebg=1,bgc=[1,0,0],e=1)
+        
+    else:
+        cmds.text('error_text',label='请填入项目缩写',ebg=1,bgc=[1,0,0],e=1)
+
+def createProjectName():
     from maya import cmds,mel
     project=cmds.textFieldGrp('pj',text=1,q=1)
     
@@ -402,7 +412,12 @@ def showUI():
         cmds.deleteUI(winName)
     win = cmds.window(winName,widthHeight=(380,310))
     column1=cmds.columnLayout( adjustableColumn=True )
-    cmds.textFieldGrp('pj', label=u'项目名称缩写', pht=u'如DDCT',w=50,cal=(1,'left'),cw2=(80,80))
+
+    cmds.rowLayout( numberOfColumns=2, columnWidth2=(80, 75))
+    cmds.textFieldGrp('pj', label=u'项目名称缩写', pht=u'如DDCT',w=180,cal=(1,'left'),cw2=(80,80))
+    cmds.text('error_text',label='')
+    cmds.setParent(column1)
+
     cmds.button( label=u'检测除毛发外的多边面',command=cleanB)
     cmds.button( label=u'创建并赋予基础人体材质球',command=creB)
     

@@ -5,6 +5,8 @@ import openpyxl as op
 from Qt import QtCore
 from Qt import QtWidgets
 
+import UnrealPipeline.core.Config as UC
+
 
 from dayu_widgets.field_mixin import MFieldMixin
 from dayu_widgets.push_button import MPushButton
@@ -24,9 +26,12 @@ class mw(QtWidgets.QWidget, MFieldMixin):
     cam_se=[]
     ep=''
     #文件类型
-    flie_class=['Lighting','Animation','Cache','VFX','Modify']  
+    flie_class=['Lighting','Animation','Cache','VFX','Modify']
     #文件路径
     excel_path=''
+    #偏移帧
+    start_offset=UC.globalConfig.get().start_offset
+    end_offset=UC.globalConfig.get().end_offset
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -170,9 +175,9 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                             lt_ls:unreal.LevelSequence
                             lt_ls.set_display_rate((25,1))
                             if cam_name[1]:
-                                lt_ls.set_playback_start(int(cam_name[1])-1)
+                                lt_ls.set_playback_start(int(cam_name[1])-1)                                #设置起始帧
                             if cam_name[2]:
-                                lt_ls.set_playback_end(int(cam_name[2])+1)
+                                lt_ls.set_playback_end(int(cam_name[2])+self.end_offset+self.start_offset)  #设置结束帧
                             lt_ls_list.append(lt_ls)
                         unreal.EditorAssetLibrary.save_directory('/Game/Shots/%s/%s/%s/%s'%(ep,sc_name,flie_name,file_class_name))
                         unreal.LevelEditorSubsystem().load_level('/Game/Shots/%s/%s/%s/%s/%s_lt'%(ep,sc_name,flie_name,file_class_name,cam_name[0]))
@@ -200,7 +205,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                             if cam_name[1]:
                                 an_ls.set_playback_start(int(cam_name[1])-1)
                             if cam_name[2]:
-                                an_ls.set_playback_end(int(cam_name[2])+1)
+                                an_ls.set_playback_end(int(cam_name[2])+self.end_offset+self.start_offset)
                             an_ls_list.append(an_ls)
                     if file_class_name=='Cache':
                         # flie_name='%s_cache'%(cam_name[0])

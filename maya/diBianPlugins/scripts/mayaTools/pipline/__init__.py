@@ -11,6 +11,7 @@ def install(menu_id):
     pm.menuItem(label=u'地编用工具',command=edittools)
     pm.menuItem(label=u'UDIM拆分工具',command=udimSplit)
     pm.menuItem(label=u'布料解算BS烘焙工具',command=blendShapeBake)
+    pm.menuItem(label=u'BS连接骨骼工具',command=bsToJoin)
 
 
 TextureArrange = """
@@ -37,5 +38,10 @@ gui.showUI()
 
 blendShapeBake = """
 from mayaTools.pipline.blendShapeBake import gui
+gui.showUI()
+"""
+
+bsToJoin = """
+from mayaTools.pipline.bsToJoin import gui
 gui.showUI()
 """
