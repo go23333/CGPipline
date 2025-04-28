@@ -11,7 +11,7 @@ def creB(*args):
         cmds.text('error_text',label='',ebg=1,bgc=[1,0,0],e=1)
         
     else:
-        cmds.text('error_text',label='请填入项目缩写',ebg=1,bgc=[1,0,0],e=1)
+        cmds.text('error_text',label=u'请填入项目缩写',ebg=1,bgc=[1,0,0],e=1)
 
 def createProjectName():
     from maya import cmds,mel

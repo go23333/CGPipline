@@ -70,8 +70,9 @@ class win():
         #导入选定对象引用并删除选定对象的名称空间
         path_reference=cmds.referenceQuery(obj[0], f=True )
         cmds.file(path_reference, ir=1)
-        cmds.parent(obj,world=True)#解除组
+        # cmds.parent(obj,world=True)#解除组
         self.obj_namespace=str(obj[0]).split(':',1)[0]+':'
+        cmds.select(obj)
         cmds.namespace(removeNamespace = self.obj_namespace, mergeNamespaceWithParent = True)
         
         self.obj_new=cmds.ls(sl=1)

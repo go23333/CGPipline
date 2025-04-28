@@ -181,18 +181,18 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         self.radio_group_level.set_spacing(1)
         
 
-        label_level = MLabel()
-        label_level.setWordWrap(True)
-        label_level.setMaximumWidth(200)
-        label_level.setMinimumHeight(36)
+        self.label_level = MLabel()
+        self.label_level.setWordWrap(True)
+        self.label_level.setMaximumWidth(200)
+        self.label_level.setMinimumHeight(36)
         self.register_field("asset_level_app")
         self.register_field(
-            "asset_level_app_text",lambda: " 、 ".join(self.field("asset_level_app")) if self.field("asset_level_app") else None
+            "asset_level_app_text",lambda: "、".join(self.field("asset_level_app")) if self.field("asset_level_app") else None
         )
         self.bind(
             "asset_level_app", self.radio_group_level, "dayu_checked", signal="sig_checked_changed"
         )
-        self.bind("asset_level_app_text", label_level, "text")
+        self.bind("asset_level_app_text", self.label_level, "text")
         
         scroll_level=QtWidgets.QScrollArea()
         scroll_level.setMinimumWidth(100)
@@ -214,7 +214,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         lay1_3.addWidget(MDivider("场景"))
         lay1_3.addWidget(self.level_path_text)
         lay1_3.addWidget(scroll_level)
-        lay1_3.addWidget(label_level)
+        lay1_3.addWidget(self.label_level)
 
         lay1.addLayout(lay1_1)
         lay1.addLayout(lay1_2)
@@ -249,8 +249,12 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         button_get = MPushButton(text="获取信息")
         button_get.clicked.connect(self.buttonGetClicked)
 
+        button_clear = MPushButton(text="清除所有资产选择")
+        button_clear.clicked.connect(self.buttonClearClicked)
+
         lay2_1.addWidget(scroll_ep)
         lay2_1.addWidget(button_get)
+        lay2_1.addWidget(button_clear)
 
 
         #第二部分
@@ -495,6 +499,21 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         self.proQueryClicked()
         self.levelQueryClicked()
         self.getLightMap()
+
+    def buttonClearClicked(self,check_spin_box:QtWidgets.QGroupBox):
+        self.radio_group_level.set_dayu_checked([])                           
+
+        check_spin_boxs=[]
+        check_spin_boxs.append(self.scroll_ch.widget().layout())
+        check_spin_boxs.append(self.scroll_pro.widget().layout())
+        for check_spin_box in check_spin_boxs:
+            lay_box = check_spin_box.layout()
+            for sub_lay in lay_box.children():
+                    #遍历子layout中的widget
+                    for i in range(sub_lay.count()):
+                        widget = sub_lay.itemAt(i).widget()
+                        if isinstance(widget,MCheckBox):
+                            widget.setChecked(False)        #取消勾选角色和道具的选项框
 
 
     def getEpList(self):

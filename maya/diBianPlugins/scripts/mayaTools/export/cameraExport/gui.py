@@ -3,6 +3,7 @@
 #导入标准模块
 import maya.cmds as cmds
 import pymel.core as pm
+import os
 #导入自定义模块
 import mayaTools.core.mayaLibrary as ML
 import mayaTools.core.pathLibrary as PL
@@ -18,7 +19,7 @@ class CameraExporertUI:
         cmds.text(l=u'选择导出路径: ',p=rowlayout_PicPath,al='left')
         self.camera_fbx_export_path = cmds.textField(p=rowlayout_PicPath,cc = lambda *arg:self.recorrectPath(self.camera_fbx_export_path))
         BTN_PickPath = cmds.button(l=u'选择路径',p=rowlayout_PicPath,c=lambda *arg: ML.fileDialog(u'选择贴图路径',3,self.camera_fbx_export_path))
-        self.cb_ScaleTenTimes = cmds.checkBox(l = u'放大10倍', p = MainLayout,v=1)
+        self.cb_ScaleTenTimes = cmds.checkBox(l = u'放大10倍', p = MainLayout,v=0)
         cmds.button(l =u'导出选择的相机', p = MainLayout,c = self.btnExportCamera)
 
         #偏移时间轴
@@ -139,6 +140,13 @@ class CameraExporertUI:
                 ML.scaleFrameValue(slnode+'.translateY',10)
                 ML.scaleFrameValue(slnode+'.translateZ',10)
             fbxExportPath = cmds.textField(self.camera_fbx_export_path,q=1,text=1) + str(slnode) + '.fbx'
+            #当导出时没有对应文件夹时创建新文件夹
+            base_path=cmds.textField(self.camera_fbx_export_path,q=1,text=1)
+            if not os.path.exists(base_path.rsplit('/',1)[0]):
+                if base_path.rsplit('/',1)[1]:
+                    os.makedirs(base_path)
+                else:
+                    os.makedirs(base_path.rsplit('/',1)[0])
             ML.export_fbx_without_dialog(slnode,fbxExportPath)
             # NOTE 还原缩放
             if cmds.checkBox(self.cb_ScaleTenTimes,q=1,v=1):
@@ -187,15 +195,15 @@ class CameraExporertUI:
 
             #偏移摄像机帧数
             cam_str_split=slnode.split('_')
-            start_frame=int(cam_str_split[-3])
-            end_frame=int(cam_str_split[-2])
+            start_frame=int(cam_str_split[3])
+            end_frame=int(cam_str_split[4])
             #偏移帧
             cmds.keyframe( slnode,relative=True,timeChange=self.start_offset)
             #烘焙前后帧
             cmds.bakeResults( slnode, t=(start_frame,start_frame+self.start_offset+1), simulation=True,preserveOutsideKeys=True )
             cmds.bakeResults( slnode, t=(end_frame,end_frame+self.start_offset+self.end_offset), simulation=True,preserveOutsideKeys=True )
             #替换结束帧的值
-            cam_str_split[-2] = str(end_frame+self.start_offset+self.end_offset)
+            cam_str_split[4] = str(end_frame+self.start_offset+self.end_offset).zfill(3)
             cam_newname = '_'.join(cam_str_split)
             cmds.select(slnode)
             cmds.rename(cam_newname)
@@ -209,6 +217,13 @@ class CameraExporertUI:
                 ML.scaleFrameValue(slnode+'.translateZ',10)
 
             fbxExportPath = cmds.textField(self.camera_fbx_export_path,q=1,text=1) + str(slnode) + '.fbx'
+            #当导出时没有对应文件夹时创建新文件夹
+            base_path=cmds.textField(self.camera_fbx_export_path,q=1,text=1)
+            if not os.path.exists(base_path.rsplit('/',1)[0]):
+                if base_path.rsplit('/',1)[1]:
+                    os.makedirs(base_path)
+                else:
+                    os.makedirs(base_path.rsplit('/',1)[0])
             ML.export_fbx_without_dialog(slnode,fbxExportPath)
             # NOTE 还原缩放
             if cmds.checkBox(self.cb_ScaleTenTimes,q=1,v=1):

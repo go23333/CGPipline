@@ -1,83 +1,90 @@
+#coding=utf-8
+
 from maya import cmds,mel
 import time
 
 
 class win():
-	def __init__(self):
-		self.winName="Ò»¼ü¼ôÇĞÃ«·¢ÇúÏß"
-		if cmds.window(self.winName,q=1,ex=1):
-			cmds.deleteUI(self.winName)
-		cmds.window(self.winName,widthHeight=(300,80))
-		self.UI()
-		
-	def UI(self):
-		
-		self.column=cmds.columnLayout( adjustableColumn=True )
-		
-		cmds.button( label='Ö´ĞĞ¼ôÇĞ',command=self.cut)
-		cmds.text('Ñ¡ÔñÍ·Æ¤ºÍÇúÏßºóµã»÷Ö´ĞĞ£¬\nÖ´ĞĞÇ°Òª±£Ö¤ÇúÏßÃ»ÓĞÖØÃû¡£\n²¢²»Ò»¶¨Ò»´Î³É¹¦£¬¿É¶à´ÎÖ´ĞĞ¡£')
-		
-	def cut(self,*args):
+    def __init__(self):
+        self.winName=u"ä¸€é”®å‰ªåˆ‡æ¯›å‘æ›²çº¿"
+        if cmds.window(self.winName,q=1,ex=1):
+            cmds.deleteUI(self.winName)
+        cmds.window(self.winName,widthHeight=(300,80))
+        self.UI()
+        
+    def UI(self):
+        
+        self.column=cmds.columnLayout( adjustableColumn=True )
+        
+        cmds.button( label=u'æ‰§è¡Œå‰ªåˆ‡',command=self.cut)
+        cmds.text(u'é€‰æ‹©å¤´çš®å’Œæ›²çº¿åç‚¹å‡»æ‰§è¡Œï¼Œ\næ‰§è¡Œå‰è¦ä¿è¯æ›²çº¿æ²¡æœ‰é‡åã€‚\nå¹¶ä¸ä¸€å®šä¸€æ¬¡æˆåŠŸ,å¯å¤šæ¬¡æ‰§è¡Œã€‚')
+        
+    def cut(self,*args):
 
-		ss=cmds.ls(sl=1)
-		meshs=cmds.listRelatives(ss,type='mesh')
-		curves=cmds.listRelatives(ss,type='curveShape')
-		cmds.group(em=True,n='cutCurve_Group' )
-		sg=cmds.ls(sl=1)
-		
-		ct=time.time()
-		
-		for cu in curves:
-		    
-			ppc2=0
-			ppc2a="polyProjectionCurve1_2"
-			
-			cmds.select('%s'%cu)
-			cmds.extendCurve( em=0, et=0, s=True, d=0.3 )
-			#Í¶Ó°
-			t1='polyProjectCurve -ch 1 -pointsOnEdges 0 -curveSamples 500 -automatic 0  "%s" "%s"'%(cu,meshs[0])
-			mel.eval(t1)
-			cmds.select('polyProjectionCurve1',hi=1)
-			lsc=cmds.ls(sl=1)
-			for item in lsc:
-				if item==ppc2a:
-					ppc2=1		
-			#ÉèÖÃ¼ôÇĞµã
-			node = cmds.curveIntersect('%s'%cu, 'polyProjectionCurve1_1', ch= True,useDirection=True,direction=(0, 1, 0))
-			p1 = cmds.getAttr(node + ".parameter1" )  
-			t1=tuple(p1[0])[:1]
-			#¼ôÇĞ
-			if t1:
-				cmds.detachCurve( '%s'%cu, p=(t1), rpo=True,n='cutCurve' )
-				sel=cmds.ls(sl=1)
-				cmds.parent( '%s'%sel[0], '%s'%sg[0] )
-				cu_c=cmds.pickWalk( '%s'%cu, direction='up' )
-				cmds.delete( 'polyProjectionCurve1')
-				cmds.delete(at=1)
-			#Èİ´í
-			elif ppc2==1:
-				node = cmds.curveIntersect('%s'%cu, 'polyProjectionCurve1_2', ch= True,useDirection=True,direction=(0, 1, 0))
-				p1 = cmds.getAttr(node + ".parameter1" )   
-				t1=tuple(p1[0])[:1]
-				cmds.select('%s'%cu)
-				if t1:
-					cmds.detachCurve( '%s'%cu, p=(t1), rpo=True,n='cutCurve' )
-					sel=cmds.ls(sl=1)
-					cmds.parent( '%s'%sel[0], '%s'%sg[0] )
-				
-					cu_c=cmds.pickWalk( '%s'%cu, direction='up' )
-					cmds.delete( 'polyProjectionCurve1')
-					cmds.delete(at=1)
-				else:
-					cmds.delete('polyProjectionCurve1')
-			else :
-				cmds.delete('polyProjectionCurve1')
-				
-		print(time.time()-ct)
+        ss=cmds.ls(sl=1)
+        meshs=cmds.listRelatives(ss,type='mesh')
+        curves=cmds.listRelatives(ss,type='curveShape')
+        cmds.group(em=True,n='cutCurve_Group' )
+        sg=cmds.ls(sl=1)
+        
+        ct=time.time()
+        
+        for cu in curves:
+            
+            ppc2=0
+            ppc2a="polyProjectionCurve1_2"
+            
+            cmds.select('%s'%cu)
+            cmds.extendCurve( em=0, et=0, s=True, d=0.3 )
+            #æŠ•å½±
+            t1='polyProjectCurve -ch 1 -pointsOnEdges 0 -curveSamples 500 -automatic 0  "%s" "%s"'%(cu,meshs[0])
+            mel.eval(t1)
+            cmds.select('polyProjectionCurve1',hi=1)
+            lsc=cmds.ls(sl=1)
+            for item in lsc:
+                if item==ppc2a:
+                    ppc2=1        
+            #è®¾ç½®å‰ªåˆ‡ç‚¹
+            node = cmds.curveIntersect('%s'%cu, 'polyProjectionCurve1_1', ch= True,useDirection=True,direction=(0, 1, 0))
+            p1 = cmds.getAttr(node + ".parameter1" )  
+            t1=tuple(p1[0])[:1]
+            #å‰ªåˆ‡
+            if t1:
+                cmds.detachCurve( '%s'%cu, p=(t1), rpo=True,n='cutCurve' )
+                sel=cmds.ls(sl=1)
+                cmds.parent( '%s'%sel[0], '%s'%sg[0] )
+                cu_c=cmds.pickWalk( '%s'%cu, direction='up' )
+                cmds.delete( 'polyProjectionCurve1')
+                cmds.delete(at=1)
+            #å®¹é”™
+            elif ppc2==1:
+                node = cmds.curveIntersect('%s'%cu, 'polyProjectionCurve1_2', ch= True,useDirection=True,direction=(0, 1, 0))
+                p1 = cmds.getAttr(node + ".parameter1" )   
+                t1=tuple(p1[0])[:1]
+                cmds.select('%s'%cu)
+                if t1:
+                    cmds.detachCurve( '%s'%cu, p=(t1), rpo=True,n='cutCurve' )
+                    sel=cmds.ls(sl=1)
+                    cmds.parent( '%s'%sel[0], '%s'%sg[0] )
+                
+                    cu_c=cmds.pickWalk( '%s'%cu, direction='up' )
+                    cmds.delete( 'polyProjectionCurve1')
+                    cmds.delete(at=1)
+                else:
+                    cmds.delete('polyProjectionCurve1')
+            else :
+                cmds.delete('polyProjectionCurve1')
+                
+        print(time.time()-ct)
 
 
+
+def showUI():
+    win()
+    cmds.showWindow()
 
 if __name__=='__main__':
-	win()
-	cmds.showWindow()
+    showUI()
+
+
  

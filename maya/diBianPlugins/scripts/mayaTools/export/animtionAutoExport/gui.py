@@ -96,7 +96,7 @@ class win():
         #获取Excel表格信息
         excel_path=cmds.textField('excel',text=1,q=1)
         df=op.load_workbook(excel_path,data_only=True)
-        sheet=df.get_sheet_by_name('镜头表')
+        sheet=df.get_sheet_by_name(u'镜头表')
         
         sc=[]
         cam=[]
@@ -126,7 +126,7 @@ class win():
                 start_end_c.append(i[4])
                 start_endK.append(start_end_c)
                 self.start_endK_d[i[2]]=start_end_c    #key为场次名称 value为起始结束帧
-        print(self.start_endK_d)
+        # print(self.start_endK_d)
         
             
     def execute(self,*args):
@@ -151,7 +151,6 @@ class win():
                 time.sleep(5)
                 #将帧速率设置为25
                 cmds.currentUnit( time='pal' )
-                print(cmds.currentUnit( q=1,time=1))
                 #获取当前场景的场次信息
                 key=cmds.file(q=1,sn=1).rsplit('/',1)[-1].rsplit('_',1)[0]
                 
@@ -183,7 +182,7 @@ class win():
                             #cmds.keyframe( frame_list,relative=True,timeChange=start_offset)
                             
                             print('ch',self.space_name)
-                            cmds.select(self.space_name+':Root_M')
+                            cmds.select(self.space_name+':DeformationSystem')
                             #cmds.pickWalk(self.space_name+':DeformationSystem', direction='down')
                             
                             try:
@@ -201,7 +200,7 @@ class win():
                             cmds.select(self.space_name+':*_GuGe_G')
                             
                             try:
-                                cmds.select(self.space_name+':*_Pro_Mo',add=1)
+                                # cmds.select(self.space_name+':*_Pro_Mo',add=1)
                                 self.bake()
                                 self.exportFBX()
                                 print('pro',self.space_name)
@@ -209,25 +208,27 @@ class win():
                                 export_fail_list.append(ma+'  :  '+self.space_name)
                                 print('!!!!!!!!!!!!'+self.space_name+' export fail')
                 else :
-                    cmds.text('detection',label=u'Excel数据与当前场景不匹配',ebg=1,e=1)
-                    break
+                    print(cmds.file(q=1,sn=1)+'  与表内信息不匹配')
+                    # cmds.text('detection',label=u'Excel数据与当前场景不匹配',ebg=1,e=1)
+                    # break
             for export_fail in export_fail_list:
                 print(export_fail)
     def bake(self,*args):
         
-        self.obj=cmds.ls(sl=1)
+        obj=cmds.ls(sl=1)
 
         #导入选定对象引用并删除选定对象的名称空间
-        path_reference=cmds.referenceQuery(self.obj[0], f=True )
+        path_reference=cmds.referenceQuery(obj[0], f=True )
         cmds.file(path_reference, ir=1)
-        cmds.parent(self.obj,world=True)#解除组
-        self.obj_namespace=str(self.obj[0]).split(':',1)[0]+':'
+        # cmds.parent(self.obj,world=True)#解除组
+        self.obj_namespace=str(obj[0]).split(':',1)[0]+':'
+        cmds.select(obj)
         cmds.namespace(removeNamespace = self.obj_namespace, mergeNamespaceWithParent = True)
         self.obj_new=cmds.ls(sl=1)
         
         #选择需要烘焙的对象
         cmds.select(self.obj_new,hi=1)
-        cmds.select(cmds.ls(type= "blendShape"),add=1)
+        # cmds.select(cmds.ls(type= "blendShape"),add=1)
         
         #烘焙
         self.obj_bake_l=[]
@@ -296,7 +297,7 @@ class win():
         
         #获取文件路径并创建新路径
         dir_path = cmds.textField('fbx_path',text=1,q=1)
-        sc_folder = str(cmds.file(q=1,sn=1)).rsplit('_an',1)[0].rsplit('/',1)[-1]
+        sc_folder = str(cmds.file(q=1,sn=1)).rsplit('_',1)[0].rsplit('/',1)[-1]
         sc_name = sc_folder.split('_')[1]
         text_path_old=dir_path+'/'+sc_name+'/'+sc_folder
         save_file_name='/'+str(cmds.file(q=1,sn=1)).rsplit('_',1)[0].rsplit('/',1)[-1]+'_an_'+self.space_name#创建文件名
@@ -376,14 +377,24 @@ class win():
             for filename in filenames:
                 if '.ma' in filename or '.mb' in filename:
                     ma_file.append(filename.rsplit('_',1)[0])
+        ma_exist=False
+        error_exist=False
         for ma_name in ma_file:    
             
             if ma_name not in self.start_endK_d:
-                cmds.text('detection',label=u'Excel与当前所选文件夹内容不匹配',ebg=1,bgc=[1,0,0],e=1)
-                print(ma_name,self.start_endK_d)
-                break
+                # cmds.text('detection',label=u'Excel与当前所选文件夹内容不匹配',ebg=1,bgc=[1,0,0],e=1)
+                print(ma_name)
+                error_exist=True
             else:
-                cmds.text('detection',label=u'Excel与当前所选文件夹内容匹配',ebg=0,bgc=[0,0,0],e=1)
+                ma_exist=True
+                # cmds.text('detection',label=u'Excel与当前所选文件夹内容匹配',ebg=0,bgc=[0,0,0],e=1)
+            
+        if error_exist and not ma_exist:
+            cmds.text('detection',label=u'Excel与当前所选文件夹内容不匹配',ebg=1,bgc=[1,0,0],e=1)
+        elif error_exist and ma_exist:
+            cmds.text('detection',label=u'Excel与当前所选文件夹内容有部分不匹配',ebg=1,bgc=[1,1,0],e=1)
+        else:
+            cmds.text('detection',label=u'Excel与当前所选文件夹内容匹配',ebg=0,bgc=[0,0,0],e=1)
                 
                 
 

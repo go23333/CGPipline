@@ -142,6 +142,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
        
         lt_ls_list=[]
         an_ls_list=[]
+        groom_seq_list=[]
         # 创建文件夹和所需的文件
         unreal.EditorAssetLibrary.make_directory('/Game/Shots/%s/Preview'%(ep))
         for sc_name in sc_list:
@@ -208,7 +209,15 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                                 an_ls.set_playback_end(int(cam_name[2])+self.end_offset+self.start_offset)
                             an_ls_list.append(an_ls)
                     if file_class_name=='Cache':
-                        # flie_name='%s_cache'%(cam_name[0])
+                        # 创建groom关卡序列
+                        if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Shots/%s/%s/%s/%s/%s'%(ep,sc_name,flie_name,file_class_name,flie_name)):
+                            groom_seq=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_hcache'%(flie_name),package_path='/Game/Shots/%s/%s/%s/%s'%(ep,sc_name,flie_name,file_class_name),asset_class=unreal.LevelSequence,factory=unreal.LevelSequenceFactoryNew())
+                            groom_seq.set_display_rate((25,1))
+                            if cam_name[1]:
+                                groom_seq.set_playback_start(int(cam_name[1])-1)
+                            if cam_name[2]:
+                                groom_seq.set_playback_end(int(cam_name[2])+self.end_offset+self.start_offset)
+                            groom_seq_list.append(groom_seq)
                         unreal.EditorAssetLibrary.make_directory('/Game/Shots/%s/%s/%s/%s'%(ep,sc_name,flie_name,file_class_name))
                     if file_class_name=='VFX':
                         # flie_name='%s_vfx'%(cam_name[0])
@@ -244,6 +253,14 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                     lt_section=lt_track.add_section()
                     lt_section.set_sequence(an)
                     lt_section.set_range(an.get_playback_start(),an.get_playback_end())
+                    break
+
+            for groom_cache in groom_seq_list:
+                if lt.get_name().rsplit('_',1)[0]==groom_cache.get_name().rsplit('_',1)[0]:
+                    lt_track=lt.add_track(unreal.MovieSceneSubTrack)
+                    lt_section=lt_track.add_section()
+                    lt_section.set_sequence(groom_cache)
+                    lt_section.set_range(groom_cache.get_playback_start(),groom_cache.get_playback_end())
                     break
         #保存全部创建的文件
         unreal.EditorAssetLibrary.save_directory('/Game/Shots')
