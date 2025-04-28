@@ -1261,7 +1261,7 @@ def MoveStaticMeshAndDependenceToFolder(staticMesh:unreal.StaticMesh,rootFolder:
         staticMesh.set_material(staticMesh.get_material_index(material_name),material)
         unreal.EditorAssetLibrary.save_asset(material.get_path_name())
         unreal.EditorAssetLibrary.save_asset(staticMesh.get_path_name())
-        return staticMesh
+    return staticMesh
 
 
 
@@ -1273,8 +1273,9 @@ def ImportToLibrary():
             MoveStaticMeshAndDependenceToFolder(asset,"/Game/Test/3D_Assets/")
 
 if __name__ == "__main__":
-    data = {'name': 'DaoCao_43_Merge', 'AssetID': 'rhuDnBP', 'assetFormat': 'Unreal Engine', 'assetType': '3D Assets', 'baseColor': None, 'normal': None, 'arm': None, 'mesh': 'E:/AssetLibrary/Assets\\rhuDnBP\\rhuDnBP'}
-    importAssetPipline(data)
+    selectedAssets = unreal.EditorUtilityLibrary.get_selected_assets()[0]
+    MoveStaticMeshAndDependenceToFolder(selectedAssets,"/Game/Test/3D_Assets/")
+
 
 
 
