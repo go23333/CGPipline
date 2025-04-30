@@ -107,9 +107,10 @@ class TagButton(MPushButton):
 
 
 class TagArea(QWidget):
-    tags = []
+    
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.tags = []
         self.__initUI()
     def __initUI(self):
         self.main_layout = FlowLayout(self)
@@ -124,6 +125,9 @@ class TagArea(QWidget):
         self.main_layout.removeWidget(button)
         self.tags.remove(objectName)
         button.close()
+    def clear_all_tags(self):
+        self.main_layout.removeAllWidgets()
+        self.tags = []
         
 class ExportToAssetLibrary(cw.CommonMainWindow):
     def __init__(self, parent=None):
@@ -305,6 +309,7 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
             #清理文件
             unreal.EditorAssetLibrary.delete_directory(tempPath)
             self.close()
+            self.tags_area.clear_all_tags()
             self.deleteLater()
         else:
             pass
