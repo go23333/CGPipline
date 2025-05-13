@@ -28,6 +28,19 @@ print('AnimImport')
 
 
 
+def assetReplace(asset_path1,asset_path2):
+
+    asset1=unreal.EditorAssetLibrary.find_asset_data(asset_path1).get_asset()
+    asset2=unreal.EditorAssetLibrary.find_asset_data(asset_path2).get_asset()
+
+
+    unreal.EditorAssetLibrary.consolidate_assets(asset1,[asset2])
+    unreal.EditorAssetLibrary.delete_asset(asset_path2)
+    
+
+
+
+
 class mw(QtWidgets.QWidget, MFieldMixin):
 
 
@@ -70,30 +83,39 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         anim_path=self.flie_import.text()
         
         fbx_base_path='/Game/Shots/'
+
+        type_name=''
         
         #遍历文件夹内文件
         for dirpath, dirnames, filenames in os.walk(anim_path):
             for filename in filenames:
                 #判断后缀名是否为fbx
                 if '.fbx' in filename.lower():
+                    #判断动画类型
+                    if '_an_' in filename:
+                        type_name='_an_'
+                    elif '_ly_' in filename:
+                        type_name='_ly_'
                     #初始化命名
                     ep=''
                     sc=''
                     mesh_name=''
                     sc_all_name=''
                     
+                    anim_fbx_name=filename.split('.')[0]
                     anim_fbx=dirpath+'/'+filename               #合并文件路径和文件名称
                     ep=filename.split('_')[0]                   #获取ep名称
                     sc=filename.split('_')[1]                   #获取sc主名称
-                    sc_all_name=filename.rsplit('_an_')[0]      #获取sc全名称
+                    sc_all_name=filename.rsplit(type_name)[0]      #获取sc全名称
+
 
                     if not sc_all_name:
                         break
                     #判断后缀名
                     if 'Pro' in filename:
-                        mesh_name=filename.rsplit('_an_')[-1].split('_Pro',1)[0]
+                        mesh_name=filename.rsplit(type_name)[-1].split('_Pro',1)[0]
                     if 'CH' in filename:
-                        mesh_name=filename.rsplit('_an_')[-1].split('_CH',1)[0]
+                        mesh_name=filename.rsplit(type_name)[-1].split('_CH',1)[0]
 
 
                     fbx_create_path=f'{fbx_base_path}{ep}/{sc}/'     #创建基础文件夹路径
@@ -110,37 +132,48 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                     fbx_create_path+=sc_all_name+'/Animation'
 
                     #获取骨骼网格体路径
-                    skeleton_base_path='/Game/Assets/'
+                    skeleton_base_path='/Game/AAI/Reference/'
                     mesh_type=None
-                    if 'Pro' in filename:
+                    if '_Pro' in filename:
                         mesh_type='Pro'
                         skeleton_base_path+='Pro'
-                    if 'CH' in filename:
+                    if '_CH' in filename:
                         mesh_type='CH'
                         skeleton_base_path+='Character'
                     #遍历路径寻找骨骼网格体
                     skeleton_meshs=self.skeletonMeshGet(skeleton_base_path)
-                    #print(skeleton_meshs)
+                    # print(skeleton_meshs)
                     for skeleton_mesh in skeleton_meshs:
+                        
                         skeleton_mesh:unreal.SkeletalMesh
                         skeleton_base_name=None
                         if mesh_type=='Pro':
                             skeleton_base_name=skeleton_mesh.get_name().split('UE_')[-1].split('_Skeleton')[0]
                         if mesh_type=='CH':
-                            skeleton_base_name=skeleton_mesh.get_name().split('UE_')[-1].split('_CH_Skeleton')[0]
-
+                            skeleton_base_name=skeleton_mesh.get_name().split('UE_')[-1].split('_Skeleton')[0]
+                        # print(mesh_name,skeleton_base_name)
                         if mesh_name == skeleton_base_name:
-                            print(mesh_name,skeleton_mesh)
+                            print(mesh_name,skeleton_mesh.get_name())
 
                             #导入动画序列
                             uSTools.fbxImport.animSequenceImport(anim_fbx,fbx_create_path,skeleton_mesh)
+
+                            #如果存在ly文件,则使用an文件替换
+                            if type_name=='_an_':
+                                ly_path=fbx_create_path+'/'+anim_fbx_name.replace('_an_','_ly_')
+                                an_path=fbx_create_path+'/'+anim_fbx_name
+                                # print(ly_path)
+                                if unreal.EditorAssetLibrary.does_asset_exist(an_path):
+                                    assetReplace(an_path,ly_path)
+                                    print(ly_path)
+                            
 
                             #保存全部创建的文件
                             unreal.EditorAssetLibrary.save_directory('/Game/Shots')
 
 
         #保存全部创建的文件
-        unreal.EditorAssetLibrary.save_directory('/Game/Shots')
+        # unreal.EditorAssetLibrary.save_directory('/Game/Shots')
                             
 
         

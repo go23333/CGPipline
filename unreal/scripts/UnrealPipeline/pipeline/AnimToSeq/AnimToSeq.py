@@ -77,12 +77,17 @@ def pathToSequenceAnim(path):
         else:
             #名称不符合,跳过
             continue
+        type_name=''
         for anim_asset in anim_list:
             anim_name = anim_asset.get_name()
+            if '_ly_' in anim_name:
+                type_name='_ly_'
+            elif '_an_' in anim_name:
+                type_name='_an_'
             if '_CH' in anim_name:
-                anim_base_name=anim_name.split('_CH')[0].split('an_')[-1]
+                anim_base_name=anim_name.split('_CH')[0].split(type_name)[-1]
             elif '_Pro' in anim_name:
-                anim_base_name=anim_name.split('_Pro')[0].split('an_')[-1]
+                anim_base_name=anim_name.split('_Pro')[0].split(type_name)[-1]
             else:
                 continue
 
@@ -127,7 +132,7 @@ class MyWindow(QtWidgets.QWidget, MFieldMixin):
     
 
     def ui(self):
-        self.setWindowTitle('AAI文件导入')
+        self.setWindowTitle('动画序列到关卡')
         self.resize(300,450)
 
 
@@ -245,25 +250,23 @@ class MyWindow(QtWidgets.QWidget, MFieldMixin):
             self.seq_assets_path=[]
             self.sequnence_find_assets=[]
             for light_folder_asset in light_folder_asset_list:
-                light_asset_class=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset).get_class().get_name()
-                if light_asset_class=='LevelSequence':
-                    #确定world资产
-                    world_asset_find=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
-                    seq_asset_name=world_asset_find.get_asset().get_name()
-                    seq_asset_path=world_asset_find.get_asset().get_path_name()
-                    if '_an' in seq_asset_name :
-                        #获取灯光路径名
-                        light_flie_sc_name=seq_asset_path.rsplit('/')[-4]
-                        #添加信息到列表
-                        self.world_asset_names.append(seq_asset_name)
-                        #获取符合要求的关卡序列路径
-                        self.seq_assets_path.append(seq_asset_path)
-                        light_sc_flie_lists.append(light_flie_sc_name)
-                
-                if light_asset_class=='LevelSequence':
-                    #收集sequnence资产
-                    sequnence_asset=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
-                    self.sequnence_find_assets.append(sequnence_asset)
+                if '_an' in light_folder_asset:
+                    asset_find=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
+                    an_asset_class=asset_find.get_class().get_name()
+                    if an_asset_class=='LevelSequence':
+                        #确定world资产
+                        seq_asset_name=asset_find.get_asset().get_name()
+                        seq_asset_path=asset_find.get_asset().get_path_name()
+                        if '_an' in seq_asset_name :
+                            #获取灯光路径名
+                            light_flie_sc_name=seq_asset_path.rsplit('/')[-4]
+                            #添加信息到列表
+                            self.world_asset_names.append(seq_asset_name)
+                            #获取符合要求的关卡序列路径
+                            self.seq_assets_path.append(seq_asset_path)
+                            light_sc_flie_lists.append(light_flie_sc_name)
+                    
+                        self.sequnence_find_assets.append(asset_find)
 
         
                 

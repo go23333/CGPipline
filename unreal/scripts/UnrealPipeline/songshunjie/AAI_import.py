@@ -543,24 +543,24 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             self.world_find_assets=[]
             self.sequnence_find_assets=[]
             for light_folder_asset in light_folder_asset_list:
-                light_asset_class=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset).get_class().get_name()
-                if light_asset_class=='World':
-                    #确定world资产
-                    world_asset=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
-                    world_asset_name=world_asset.get_asset().get_name()
-                    world_asset_path=world_asset.get_asset().get_path_name()
-                    if '_Map' in world_asset_name and 'Preview' not in world_asset_path:
-                        #获取灯光路径名
-                        light_flie_sc_name=world_asset_path.rsplit('/')[-3]
-                        #添加信息到列表
-                        self.world_asset_names.append(world_asset_name)
-                        self.world_find_assets.append(world_asset)
-                        light_sc_flie_lists.append(light_flie_sc_name)
-                
-                if light_asset_class=='LevelSequence':
-                    #收集sequnence资产
-                    sequnence_asset=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
-                    self.sequnence_find_assets.append(sequnence_asset)
+                if '_Map' in light_folder_asset:
+                    asset_find=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
+                    light_asset_class=asset_find.get_class().get_name()
+                    if light_asset_class=='World':
+                        #确定world资产
+                        world_asset_name=asset_find.get_asset().get_name()
+                        world_asset_path=asset_find.get_asset().get_path_name()
+                        if '_Map' in world_asset_name and 'Preview' not in world_asset_path:
+                            #获取灯光路径名
+                            light_flie_sc_name=world_asset_path.rsplit('/')[-3]
+                            #添加信息到列表
+                            self.world_asset_names.append(world_asset_name)
+                            self.world_find_assets.append(asset_find)
+                            light_sc_flie_lists.append(light_flie_sc_name)
+                    
+                            #收集sequnence资产
+                            sequnence_asset=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
+                            self.sequnence_find_assets.append(sequnence_asset)
 
         
                 

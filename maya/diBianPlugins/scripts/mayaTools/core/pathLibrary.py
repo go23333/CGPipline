@@ -128,3 +128,7 @@ def CopyFileToDir(filePath,dir):
 def CopyFilesToDir(files,dir):
     for file in files:
         CopyFileToDir(file,dir)
+
+
+def isPath(path):
+    return os.path.exists(path)
