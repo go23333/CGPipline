@@ -4,7 +4,28 @@ from maya import cmds,mel
 import openpyxl as op
 import time
 import os
+import json
 
+
+def jsonCreate(path1,path2):
+    # home_dir = os.path.expanduser('~').replace('\\','/')  # 获取用户的主目录
+    # json_path = home_dir+'/AppData/Local/Temp/mayaModelToUE.json'
+    json_path = 'D:/Documents/maya/scripts/mayaModelToUE.json'
+    #创建写入json文件的字典
+    path_dict=[path1,path2]
+    print(json_path)
+
+    #将材质名称和包含的贴图创建为json文件
+    with open(json_path,'w') as json_file:
+        json.dump(path_dict,json_file)
+
+def openJson():
+    json_path = 'D:/Documents/maya/scripts/mayaModelToUE.json'
+    if os.path.exists(json_path):
+        with open(json_path,'r') as js_file:
+            json_data=json.load(js_file)
+        if json_data :
+            return json_data
 
 
 def ExportFbx(file_path):
@@ -51,6 +72,16 @@ class win():
         
         
     def UI1(self):
+        #打开temp文件夹中的缓存文件
+        path_list=openJson()
+        if path_list:
+            path1=path_list[0]
+            path2=path_list[1]
+        else:
+            path1=''
+            path2=''
+
+
         self.start=1
         self.end=5
         self.column1=cmds.columnLayout( adjustableColumn=True )
@@ -64,7 +95,7 @@ class win():
         cmds.setParent(self.column1)
         
         cmds.rowLayout( numberOfColumns=2, columnWidth2=(80, 75))
-        cmds.textField('export',w=340)
+        cmds.textField('export',text=path1,w=340)
         cmds.symbolButton( image='circle.png',w=20,i="navButtonBrowse.xpm",c=self.openFile)
         
         cmds.setParent(self.column1)
@@ -77,7 +108,7 @@ class win():
         cmds.setParent(self.column1)
         
         cmds.rowLayout( numberOfColumns=2, columnWidth2=(80, 75))
-        cmds.textField('export2',w=340)
+        cmds.textField('export2',text=path2,w=340)
         cmds.symbolButton( image='circle.png',w=20,i="navButtonBrowse.xpm",c=self.openFile2)
         
         cmds.setParent(self.column1)
@@ -110,9 +141,12 @@ class win():
 
 
     def execute(self,*args):
+        
         file_path1=cmds.textField('export',text=1,q=1)
         file_path2=cmds.textField('export2',text=1,q=1)
         radio_idex=cmds.radioButtonGrp( 'radio_group',select=1,q=1)
+
+        jsonCreate(file_path1,file_path2)
         
         f1_switch=False
         f2_switch=False

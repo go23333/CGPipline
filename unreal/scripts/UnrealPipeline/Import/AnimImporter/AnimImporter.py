@@ -163,7 +163,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                                 ly_path=fbx_create_path+'/'+anim_fbx_name.replace('_an_','_ly_')
                                 an_path=fbx_create_path+'/'+anim_fbx_name
                                 # print(ly_path)
-                                if unreal.EditorAssetLibrary.does_asset_exist(an_path):
+                                if unreal.EditorAssetLibrary.does_asset_exist(ly_path):
                                     assetReplace(an_path,ly_path)
                                     print(ly_path)
                             
