@@ -10,7 +10,7 @@ import mayaTools.core.mayalibrary2 as ML2
 
 #define global vir
 from mayaTools.core.pathLibrary import getWorkDir
-
+import os
 
 tempFilePath = getWorkDir() + r"temp/toReduceMesh.fbx"
 
@@ -48,8 +48,11 @@ class reducefaceUI:
         cmds.showWindow(self.window)
     def reduceface(self,*arg):
         selectedObjs = pm.ls(selection=True,l=1)
+        folder = os.path.dirname(tempFilePath)
+        #创建临时目录
+        if not os.path.exists(folder):
+            os.makedirs(folder)
         for obj in selectedObjs:
-            print(tempFilePath)
             ML2.export_fbx(str(obj),tempFilePath)
             import mayaTools.core.callThirdpart as ct
             ct.callPolygonCruncher(cmds.checkBox(self.cb_pnormals,q=1,v=1),cmds.checkBox(self.cb_pUV,q=1,v=1),tempFilePath,cmds.floatField(self.FF_Aspect,q=1,v=1))
