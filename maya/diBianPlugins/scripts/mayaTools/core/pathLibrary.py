@@ -10,7 +10,7 @@ from mayaTools.core.log import log
 def GetTempPath():
     return (tempfile.gettempdir())
 def getWorkDir():
-    workDir = r"d:\\Documents\\CGPipline\\maya\\"
+    workDir = r"d:/Documents/CGPipline/maya/"
     if not os.path.exists(workDir):
         os.makedirs(workDir)
     return workDir

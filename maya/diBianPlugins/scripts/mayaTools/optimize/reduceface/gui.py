@@ -12,9 +12,9 @@ import mayaTools.core.mayalibrary2 as ML2
 from mayaTools.core.pathLibrary import getWorkDir
 
 
-tempFilePath = getWorkDir() + r"temp\\toReduceMesh.fbx"
+tempFilePath = getWorkDir() + r"temp/toReduceMesh.fbx"
 
-resFilePath =  getWorkDir() + r"temp\\Results\\toReduceMesh1.fbx"
+resFilePath =  getWorkDir() + r"temp/Results/toReduceMesh1.fbx"
 
 class reducefaceUI:
     def __init__(self):
@@ -49,6 +49,7 @@ class reducefaceUI:
     def reduceface(self,*arg):
         selectedObjs = pm.ls(selection=True,l=1)
         for obj in selectedObjs:
+            print(tempFilePath)
             ML2.export_fbx(str(obj),tempFilePath)
             import mayaTools.core.callThirdpart as ct
             ct.callPolygonCruncher(cmds.checkBox(self.cb_pnormals,q=1,v=1),cmds.checkBox(self.cb_pUV,q=1,v=1),tempFilePath,cmds.floatField(self.FF_Aspect,q=1,v=1))
