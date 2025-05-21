@@ -308,6 +308,7 @@ class win():
         cmds.FBXResetExport()
         mel.eval('FBXExportFileVersion -v FBX201300')
         mel.eval('FBXExportSmoothingGroups -v true')
+        mel.eval('FBXExportInputConnections -v false')
         mel.eval('FBXExportUpAxis y')
         mel.eval('FBXExportSmoothMesh -v true')
         start_offset=int(cmds.textFieldGrp('start_offset',text=1,q=1))
@@ -336,10 +337,20 @@ class win():
         
         #ExportFbx(self.export_path)
         
-        #创建收纳组
-        collect_g='%s_g'%self.obj_namespace.split(':',1)[0]
-        cmds.group(em=True,n=collect_g)
-        cmds.parent(self.obj_new,collect_g)
+        # #创建收纳组
+        # collect_g='%s_g'%self.obj_namespace.split(':',1)[0]
+        # cmds.group(em=True,n=collect_g)
+        # cmds.parent(self.obj_new,collect_g)
+
+        #修改组名
+        try:
+            cmds.select(self.obj_new)
+            cmds.pickWalk( direction='up' )
+            cmds.pickWalk( direction='up' )
+            cmds.pickWalk( direction='up' )
+            cmds.rename('Group_'+self.obj_namespace.split(':',1)[0])
+        except:
+            pass
 
     def openFile(self,*args):
         #提示栏清空

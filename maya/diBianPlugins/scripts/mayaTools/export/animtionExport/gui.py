@@ -139,6 +139,7 @@ class win():
         #设置fbx格式
         cmds.FBXResetExport()
         mel.eval('FBXExportFileVersion -v FBX201300')
+        mel.eval('FBXExportInputConnections -v true')
         mel.eval('FBXExportSmoothingGroups -v true')
         mel.eval('FBXExportSmoothMesh -v true')
         

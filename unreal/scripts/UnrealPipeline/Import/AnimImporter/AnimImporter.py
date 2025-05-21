@@ -142,9 +142,9 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                         skeleton_base_path+='Character'
                     #遍历路径寻找骨骼网格体
                     skeleton_meshs=self.skeletonMeshGet(skeleton_base_path)
-                    # print(skeleton_meshs)
+                    # print(mesh_name)
+
                     for skeleton_mesh in skeleton_meshs:
-                        
                         skeleton_mesh:unreal.SkeletalMesh
                         skeleton_base_name=None
                         if mesh_type=='Pro':
@@ -153,7 +153,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                             skeleton_base_name=skeleton_mesh.get_name().split('UE_')[-1].split('_Skeleton')[0]
                         # print(mesh_name,skeleton_base_name)
                         if mesh_name == skeleton_base_name:
-                            print(mesh_name,skeleton_mesh.get_name())
+                            # print(mesh_name,skeleton_mesh.get_name())
 
                             #导入动画序列
                             uSTools.fbxImport.animSequenceImport(anim_fbx,fbx_create_path,skeleton_mesh)

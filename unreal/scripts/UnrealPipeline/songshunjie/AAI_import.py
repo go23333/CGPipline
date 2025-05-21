@@ -405,26 +405,21 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         asset_level_names=self.field("asset_level_app")
         ep_name=self.field("ep_app")
 
-        
-        
-
 
 
         if self.select_world_names:
-
-            # 通过选择的场景获取对应的场景资产
-            if self.select_world_names:
-                for select_world_name in self.select_world_names:
-                    for world_asset_find in self.world_find_assets:
-                        if select_world_name==world_asset_find.get_asset().get_name():
-                            world_asset_find_list.append(world_asset_find)
-            #通过选择的关卡序列获取对应的关卡序列
-                    for sequnence_find_asset in self.sequnence_find_assets:
-                        # print(sequnence_find_asset)
-                        if select_world_name.replace('_Map','')==sequnence_find_asset.get_asset().get_name().rsplit('_',1)[0] and sequnence_find_asset.get_asset().get_name().rsplit('_',1)[-1]=='an':
-                            sequnence_asset_find_list.append(sequnence_find_asset)
-
             
+            # 通过选择的场景获取对应的场景资产
+            for select_world_name in self.select_world_names:
+                for world_asset_find in self.world_find_assets:
+                    if select_world_name==world_asset_find.get_asset().get_name():
+                        world_asset_find_list.append(world_asset_find)
+        #通过选择的关卡序列获取对应的关卡序列
+                for sequnence_find_asset in self.sequnence_find_assets:
+                    # print(sequnence_find_asset)
+                    if select_world_name.replace('_Map','_an')==sequnence_find_asset.get_asset().get_name():
+                        sequnence_asset_find_list.append(sequnence_find_asset)
+
 
             #对场景添加资产
             if asset_level_names:
@@ -459,10 +454,9 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                 #添加角色
                 if asset_ch_names_dict:
                     for find_ch_asset in self.find_ch_assets:   
-                        for asset_ch_name,value in asset_ch_names_dict.items():  
-                            
+                        for asset_ch_name,value in asset_ch_names_dict.items():                              
                             if value > 1:
-                                if asset_ch_name==find_ch_asset.get_asset().get_name():
+                                if asset_ch_name==find_ch_asset.get_asset().get_name():                                 
                                     for i in range(value):
                                         sequnence_asset_find.get_asset().add_spawnable_from_instance(find_ch_asset.get_asset())
                             else:
@@ -543,9 +537,10 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             self.world_find_assets=[]
             self.sequnence_find_assets=[]
             for light_folder_asset in light_folder_asset_list:
+                asset_find=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
+                light_asset_class=asset_find.get_class().get_name()
                 if '_Map' in light_folder_asset:
-                    asset_find=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
-                    light_asset_class=asset_find.get_class().get_name()
+                    
                     if light_asset_class=='World':
                         #确定world资产
                         world_asset_name=asset_find.get_asset().get_name()
@@ -557,10 +552,10 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                             self.world_asset_names.append(world_asset_name)
                             self.world_find_assets.append(asset_find)
                             light_sc_flie_lists.append(light_flie_sc_name)
-                    
-                            #收集sequnence资产
-                            sequnence_asset=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
-                            self.sequnence_find_assets.append(sequnence_asset)
+                if light_asset_class=='LevelSequence':
+                    #收集sequnence资产
+                    sequnence_asset=unreal.EditorAssetLibrary.find_asset_data(light_folder_asset)
+                    self.sequnence_find_assets.append(sequnence_asset)
 
         
                 
