@@ -5,6 +5,7 @@ import pymel.core as pm
 
 #导入自定义模块
 import mayaTools.core.mayaLibrary as ML
+import mayaTools.core.mayalibrary2 as ML2
 
 
 #define global vir
@@ -48,14 +49,14 @@ class reducefaceUI:
     def reduceface(self,*arg):
         selectedObjs = pm.ls(selection=True,l=1)
         for obj in selectedObjs:
-            ML.export_fbx_without_dialog(obj,tempFilePath)
+            ML2.export_fbx(str(obj),tempFilePath)
             import mayaTools.core.callThirdpart as ct
             ct.callPolygonCruncher(cmds.checkBox(self.cb_pnormals,q=1,v=1),cmds.checkBox(self.cb_pUV,q=1,v=1),tempFilePath,cmds.floatField(self.FF_Aspect,q=1,v=1))
             if cmds.checkBox(self.cb_deleteOrigin,q=1,v=1):
                 pm.delete(obj)
             else:
                 pm.rename(obj,str(obj)+"_Origin")
-            self.newNodes = ML.import_fbx_without_dialog(resFilePath)
+            self.newNodes = ML2.import_fbx(resFilePath,1)
     # def rollback(self,*arg):
     #     import pymel.core as pm
     #     for newNode in self.newNodes:
@@ -64,3 +65,10 @@ class reducefaceUI:
 def showUI():
     UI = reducefaceUI()
     UI.show()
+
+
+
+if __name__ == "__main__":
+    from mayaTools import reloadModule
+    reloadModule()
+    showUI()
