@@ -9,10 +9,10 @@ for path in sys.path:
 sys.path.remove(path)
 sys.path.insert(0,path)
 
-from pymel.core.general import evalDeferred
-
+import maya.cmds as cmds
 from mayaTools import install
-evalDeferred(install)
+cmds.evalDeferred(install)
+
 
 
 

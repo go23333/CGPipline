@@ -9,7 +9,6 @@ __path__ = extend_path(__path__, __name__)
 
 
 
-
 def install(menuID="mayaTools"):
     #确保不重复创建
     if pm.menu(menuID, exists=True):
