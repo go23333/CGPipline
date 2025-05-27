@@ -35,7 +35,7 @@ class ScenesMeshImporter(QtWidgets.QWidget):
 
     def __init__(self,parent=None):
         super().__init__(parent)
-        self.setWindowTitle("场景模型导入")
+        self.setWindowTitle("道具模型导入")
         self.resize(600,400)
         self.__init_ui()
     def __init_ui(self):
@@ -46,7 +46,7 @@ class ScenesMeshImporter(QtWidgets.QWidget):
         self.wCamera = DateTableView(util.CameraHeader)  #定义相机数据表格
 
         self.folderSelectGroup.setOnTextChanged(self.wCamera.fetchCamera)        # 文字框改变时刷新
-        self.folderSelectGroup.setOnTextChanged(self.importName)  
+        # self.folderSelectGroup.setOnTextChanged(self.importName)
 
         layImport = QtWidgets.QVBoxLayout() 
 
@@ -82,7 +82,7 @@ class ScenesMeshImporter(QtWidgets.QWidget):
         self.pro_name_text.setPlaceholderText(self.tr("输入资产名称"))
 
         self.ep_text=MLineEdit().medium()
-        self.ep_text.setPlaceholderText(self.tr("输入集数"))
+        self.ep_text.setPlaceholderText(self.tr("输入集数,如Ep001"))
 
         lay_pro_edit.addWidget(self.ep_text)
         lay_pro_edit.addWidget(self.pro_name_text)
@@ -216,7 +216,12 @@ class ScenesMeshImporter(QtWidgets.QWidget):
         else:
             ep=name
         pro_root_path = UC.globalConfig.get().ProMeshImportPathPatten
-        file_root = pro_root_path.replace('$ep',ep).replace('$proname',pro_name)
+
+        #判断名称框是否有字符,没有则使用默认名称
+        if pro_name:
+            file_root = pro_root_path.replace('$ep',ep).replace('$proname',pro_name)
+        else:
+            file_root = pro_root_path.replace('$ep',ep).replace('$proname',name)
         #设置名称列表
         basefloder_names=['Material','Mesh','Texture']
         #保存所有文件

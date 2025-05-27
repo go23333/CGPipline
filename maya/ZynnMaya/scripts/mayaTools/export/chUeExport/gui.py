@@ -404,13 +404,16 @@ def openFile_texture(*args):
     singleFilter=u"目录"
     texture_path=str(cmds.fileDialog2(fileFilter=singleFilter,startingDirectory =str(cmds.file(q=1,sn=1)).rsplit('/',1)[0],fm=3)[0])
     cmds.textField('texture_path',text=texture_path,e=1)
+
+def rename(*args):
+    mel.eval('performSearchReplaceNames 1;')
     
     
 def showUI():
     winName=u"创建角色基础材质"
     if cmds.window(winName,q=1,ex=1):
         cmds.deleteUI(winName)
-    win = cmds.window(winName,widthHeight=(380,310))
+    win = cmds.window(winName,widthHeight=(380,335))
     column1=cmds.columnLayout( adjustableColumn=True )
 
     cmds.rowLayout( numberOfColumns=2, columnWidth2=(80, 75))
@@ -447,6 +450,9 @@ def showUI():
     cmds.setParent(column1)
     
     cmds.button(label=u'导出选择的模型到指定位置',command=exportFBX)
+    cmds.setParent(column1)
+
+    cmds.button(label=u'重命名工具',command=rename)
     cmds.setParent(column1)
     
     cmds.showWindow(win)

@@ -1,7 +1,6 @@
 # #coding=utf-8
 
 from maya import cmds,mel
-import openpyxl as op
 import time
 import os
 import tempfile
