@@ -1,0 +1,16 @@
+certifi @ file:///C:/b/abs_85o_6fm0se/croot/certifi_1671487778835/work/certifi
+cx-Freeze==6.15.16
+cx-Logging==3.1.0
+dayu-path==0.5.2
+dayu_widgets==0.15.0
+et-xmlfile==1.1.0
+lief==0.12.3
+openpyxl==3.1.3
+PyQt5==5.10.1
+PyQt5-Qt5==5.15.2
+pywin32==304
+Qt.py==1.4.6
+sip==4.19.8
+six==1.17.0
+types-pyside2==5.15.2.1.7
+wincertstore==0.2

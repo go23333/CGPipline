@@ -1,0 +1,13 @@
+
+global proc backgroundCMD(string $plugin_path , string $plugin_name)
+{
+
+    file -f -new;
+    python("import sys");
+    python("sys.path.append('"+$plugin_path+"')");
+    python("import " + $plugin_name);
+
+}
+
+
+

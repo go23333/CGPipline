@@ -2,8 +2,9 @@
 
 from maya import cmds,mel
 
-import mayaTools.SongShunJie.CutHairCurve as MSCut
-import mayaTools.SongShunJie.modelExportUE as MSModel
+import mayaTools.pipline.modelTools.CutHairCurve as MSCut
+import mayaTools.pipline.modelTools.modelExportUE as MSModel
+import mayaTools.pipline.modelTools.modelPolygonCount as MSPolygonCount
 
 
 
@@ -23,7 +24,7 @@ class win():
         
         cmds.button( label=u'模型快速导出到UE工程工具',command=self.modelExportUE)
 
-        cmds.button( label=u'功能3',command=self.cut)
+        cmds.button( label=u'模型面数统计工具',command=self.polygonCount)
         
         
     def cutHair(self,*args):
@@ -34,8 +35,8 @@ class win():
 
         MSModel.showUI()
 
-    def cut(self,*args):
-        pass
+    def polygonCount(self,*args):
+        MSPolygonCount.showUI()
 
 
 

@@ -12,11 +12,22 @@ def InstallMenu(rootMenu:unreal.ToolMenu):
     InstallMenu(submenu)
     from UnrealPipeline.Import.AnimImporter import InstallMenu
     InstallMenu(submenu)
+    from UnrealPipeline.Import.ScenesFolder import InstallMenu
+    InstallMenu(submenu)
+    from UnrealPipeline.Import.ShadeCreate import InstallMenu
+    InstallMenu(submenu)
+    from UnrealPipeline.Import.GroomImporter import InstallMenu
+    InstallMenu(submenu)
+    from UnrealPipeline.Import.GroomImporter574 import InstallMenu
+    InstallMenu(submenu)
+    from UnrealPipeline.Import.ClothAbcImporter import InstallMenu
+    InstallMenu(submenu)
+    from UnrealPipeline.Import.ClothAbcImporter574 import InstallMenu
+    InstallMenu(submenu)
+    from UnrealPipeline.Import.SemiClothAbcImporter import InstallMenu
+    InstallMenu(submenu)
+    from UnrealPipeline.Import.SkMeshImporter import InstallMenu
+    InstallMenu(submenu)
+    
 
 
-
-    entry = MakeEntry("model_import","道具模型导入",toolTip="",command="from UnrealPipeline.songshunjie import ScenesFolder;ScenesFolder.start()")
-    submenu.add_menu_entry("",entry)
-
-    entry = MakeEntry("material_model_import","角色材质模型导入",toolTip="",command="from UnrealPipeline.songshunjie import ShadeCreate;ShadeCreate.start()")
-    submenu.add_menu_entry("",entry)

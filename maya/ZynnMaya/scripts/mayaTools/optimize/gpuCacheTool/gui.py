@@ -10,7 +10,7 @@ from mayaTools.core.log import log
 
 class gpuCacheToolUI:
     def __init__(self):
-        pm.loadPlugin('gpuCache.mell') #loadplugins
+        pm.loadPlugin('gpuCache.mll') #loadplugins
         window_name = "gpuCacheToolWindow" #define main window name
         window_title = u"GPU Cahce工具" #define window title
         window_width = 400

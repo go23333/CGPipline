@@ -13,6 +13,7 @@ import json
 from functools import partial
 import UnrealPipeline.core.glbHelper as g
 import shutil
+import fbx
 from UnrealPipeline.core.Config import globalConfig
 import UnrealPipeline.core.utilis as UT
 
@@ -27,7 +28,26 @@ levelSequenceEditorSubsystem = unreal.get_editor_subsystem(unreal.LevelSequenceE
 unrealEditorSybsystem = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 unrealAssetsSubsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
 
+def sort_key(material:unreal.StaticMaterial):
+    return material.material_slot_name
 
+def resort_mesh_material():
+    sl = unreal.EditorUtilityLibrary.get_selected_assets()
+    for mesh in sl:
+        if isinstance(mesh,unreal.StaticMesh):
+            material_slots = mesh.static_materials
+            # 创建新的插槽列表
+            new_slots = list(material_slots)
+            new_slots.sort(key=sort_key)
+            mesh.static_materials = new_slots
+        elif isinstance(mesh,unreal.SkeletalMesh):
+            material_slots = mesh.materials
+            # 创建新的插槽列表
+            new_slots = list(material_slots)
+            new_slots.sort(key=sort_key)
+            mesh.materials = new_slots
+        else:
+            pass
 
 
 # 定义一些包裹类
@@ -130,13 +150,14 @@ class WrapStaticMesh(WrapBaseAsset):
     def get_vertices_count(self):
         return(staticMeshEditorSubsystem.get_number_verts(self.asset,0))
     @classmethod
-    def importFromFbx(cls,sourcePath:str,destinationPath,scale:int):
+    def importFromFbx(cls,sourcePath:str,destinationPath,scale:int,create_name=None):
         # 构建导入选项
         options = unreal.FbxImportUI()
         options.import_mesh = True
         options.import_textures = False
         options.import_materials = False
-        options.import_as_skeletal=False
+        options.mesh_type_to_import = unreal.FBXImportType.FBXIT_STATIC_MESH
+        options.import_as_skeletal = False
         options.static_mesh_import_data.import_translation = unreal.Vector(0.0,0.0,0.0)
         options.static_mesh_import_data.import_rotation = unreal.Rotator(0.0,0.0,0.0)
         options.static_mesh_import_data.import_uniform_scale = scale
@@ -144,9 +165,10 @@ class WrapStaticMesh(WrapBaseAsset):
         options.static_mesh_import_data.generate_lightmap_u_vs = False
         options.static_mesh_import_data.auto_generate_collision  = True
         # 构建导入任务
-        task = buildImportTask(sourcePath,destinationPath,options)
+        task = buildImportTask(sourcePath,destinationPath,options,create_name)
         unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
         return(WrapStaticMesh(task.get_objects()[0]))
+
 
 class WrapTexture(WrapBaseAsset):
     def __init__(self,asset:unreal.Texture) -> None:
@@ -239,6 +261,17 @@ class WrapCineCameraActor(WrapActor):
         self.component.focus_settings.focus_method = method
     def setAspectRatio(self,value:float):
         self.component.crop_settings.aspect_ratio = value
+    def setClipPlane(self,clip_near:float):
+        self.component.override_custom_near_clipping_plane = True
+        self.component.custom_near_clipping_plane = clip_near
+    def setMotionBlur(self,amount:float = 0.0,maxBlur:float = 0.01):
+        post_process_settings = self.component.post_process_settings
+        post_process_settings:unreal.PostProcessSettings
+        post_process_settings.override_motion_blur_amount = True
+        post_process_settings.override_motion_blur_max = True
+        post_process_settings.motion_blur_amount = amount
+        post_process_settings.motion_blur_max = maxBlur
+        self.component.post_process_settings = post_process_settings
     @classmethod
     def spawn(cls,location:unreal.Vector,rotation:unreal.Rotator):
         return(WrapCineCameraActor(editorActorSubsystem.spawn_actor_from_class(unreal.CineCameraActor,location,rotation)))
@@ -299,7 +332,7 @@ class WrapPostProcessVolume(WrapActor):
         processSettings.set_editor_property('auto_exposure_max_brightness',value)
         processSettings.set_editor_property('override_auto_exposure_max_brightness',True)
         self.setCurrentSettings(processSettings)
-    def setRayTracingGiType(self,type:unreal.RayTracingGlobalIlluminationType):
+    def setRayTracingGiType(self,type):
         processSettings = self.getCurrentSettings()
         processSettings.set_editor_property('ray_tracing_gi_type',type)
         processSettings.set_editor_property('override_ray_tracing_gi',True)
@@ -361,7 +394,7 @@ def duplicate_asset(Spath,Dpath):
     unreal.EditorAssetLibrary.save_asset(Dpath,True)
 
 
-def buildImportTask(filePath:str,destinationPath:str,options = None):
+def buildImportTask(filePath:str,destinationPath:str,options = None,destination_name = None):
     task = unreal.AssetImportTask()
     task.automated = True
     task.destination_name = ""
@@ -369,6 +402,8 @@ def buildImportTask(filePath:str,destinationPath:str,options = None):
     task.filename = filePath
     task.replace_existing = True
     task.save = True
+    if destination_name:
+        task.destination_name = destination_name
     if options:
         task.options = options
     return task
@@ -387,15 +422,16 @@ def unrealLogError(category:str,text:str):
 
 
 def openSelectedFoliage():
-    includeMode = unreal.RMAFoliageToolsIncludeMode.RMAIM_SELECTION
-    buffer = unreal.RMAFoliageToolsFunctionLibrary.create_buffer(includeMode,False)
+    staticmeshs = unreal.PythonExtensionBPLibrary.get_selected_foliage_meshs()
     assetEditorSubsystem = unreal.get_editor_subsystem(unreal.AssetEditorSubsystem)
-    assetEditorSubsystem.open_editor_for_assets([unreal.SystemLibrary.conv_soft_obj_path_to_soft_obj_ref(buffer.assets[0])])
+    assetEditorSubsystem.open_editor_for_assets(staticmeshs)
 
 
 def FoliageToSMActor():
-    IncludeMode = unreal.RMAFoliageToolsIncludeMode.RMAIM_SELECTION
-    unreal.RMAFoliageToolsFunctionLibrary.foliage_ins_to_sm_actor(IncludeMode,True)
+    if editorActorSubsystem.get_selected_level_actors() != []:
+        print("selection list is not empty")
+        return
+    unreal.PythonExtensionBPLibrary.convert_selected_foliage_to_staticmesh()
 
 
 
@@ -473,6 +509,8 @@ def breakBlueprint(deleteOrigin:bool):
         for ChildActorComponent in ChildActorComponents:
             ChildActorComponent:unreal.ChildActorComponent
             originStaticMeshActor = ChildActorComponent.child_actor
+            if type(originStaticMeshActor) != unreal.StaticMeshActor:
+                continue
             originStaticMeshActor:unreal.StaticMeshActor
             newStaticMeshActor = WrapStaticMeshActor(editorActorSubsystem.spawn_actor_from_class(unreal.StaticMeshActor,ChildActorComponent.get_world_location(),ChildActorComponent.get_world_rotation()))
             newStaticMeshActor.setScale(ChildActorComponent.get_world_scale())
@@ -515,34 +553,163 @@ def nearClip(value:float):
 
 def saveAll():
     unreal.EditorAssetLibrary.save_directory("/Game/")
-def importCameras(datas:list):
+def importCameras(datas:list,start_offset=None,end_offset=None):
+    cam_error_list = []     #记录帧数不匹配摄像机
+    if start_offset == None:
+        start_offset = globalConfig.get().start_offset
+    if end_offset == None:
+        end_offset = globalConfig.get().end_offset
+
     saveAll()          # 保存所有资产,防止导入过程中崩溃
     dataCount = len(datas)
     for data in datas: # 遍历所有传入的资产数据
         name = data["name"]
         path = data["path"]
-        parsedName = UT.parseCameraName(name)
+
+        camera_nodes=fbxNodeName(nodeType='Camera',path=path)   #获取fbx中的摄像机名称
+        if not camera_nodes:                                    #判断fbx文件中是否存在摄像机
+            unrealLogError("相机导入",f"未在 {name} 中找到摄像机")
+            continue
+
+        parsedName = UT.parseCameraName(camera_nodes[0])
         if parsedName:
             assetPath = UT.applyMacro(globalConfig.get().CameraImportPathPatten,parsedName) # 应用宏替换
             wrapLevelSeq = WarpLevelSequence.create(assetPath,False)                     # 创建关卡序列
+            wrapLevelSeq.setLock(False)                                                  #打开序列
             wrapLevelSeq.setFrameRate(25)                                                # 设置帧率
-            wrapLevelSeq.setPlayBackStart(int(parsedName["frameStart"])-globalConfig.get().cameraPlaybackStartOffset)
-            wrapLevelSeq.setPlayBackEnd(int(parsedName["frameEnd"])+globalConfig.get().cameraPlaybackStartOffset)
+            start_frame = int(parsedName["frameStart"])+start_offset
+            end_frame = int(parsedName["frameEnd"])+start_offset
+            #获取原始的播放起始帧和结束帧，对比新旧帧数
+            old_start_frame = wrapLevelSeq.asset.get_playback_start()
+            old_end_frame = wrapLevelSeq.asset.get_playback_end()
+            if old_start_frame != start_frame-start_offset or old_end_frame != end_frame+end_offset:
+                cam_error_list.append(name)     #记录帧数不同的摄像机
+            wrapLevelSeq.setPlayBackStart(start_frame-start_offset)
+            wrapLevelSeq.setPlayBackEnd(end_frame+end_offset)
             wrapLevelSeq.importCamera(path,globalConfig.get().CameraimportUniformScale)                                              # 导入相机
             templist = wrapLevelSeq.getBindingProxyAndObject(unreal.CineCameraActor)
             if not templist:
                 unrealLogError("相机导入","从wrapLevelSeq上获取相机失败,相机属性设置失败")
                 return False
-            templist[0].set_name(name)                                                   # 重命名相机
+            
+            new_camera_name = f'{name}_{parsedName["frameStart"]}_{parsedName["frameEnd"]}'
+            shift_keys_on_binding(binding=templist[0], delta_frames=start_offset)    #偏移摄像机关键帧
+            templist[0].set_name(new_camera_name)                                                   # 重命名相机
             wrapCamera = WrapCineCameraActor(templist[1])
             wrapCamera.setFilmback(FilmBackPreset.DSLR)
+            # wrapCamera.setClipPlane(globalConfig.get().CameraimportNearClip)      #剪切平面
+            wrapCamera.setMotionBlur(0.0,0.01)
             wrapCamera.setFocusMethod(unreal.CameraFocusMethod.DISABLE)
             wrapCamera.setAspectRatio(globalConfig.get().CameraimportAspectRatio)
-            wrapLevelSeq.SetCameraCutsStartEnd(int(parsedName["frameStart"])-globalConfig.get().cameraImportPreRollFrame,int(parsedName["frameEnd"])+globalConfig.get().cameraImportPostRollFrame)
-            wrapLevelSeq.setLock(True)                                                    # 锁定序列
+            
+            wrapLevelSeq.SetCameraCutsStartEnd(start_frame-globalConfig.get().cameraImportPreRollFrame,end_frame+globalConfig.get().cameraImportPostRollFrame)
+            # wrapLevelSeq.setLock(True)                                                    # 锁定序列
             wrapLevelSeq.saveAsset()
         else:
             unrealLogError("相机导入",f"无法解析相机名称{name}")
+
+    return cam_error_list
+
+
+def shift_keys_on_binding(binding: unreal.MovieSceneBindingProxy, delta_frames: int):
+    """
+    将指定绑定下所有关键帧向后移动 delta_frames 帧
+    
+    Args:
+        binding: MovieSceneBindingProxy 对象（可从序列中获取）
+        delta_frames: 要移动的帧数（正数向后，负数向前）
+    """
+    sub_bind = binding.get_child_possessables()
+    if sub_bind:
+        for sub in sub_bind:
+            shift_keys_on_binding(sub, delta_frames)
+    # 遍历该绑定下的所有轨道
+    tracks = binding.get_tracks()
+    for track in tracks:
+        # 获取轨道下的所有分段（Section）
+        sections = track.get_sections()
+        for section in sections:
+            # 获取分段内的所有通道
+            channels = section.get_all_channels()
+            for channel in channels:
+                # 获取该通道的所有关键帧
+                keys = channel.get_keys()
+                for key in keys:
+                    # 获取当前时间（FrameNumber）
+                    current_time = key.get_time()
+                    # 计算新时间 (FrameNumber 直接加整数)
+                    new_time = current_time.frame_number + unreal.FrameNumber(delta_frames)
+                    key.set_time(new_time)
+                    
+    # # 刷新 Sequencer 界面
+    # unreal.LevelSequenceEditorBlueprintLibrary.refresh_current_level_sequence()
+
+
+def fbxNodeName(nodeType:str,path):
+    #初始化并加载FBX场景
+    manager = fbx.FbxManager.Create()
+    scene = fbx.FbxScene.Create(manager, "")
+    importer = fbx.FbxImporter.Create(manager, "")
+    
+    if not importer.Initialize(path, -1, manager.GetIOSettings()):
+        print("FBX文件加载失败")
+        return None, None
+    
+    importer.Import(scene)
+    importer.Destroy()
+
+    if not scene:
+        return
+    
+    root_node = scene.GetRootNode()
+    node_names=[]
+    for i in range(root_node.GetChildCount()):
+        nodes=fbxTraverseNode(root_node.GetChild(i),nodeType)
+        for node in nodes:
+            node_names.append(node)
+
+    # 清理资源
+    scene.Destroy()
+    manager.Destroy()
+
+    return node_names
+
+def fbxTraverseNode(node,nodeType):
+
+    node_names=[]
+    #递归遍历节点层级
+    node_name = node.GetName()
+    attr_type = "Unknown"
+    
+    # 获取节点类型
+    if node.GetNodeAttribute():
+        try:        #5.3
+            attr_type = {
+                fbx.FbxNodeAttribute.eMesh: "Mesh",
+                fbx.FbxNodeAttribute.eCamera: "Camera",
+                fbx.FbxNodeAttribute.eLight: "Light",
+                fbx.FbxNodeAttribute.eSkeleton: "Bone"
+            }.get(node.GetNodeAttribute().GetAttributeType(), "Other")
+        except:     #5.7
+            attr_type = {
+                fbx.FbxNodeAttribute.EType.eMesh: "Mesh",
+                fbx.FbxNodeAttribute.EType.eCamera: "Camera",
+                fbx.FbxNodeAttribute.EType.eLight: "Light",
+                fbx.FbxNodeAttribute.EType.eSkeleton: "Bone"
+            }.get(node.GetNodeAttribute().GetAttributeType(), "Other")
+    
+    if nodeType==attr_type:
+        node_names.append(node_name)
+        
+    # 递归处理子节点
+    for i in range(node.GetChildCount()):
+        sub_nodes=fbxTraverseNode(node.GetChild(i), nodeType)
+        for sub_node in sub_nodes:
+            node_names.append(sub_node)
+
+    
+    return node_names
+    
 
 
 def textureImport(texturePaths:list,path):
@@ -655,7 +822,107 @@ def importStaticmeshs(datas:list,sceneName=None,createSwitch=False):
     saveAll()
 
 
+def importStaticmeshs57(datas:list,map_path):
 
+
+    sub_level_names=['_Shade','_Shade_Light','_Shade_VFX']
+    basefloder_names=['Map/Level','Common','Material','Mesh','Other','BP','VFX','Texture']
+    import_assets = []
+    import_textures = []
+
+
+
+    saveAll()          # 保存所有资产,防止导入过程中崩溃
+    # 载入对应母球
+    wrapMaterial = WrapMaterial(unreal.load_asset(globalConfig.get().SceneDefaultVTMaterial))
+    for data in datas: # 遍历所有传入的资产数据
+        name = data["name"]
+        path = data["path"]
+
+        basename = name.split('_')[0]
+        subname  = name.split('_')[1]
+        basename_path = f'{basename}/{basename}_{subname}/{name}'
+
+
+
+        rootPath = globalConfig.get().StaticMeshImportPathPatten57+basename_path
+
+        wrapSM = WrapStaticMesh.importFromFbx(path,rootPath,1,create_name='SM_'+name) #导入静态网格体
+        import_assets.append(wrapSM.asset)
+        
+        JsonPath = path.replace('.fbx','.json')
+        with open(JsonPath,"r",encoding="utf-8") as f:
+            jsonData = json.loads(f.read())
+        MaterialInfoList = UT.analyseJson(jsonData)
+        for MaterialInfo in MaterialInfoList:
+            # 判断是否创建材质
+            if not MaterialInfo['CreateMaterial']:
+                continue
+            wrapMaterialIns = WrapMaterialInstance.create(os.path.join(rootPath,f"Material/MI_{MaterialInfo['Materialname']}"))
+            wrapMaterialIns.setParent(wrapMaterial.asset)
+            TexturePath = MaterialInfo['TexturePath']
+            if TexturePath['diffuse_color'] != None:
+                wrapBaseColor = textureImport(TexturePath['diffuse_color'],os.path.join(rootPath,"Texture"))
+                wrapBaseColor.saveAsset()
+                wrapBaseColor.setAsColor()
+                wrapBaseColor.setVTEnable(True)
+                wrapBaseColor.saveAsset()
+                wrapMaterialIns.setTextureParameter("BaseColor_Map",wrapBaseColor.asset)
+                import_textures.append(wrapBaseColor.asset)
+            if TexturePath['refl_roughness'] == None:
+                ARMSPath = TexturePath['refl_metalness']
+            else:
+                ARMSPath = TexturePath['refl_roughness']
+            WrapARMS = textureImport(ARMSPath,os.path.join(rootPath,"Texture"))
+            WrapARMS.saveAsset()
+            WrapARMS.setAsLinerColor()
+            WrapARMS.setVTEnable(True)
+            WrapARMS.saveAsset()
+            wrapMaterialIns.setTextureParameter("ARMS_Map",WrapARMS.asset)
+            import_textures.append(WrapARMS.asset)
+            if TexturePath['bump_input'] != None:
+                wrapNormal = textureImport(TexturePath['bump_input'],os.path.join(rootPath,"Texture"))
+                wrapNormal.saveAsset()
+                wrapNormal.setAsNormal()
+                wrapNormal.setVTEnable(True)
+                wrapNormal.saveAsset()
+                import_textures.append(wrapNormal.asset)
+                wrapMaterialIns.setTextureParameter("Normal_Map",wrapNormal.asset)
+
+            if TexturePath['emission_color'] != None:
+                WrapEmissive = textureImport(TexturePath['emission_color'],os.path.join(rootPath,"Texture"))
+                WrapEmissive.saveAsset()
+                WrapEmissive.setAsColor()
+                WrapEmissive.setVTEnable(True)
+                WrapEmissive.saveAsset()
+                import_textures.append(WrapEmissive.asset)
+                wrapMaterialIns.setTextureParameter("Emmissive_Map",WrapEmissive.asset)
+                wrapMaterialIns.setScalarParameter("自发光强度",1.0)
+            wrapMaterialIns.saveAsset()
+            wrapSM.setMaterialBySloatName(MaterialInfo["Materialname"],wrapMaterialIns.asset)
+        wrapSM.saveAsset()
+    saveAll()
+
+    #为texture文件加'T_'前缀
+    for import_texture in import_textures:
+        old_name = import_texture.get_name()
+        asset_path = import_texture.get_path_name()
+        asset_rename_data = unreal.AssetRenameData()
+        asset_rename_data.asset = import_texture
+        asset_rename_data.new_name = 'T_'+old_name
+        asset_rename_data.new_package_path = asset_path.rsplit('/',1)[0]
+        asset_tool = unreal.AssetToolsHelpers.get_asset_tools()
+        asset_tool.rename_assets([asset_rename_data])
+        saveAll()
+
+    #将导入的fbx引用到对应level中
+    if map_path:
+        if unreal.EditorAssetLibrary.does_asset_exist(map_path):
+            unreal.LevelEditorSubsystem().load_level(map_path)
+            for import_asset in import_assets:
+                add_actor=unreal.EditorLevelLibrary.spawn_actor_from_object(import_asset,unreal.Vector(0.0, 0.0, 0.0))
+
+    saveAll()
 
 
         
@@ -1116,8 +1383,14 @@ def importAssetPipline(AssetData:dict):
         wrapMaterialIns.setTextureParameter("Normal_Map",t_normal.asset)
         wrapMaterialIns.setTextureParameter("ARMS_Map",t_arm.asset)
         wrapMaterialIns.saveAsset()
-    elif AssetData["assetFormat"] == "Unreal Engine":# 当类型为FBX资产
-        tempPath = globalConfig.get().MyBridgeTargetPathBuildin + "3D_Assets/" + AssetData["AssetID"]
+    elif AssetData["assetFormat"] == "UnrealEngine":# 当类型为FBX资产
+        if AssetData["assetType"] == '3D Assets':
+            tempPath = globalConfig.get().MyBridgeTargetPathBuildin + "3D_Assets/" + AssetData["AssetID"]
+        elif AssetData["assetType"] == 'VFX':
+            tempPath = globalConfig.get().MyBridgeTargetPathBuildin + "VFX/" + AssetData["AssetID"]
+        else:
+            return
+
         system_path = convert_unreal_path_to_system_path(tempPath)
         if not os.path.exists(system_path):
             shutil.copytree(AssetData["mesh"],system_path)
@@ -1243,6 +1516,7 @@ def MoveStaticMeshAndDependenceToFolder(staticMesh:unreal.StaticMesh,rootFolder:
 
             # 设置母球
             unreal.MaterialEditingLibrary.set_material_instance_parent(material,new_master_material)
+            unreal.EditorAssetLibrary.save_asset(new_master_material.get_path_name())
 
             # 遍历贴图参数
             texture_parameter_values = material.texture_parameter_values
@@ -1272,10 +1546,64 @@ def ImportToLibrary():
             unreal.PythonExtensionBPLibrary.bake_mesh_pivot(asset,unreal.PivotPreset.BOUNDING_BOX_CENTER_BOTTOM)
             MoveStaticMeshAndDependenceToFolder(asset,"/Game/Test/3D_Assets/")
 
-if __name__ == "__main__":
-    selectedAssets = unreal.EditorUtilityLibrary.get_selected_assets()[0]
-    MoveStaticMeshAndDependenceToFolder(selectedAssets,"/Game/Test/3D_Assets/")
 
+def check_level_has_diffuse_boost(path:str)->bool:
+    key_word = "bOverride_LumenDiffuseColorBoost"
+    with open(path,"rb") as f:
+        str_data = str(f.read())
+        if str_data.find(key_word)>0:
+            return True
+    return False
+
+
+def find_all_level_has_diffuse_boost():
+    # asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
+    # all_assets_data:list[unreal.AssetData] = asset_registry.get_all_assets()
+    # for asset_data in all_assets_data:
+    #     asset_data:unreal.AssetData
+        
+    #     if not str(asset_data.package_name).startswith("/Game/"):
+    #         continue
+
+    #     if type(asset_data.get_asset()) == unreal.World:
+    #         #asset_data.package_name
+    #         path = unreal.Paths.project_content_dir()
+    #         asset_sub_path = str(asset_data.package_name).removeprefix("/Game/") + ".umap"
+    #         asset_real_path = os.path.join(path,asset_sub_path)
+    #         if check_level_has_diffuse_boost(asset_real_path):
+    #             unreal.log_warning(f"关卡:{str(asset_data.package_name)}中开启了漫反射增强的选项")
+    content_path = unreal.Paths.project_content_dir()
+    Levels = []
+    for root,dir,files in os.walk(content_path):
+        Levels.extend([os.path.join(root,file) for file in files if file.endswith(".umap")])
+    for level in Levels:
+        if check_level_has_diffuse_boost(level):
+            level_path_in_unreal = level.replace(content_path,"/Game/")
+            unreal.log_warning(f"关卡:{level_path_in_unreal}中开启了漫反射增强的选项")
+            
+
+
+def set_hair_interpolation_type_to_distance(interpolation_switch=True,lod_switch=True):
+    for asset in unreal.EditorUtilityLibrary.get_selected_assets():
+        if type(asset) != unreal.GroomAsset:
+            continue
+        groups = unreal.Array(unreal.HairGroupsInterpolation)
+        for interpolation in asset.hair_groups_interpolation:
+            interpolation_settings:unreal.HairInterpolationSettings = interpolation.get_editor_property("interpolation_settings")
+            if interpolation_switch:
+                interpolation_settings.interpolation_distance = unreal.HairInterpolationWeight.DISTANCE
+            
+            interpolation.set_editor_property("interpolation_settings",interpolation_settings)
+            groups.append(interpolation)
+        asset.hair_groups_interpolation = groups
+        if lod_switch:
+            asset.set_editor_property("lod_mode",unreal.GroomLODMode.MANUAL)
+        unreal.EditorAssetLibrary.save_loaded_asset(asset,True)
+
+
+if __name__ == "__main__":
+    message = {"name": "Knife", "AssetID": "4uDIlou", "assetFormat": "FBX", "assetType": "3D Assets", "baseColor": "//192.168.3.248/AssetLibrary/Assets\\Knife_4uDIlou\\Thumbs/2K\\4uDIlou_Albedo.png", "normal": "//192.168.3.248/AssetLibrary/Assets\\Knife_4uDIlou\\Thumbs/2K\\4uDIlou_Normal.png", "arm": "//192.168.3.248/AssetLibrary/Assets\\Knife_4uDIlou\\Thumbs/2K\\4uDIlou_ARM.png", "mesh": "//192.168.3.248/AssetLibrary/Assets\\Knife_4uDIlou\\4uDIlou.fbx", "udim": "False"}
+    importAssetPipline(message)
 
 
 

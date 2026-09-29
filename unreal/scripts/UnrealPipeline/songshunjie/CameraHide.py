@@ -83,7 +83,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                         if actor_bind_trak.get_class().get_name()=='MovieSceneVisibilityTrack':
                             hidden_track=actor_bind_trak
                             hidden_section=hidden_track.get_sections()[0]
-                            hidden_key=hidden_section.get_all_channels()[0]
+                            hidden_channel = hidden_section.get_all_channels()[0]
                             # print(hidden_section[0])
                             break
                     
@@ -94,10 +94,11 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                         #创建bool选项框
                         hidden_section=hidden_track.add_section()
                         #设置起始帧
-                        hidden_section.set_start_frame_seconds(0)
+                        hidden_section.set_start_frame_bounded(False)
+                        hidden_section.set_end_frame_bounded(False)
                         #设置可视性选项框去√
-                        hidden_key=hidden_section.get_all_channels()[0]
-                    hidden_key.add_key(unreal.FrameNumber(0),False)
+                        hidden_channel = hidden_section.get_all_channels()[0]
+                    hidden_channel.set_default(False)
             if self.hide_switch==0:
                 for actor in actors:
                     actor:unreal.Actor

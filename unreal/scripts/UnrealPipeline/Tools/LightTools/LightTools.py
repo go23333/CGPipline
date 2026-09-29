@@ -14,7 +14,7 @@ import unreal
 
 from UnrealPipeline.core.CommonWidget import CommonMenuBar,SpinBoxWithLabel
 import UnrealPipeline.core.UnrealHelper as UH
-from songshunjie import lt_level,CameraHide
+from UnrealPipeline.songshunjie import lt_level,CameraHide
 
 #灯光常用工具
 class LightTools(QtWidgets.QWidget):
@@ -28,7 +28,7 @@ class LightTools(QtWidgets.QWidget):
         layMain = QtWidgets.QVBoxLayout()   #定义主布局
         # 添加一些按钮
         pbAutoID = MPushButton("自动ID(包括植物)")
-        pbAutoID.clicked.connect(UH.autoID())
+        pbAutoID.clicked.connect(UH.autoID)
         pbPoolSize = MPushButton("无限纹理流送池")
         pbPoolSize.clicked.connect(UH.poolSize)
         pbPopEmmissive = MPushButton("弹出自发光材质")
@@ -39,6 +39,10 @@ class LightTools(QtWidgets.QWidget):
         pbLightImportAndExport.clicked.connect(self.LightImportAndExport)
         pbACtorVisible = MPushButton("使选中对象对镜头隐藏和显示")
         pbACtorVisible.clicked.connect(self.ACtorVisible)
+        pbLightMatrix = MPushButton("灯光矩阵添加工具")
+        pbLightMatrix.clicked.connect(self.LightMatrix)
+        pbLightManager = MPushButton("灯光管理工具")
+        pbLightManager.clicked.connect(self.LightManager)
         self.wNearClip = SpinBoxWithLabel("近裁剪面:",0,1,6,1000.0,0.00001,0.00001,0.00001)
         self.wNearClip.setOnValueChanged(self.nearClip)
         menubar = CommonMenuBar()  #定义菜单栏
@@ -51,6 +55,8 @@ class LightTools(QtWidgets.QWidget):
         layMain.addWidget(pbOpenImportCameraUI)
         layMain.addWidget(pbLightImportAndExport)
         layMain.addWidget(pbACtorVisible)
+        layMain.addWidget(pbLightMatrix)
+        layMain.addWidget(pbLightManager)
         layMain.addWidget(self.wNearClip,alignment=QtCore.Qt.AlignTop)
         self.setLayout(layMain)
 
@@ -63,11 +69,12 @@ class LightTools(QtWidgets.QWidget):
         #songshunjie插件
     def LightImportAndExport(self):
         lt_level.start()
-        pass
     def ACtorVisible(self):
         CameraHide.start()
-        pass
-
+    def LightMatrix(self):
+        from UnrealPipeline.pipeline.LightMatrixAppend.LightMatrixAppend import start;start()
+    def LightManager(self):
+        from UnrealPipeline.pipeline.LightManager.LightManager import start;start()
 
 def Start():
     with application() as app:

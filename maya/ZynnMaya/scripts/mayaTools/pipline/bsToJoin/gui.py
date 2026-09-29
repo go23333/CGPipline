@@ -41,8 +41,9 @@ class win():
         
         self.column=cmds.columnLayout(adjustableColumn=True)
         
+        cmds.textFieldGrp('root_jion', label=u'传递骨骼名称', text=u'ADV_Body:head',w=180,cal=(1,'left'),cw2=(80,180))
         cmds.button( label=u'执行',command=self.execute)
-        cmds.text(u'对所有选择的模型的BlendShape连接到Head_M骨骼,\n若未选择模型,则对所有模型进行操作')
+        cmds.text(u'对所有选择的模型的BlendShape连接到输入框中的骨骼,\n若未选择模型,则对所有模型进行操作')
         
     def execute(self,*args):
         meshs=[]
@@ -69,8 +70,9 @@ class win():
         
         
         join_name=''
-        if cmds.objExists('Head_M'):
-            join_name='Head_M'
+        root_jion_name = cmds.textFieldGrp('root_jion',text=1,q=1)
+        if cmds.objExists(root_jion_name):
+            join_name=root_jion_name
         else:
             pass
         

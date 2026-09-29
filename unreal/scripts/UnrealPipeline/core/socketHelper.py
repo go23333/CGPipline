@@ -1,9 +1,10 @@
 import threading
 import socket
 import unreal
-
+import time
 from UnrealPipeline.core.Config import globalConfig
-
+import UnrealPipeline.core.UnrealHelper as UH
+import json
 
 lock = threading.Lock()
 
@@ -49,7 +50,7 @@ class ThreadSocket(threading.Thread):
                         print(f"Received: {data.decode()}")
 
                         with lock:
-                            Shared.messageList.append(f"import UnrealPipeline.core.UnrealHelper as UH;UH.importAssetPipline({data.decode()})")
+                            Shared.messageList.append(data.decode())
                         # 可以选择回显数据给客户端
                         conn.sendall(str(len(Shared.messageList)).encode())
                     except Exception as e:
@@ -80,6 +81,9 @@ class MessageQueueThread(threading.Thread):
                     message = Shared.messageList.pop(0)
                 if message:
                     unreal.PythonExtensionBPLibrary.launch_script_on_game_thread(message)
+            else:
+                #防止占用cpu
+                time.sleep(1)
     def stop(self):
         self.__isListening = False
     @classmethod
@@ -89,9 +93,19 @@ class MessageQueueThread(threading.Thread):
         unreal.register_python_shutdown_callback(lambda:thread.stop())
 
 
+def CheckMessageQueue(*args):
+    if Shared.messageList:
+        message = None
+        # 使用锁来保护共享资源
+        with lock:
+            message = Shared.messageList.pop(0)
+        if message:
+            message = json.loads(message)
+            UH.importAssetPipline(message)
+
 def StartSocketServer():
     ThreadSocket.StartListening()
-    MessageQueueThread.StartMessageQueue()
+    unreal.register_slate_post_tick_callback(CheckMessageQueue)
 
 
 def sendStringMyBridge(string:str,address:tuple[str,int]):

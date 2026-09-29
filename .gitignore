@@ -1,6 +1,9 @@
 *.pyc
+*.mll
+*.pyd
 .*/
 *.c
+*.mll
 build
 __pycache__
 /unreal/vendor
@@ -10,3 +13,8 @@ __pycache__
 /maya/diBianPlugins/thirdpart
 /maya/ZynnMaya/thirdpart
 /maya/ZynnMaya/vendor
+/maya/ZynnMaya/vendor3
+/maya/ZynnMaya/plugins/localTest
+/unreal/vendor56
+*.dll
+/maya/qualoth

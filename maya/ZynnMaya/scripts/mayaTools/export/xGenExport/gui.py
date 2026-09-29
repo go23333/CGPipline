@@ -1,1431 +1,870 @@
-#coding=utf-8
-import alembic.Abc as abc
-import alembic.AbcGeom as abcGeom
-import alembic.AbcCoreAbstract as abcA
-import maya.OpenMaya as om1
-import maya.api.OpenMayaAnim as omAnim
-import maya.api.OpenMaya as om
+#-*- coding:utf-8 -*-
+from __future__ import division,print_function
+
+from PySide2.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
+
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
-om2 = om
-import imath
-import array
-import zlib
-import json
-import maya.cmds as cmds
-import time
-import struct
-import uuid
-import xgenm as xg
 import os
-
-
-print_debug = False
-
-
-
-def list2ImathArray(l, _type):
-    arr = _type(len(l))
-    for i in range(len(l)):
-        arr[i] = l[i]
-    return arr
-
-
-def floatList2V3fArray(l):
-    arr = imath.V3fArray(len(l) // 3)
-    for i in range(len(arr)):
-        arr[i].x = l[i * 3]
-        arr[i].y = l[i * 3 + 1]
-        arr[i].z = l[i * 3 + 2]
-    return arr
-
-
-
-def getXgenData(fnDepNode, keys):
-    splineData = fnDepNode.findPlug("outSplineData", False)
-
-    handle = splineData.asMObject()
-    mdata = om2.MFnPluginData(handle)
-    mData = mdata.data()
-
-    rawData = mData.writeBinary()
-
-    def GetBlocks(bype_data):
-        address = 0
-        i = 0
-        blocks = []
-        maxIt = 100
-        while address < len(bype_data) - 1:
-            size = struct.unpack('<Q', bype_data[address + 8:address + 16])[0]
-            type_code = struct.unpack('<I', bype_data[address:address + 4])[0]
-            blocks.append((address + 16, address + 16 + size, type_code))
-            address += size + 16
-            i += 1
-            if i > maxIt:
-                break
-        return blocks
-
-    dataBlocks = GetBlocks(rawData)
-    headerBlock = dataBlocks[0]
-    dataBlocks.pop(0)
-
-    dataString = str(rawData[headerBlock[0]:headerBlock[1]])
-    dataJson = json.loads(dataString)
-    # print(dataJson)
-    Header = dataJson['Header']
-
-    Items = dict()
-
-    def readItems(items):
-        for k, v in items:
-            if isinstance(v, (int, long)):
-                group = v >> 32
-                index = v & 0xFFFFFFFF
-                addr = (group, index)
-                if k not in Items:
-                    Items[k] = [addr]
-                else:
-                    Items[k].append(addr)
-
-    for i in range(len(dataJson['Items'])):
-        readItems(dataJson['Items'][i].items())
-    for i in range(len(dataJson['RefMeshArray'])):
-        readItems(dataJson['RefMeshArray'][i].items())
-
-    # print(Items)
-    decompressedData = dict()
-
-    def decompressData(group, index):
-        if group not in decompressedData:
-            if Header['GroupBase64']:
-                raise Exception(u"GroupBase64 Error")
-            if Header['GroupDeflate']:
-                validData = zlib.decompress(str(rawData[dataBlocks[group][0] + 32:]))
-            else:
-                validData = rawData[dataBlocks[group][0]:dataBlocks[group][1]]
-            decompressedData[group] = validData
-        else:
-            validData = decompressedData[group]
-        blocks = GetBlocks(validData)
-        return validData[blocks[index][0]:blocks[index][1]]
-
-    outputs = {key: [] for key in keys}
-    for k, v in Items.items():
-        if k not in outputs:
-            continue
-        if k == 'PrimitiveInfos':
-            dtype_format = '<IQ'
-            for addr in v:
-                decompressed_data = decompressData(*addr)
-                PrimitiveInfos = []
-                record_size = struct.calcsize(dtype_format)
-                for i in range(0, len(decompressed_data), record_size):
-                    PrimitiveInfo = struct.unpack_from(dtype_format, decompressed_data, i)
-                    PrimitiveInfos.append(PrimitiveInfo)
-                outputs[k].append(PrimitiveInfos)
-        elif k in ('FaceUV', 'Positions', 'WIDTH_CV'):
-            for addr in v:
-                decompressed_data = decompressData(*addr)
-                outputs[k].append(array.array('f', decompressed_data))
-        elif k == 'FaceId':
-            for addr in v:
-                decompressed_data = decompressData(*addr)
-                outputs[k].append(array.array('i', decompressed_data))
-    return [outputs[k] for k in keys]
-
-
-
-class AbcType:
-    string = (abcGeom.OStringGeomParam, abcGeom.OStringGeomParamSample)
-    int16 = (abcGeom.OInt16GeomParam, abcGeom.OInt16GeomParamSample)
-    int32 = (abcGeom.OInt32GeomParam, abcGeom.OInt32GeomParamSample)
-    int64 = (abcGeom.OInt64GeomParam, abcGeom.OInt64GeomParamSample)
-    color3f = (abcGeom.OC3fGeomParam, abcGeom.OC3fGeomParamSample)
-    float = (abcGeom.OFloatGeomParam, abcGeom.OFloatGeomParamSample)
-    vector2f = (abcGeom.OV2fGeomParam, abcGeom.OV2fGeomParamSample)
-    vector3f = (abcGeom.OV3fGeomParam, abcGeom.OV3fGeomParamSample)
-
-
-
-class CurvesProxy(object):
-    def __init__(self, curveObj, fnDepNode, needRootList=False, animation=False):
-        self.hairRootList = None
-        self.schema = curveObj.getSchema()
-        self.cp = self.schema.getArbGeomParams()
-        self.needRootList = needRootList
-        self.animation = animation
-        self.firstSamp = abcGeom.OCurvesSchemaSample()
-        self.fnDepNode = fnDepNode
-        self.curves = None
-        self.groupName = None
-        self.is_guide = False
-        self.needBakeUV = False
-
-    def write_param(self, name, abcType, data, scope=abcGeom.GeometryScope.kUniformScope, extent=1):
-        if len(data) == 1:
-            scope = abcGeom.GeometryScope.kConstantScope
-        param = abcType[0](self.cp, name, False, scope, extent)
-        sample = abcType[1](data, scope)
-        param.set(sample)
-
-    def write_group_name(self, group_name, write_card_id=False):
-        group_name_data = list2ImathArray([str(group_name)], imath.StringArray)
-        self.write_param('groom_group_name', AbcType.string, group_name_data)
-        if write_card_id:
-            self.write_param('groom_group_cards_id', AbcType.string, group_name_data)
-        self.groupName = group_name
-
-    def write_is_guide(self, is_guide=True):
-        self.isGuide = is_guide
-        if is_guide:
-            self.write_param('groom_guide', AbcType.int16, list2ImathArray([1], imath.ShortArray))
-
-    def write_group_id(self, group_id):
-        self.write_param('groom_group_id', AbcType.int32, list2ImathArray([group_id], imath.IntArray))
-
-    def write_first_frame(self):
-        itDag = om2.MItDag()
-        itDag.reset(self.fnDepNode.object(), om2.MItDag.kDepthFirst, om2.MFn.kCurve)
-        curves = []
-        while not itDag.isDone():
-            curve_node = itDag.currentItem()
-            curves.append(curve_node)
-            itDag.next()
-        self.curves = curves
-
-        numCurves = len(self.curves)
-        if numCurves == 0:
-            return
-
-        curve = om2.MFnNurbsCurve(self.curves[0])
-
-        orders = imath.IntArray(numCurves)
-        nVertices = imath.IntArray(numCurves)
-        pointslist = []
-        knots = []
-        if self.needRootList:
-            self.hairRootList = []
-
-        samp = self.firstSamp
-        samp.setBasis(abcGeom.BasisType.kBsplineBasis)
-        samp.setWrap(abcGeom.CurvePeriodicity.kNonPeriodic)
-
-        if curve.degree == 3:
-            samp.setType(abcGeom.CurveType.kCubic)
-        elif curve.degree == 1:
-            samp.setType(abcGeom.CurveType.kLinear)
-        else:
-            # samp.setType(abcGeom.CurveType.kVariableOrder)
-            samp.setType(abcGeom.CurveType.kLinear)
-            pass
-        for i in range(numCurves):
-            curve = curve.setObject(self.curves[i])
-            numCVs = curve.numCVs
-            orders[i] = curve.degree + 1
-            nVertices[i] = numCVs
-            cvArray = curve.cvPositions()
-            for j in range(numCVs):
-                pointslist.append(cvArray[j].x)
-                pointslist.append(cvArray[j].y)
-                pointslist.append(cvArray[j].z)
-            if self.needRootList:
-                self.hairRootList.append(om2.MPoint(cvArray[0]))
-            knotsArray = curve.knots()
-            if len(knotsArray) > 1:
-                knotsLength = len(knotsArray)
-                if (knotsArray[0] == knotsArray[knotsLength - 1] or
-                        knotsArray[0] == knotsArray[1]):
-                    knots.append(float(knotsArray[0]))
-                else:
-                    knots.append(float(2 * knotsArray[0] - knotsArray[1]))
-
-                for j in range(knotsLength):
-                    knots.append(float(knotsArray[j]))
-
-                if (knotsArray[0] == knotsArray[knotsLength - 1] or
-                        knotsArray[knotsLength - 1] == knotsArray[knotsLength - 2]):
-                    knots.append(float(knotsArray[knotsLength - 1]))
-                else:
-                    knots.append(float(2 * knotsArray[knotsLength - 1] - knotsArray[knotsLength - 2]))
-        samp.setCurvesNumVertices(nVertices)
-        samp.setPositions(floatList2V3fArray(pointslist))
-        samp.setOrders(list2ImathArray(orders, imath.UnsignedCharArray))
-        samp.setKnots(list2ImathArray(knots, imath.FloatArray))
-
-        # widths = list2ImathArray([0.1], imath.FloatArray)
-        # widths = abc.Float32TPTraits()
-        # widths = abcGeom.OFloatGeomParamSample(widths, abcGeom.GeometryScope.kConstantScope)
-        # samp.setWidths(widths)
-        self.schema.set(samp)
-
-    def write_frame(self):
-        numCurves = len(self.curves)
-        if numCurves == 0:
-            return
-        curve = om2.MFnNurbsCurve(self.curves[0])
-
-        samp = abcGeom.OCurvesSchemaSample()
-        samp.setBasis(self.firstSamp.getBasis())
-        samp.setWrap(self.firstSamp.getWrap())
-        samp.setType(self.firstSamp.getType())
-        samp.setCurvesNumVertices(self.firstSamp.getCurvesNumVertices())
-        samp.setOrders(self.firstSamp.getOrders())
-        samp.setKnots(self.firstSamp.getKnots())
-
-        pointslist = []
-        for i in range(numCurves):
-            curve = curve.setObject(self.curves[i])
-            numCVs = curve.numCVs
-            cvArray = curve.cvPositions()
-            for j in range(numCVs):
-                pointslist.append(cvArray[j].x)
-                pointslist.append(cvArray[j].y)
-                pointslist.append(cvArray[j].z)
-
-        samp.setPositions(floatList2V3fArray(pointslist))
-
-        self.schema.set(samp)
-
-    def bake_uv(self, bakeMesh, uv_set=None):
-        if not self.needBakeUV or self.hairRootList is None:
-            return
-        if bakeMesh is None:
-            return
-        if uv_set is None:
-            uv_set = bakeMesh.currentUVSetName()
-        elif uv_set not in bakeMesh.getUVSetNames():
-            raise Exception('Invalid UV Set : {}'.format(uv_set))
-
-        uvs = imath.V2fArray(len(self.hairRootList))
-        for i, hairRoot in enumerate(self.hairRootList):
-            res = bakeMesh.getUVAtPoint(hairRoot, om2.MSpace.kWorld, uvSet=uv_set)
-            uvs[i].x = res[0]
-            uvs[i].y = res[1]
-
-        self.write_param('groom_root_uv', AbcType.vector2f, uvs)
-
-
-
-try:
-    from PySide6 import QtCore, QtWidgets, QtGui
-    import shiboken6 as shiboken
-except:
-    from PySide2 import QtCore, QtWidgets, QtGui
-    import shiboken2 as shiboken
-
-import maya.OpenMayaUI as om1ui
-
-
-def mayaWindow():
-    main_window_ptr = om1ui.MQtUtil.mainWindow()
-    return shiboken.wrapInstance(int(main_window_ptr), QtWidgets.QWidget)
-
-
-class FileSelectorWidget(QtWidgets.QWidget):
-    def __init__(self, callback):
-        super(FileSelectorWidget, self).__init__()
-        self.callback = callback
-        self.setup_ui()
-
-    def setup_ui(self):
-        self.layout = QtWidgets.QHBoxLayout(self)
-        self.file_line_edit = QtWidgets.QLineEdit(self)
-        self.layout.addWidget(self.file_line_edit)
-        self.browse_button = QtWidgets.QPushButton(u"浏览", self)
-        self.layout.addWidget(self.browse_button)
-        self.browse_button.clicked.connect(self.browse_file)
-        self.file_line_edit.textChanged.connect(self.callback)
-
-    def browse_file(self):
-        file_path = cmds.fileDialog2(fileMode=1, caption="Select a File")
-        if file_path:
-            self.file_line_edit.setText(file_path[0])
-
-    def set_file_path(self, path):
-        return self.file_line_edit.setText(path)
-
-    def get_file_path(self):
-        return self.file_line_edit.text()
-
-
-
-SaveXGenDesWindowParentName = "_saveXGenDesWindow"
-
-
-def getSaveXGenDesWindowParent():
-    sel = om2.MSelectionList()
+import maya.cmds as cmds
+import maya.mel as mel
+import maya.api.OpenMaya as om
+from maya.api.OpenMaya import MGlobal
+import xgenm as xg
+import time
+import tempfile
+
+from mayaTools.core.widgets import ComboxGroup,LineEditGroup,Line,WidgetGroup
+import mayaTools.core.mayaLibrary as ML
+abc_plugin_name = 'ZynnMaya1.0.mll'
+
+def ExportAbc(objects,StartFrame,EndFrame,Step,StartExpend,EndExpend,ExportPath,RefreshHair):
+    cmds.loadPlugin(abc_plugin_name)
+    res = False
     try:
-        sel.add(SaveXGenDesWindowParentName)
+        res = cmds.AbcExportN(objects ,StartFrame,EndFrame,Step,StartExpend,EndExpend,ExportPath,RefreshHair)
     except:
-        trans = om2.MFnTransform()
-        trans.create()
-        trans.setName(SaveXGenDesWindowParentName)
-        sel.add(SaveXGenDesWindowParentName)
-    return sel.getDagPath(0)
-
-
-def deleteSaveXGenDesWindowParent():
-    if cmds.objExists(SaveXGenDesWindowParentName):
-        cmds.delete(SaveXGenDesWindowParentName)
-
-
-
-
-
-def getExpressionPath(expr, pal_path, des_path, fx_name):
-    expr = expr.replace('${DESC}', xg.descriptionPath(pal_path, des_path)).replace('${FXMODULE}', fx_name)
-    ptex_path = None
-    if os.path.isdir(expr):
-        for f in os.listdir(expr):
-            if f.endswith('.ptx'):
-                ptex_path = f
-
-    if ptex_path is None:
-        return ""
-    return os.path.normpath(os.path.join(expr, ptex_path))
-
-
-def getClumpingPtexPath(dn):
-    if not dn.object().hasFn(om2.MFn.kTransform):
-        des_obj = om2.MFnDagNode(dn.object()).parent(0)
-    else:
-        des_obj = dn.object()
-    des_path = str(om2.MDagPath.getAPathTo(des_obj))
-    pal_path = str(om2.MDagPath.getAPathTo(om2.MFnDagNode(des_obj).parent(0)))
-    clumping = None
-    for fx in xg.fxModules(pal_path, des_path):
-        if fx.startswith('Clumping'):
-            clumping = fx
-            break
-    if clumping is None:
-        return ""
-    expr = xg.getAttr("mapDir", pal_path, des_path, clumping)
-    return getExpressionPath(expr, pal_path, des_path, clumping)
-
-
-
-def generate_short_hash():
-    unique_id = uuid.uuid4()
-    return str(unique_id).replace('-', '')[:8]
-
-
-def ConvertToInteractive(dn):
-    if not dn.object().hasFn(om2.MFn.kTransform):
-        path = om2.MDagPath.getAPathTo(om2.MFnDagNode(dn.object()).parent(0))
-    else:
-        path = om2.MDagPath.getAPathTo(dn.object())
-    cmds.select(path, replace=True)
-    res = cmds.xgmGroomConvert(prefix="z" + generate_short_hash())
-    if res is None:
-        raise Exception("Convert to interactive failed.")
-    sel = om2.MGlobal.getActiveSelectionList()
-    spline = om2.MFnDagNode(sel.getDagPath(0))
-    om2.MFnDagNode(getSaveXGenDesWindowParent()).addChild(spline.parent(0))
-    return spline
-    # return curve.parent(0)
-
-
-
-import ctypes
-from ctypes import c_void_p, c_uint64, c_ulonglong, c_float, c_int, c_char_p
-
-PtexSamplerDllFuncName = "_PtexSamplerDllFunc"
-
-
-class PtexSampler(object):
-    class DllFunc:
-        @staticmethod
-        def getVFunc(obj, index, *args):
-            vtble = ctypes.cast(obj, ctypes.POINTER(ctypes.c_void_p)).contents
-            vfuncAddr = ctypes.cast(vtble.value + index * 8, ctypes.POINTER(ctypes.c_void_p)).contents.value
-            return ctypes.CFUNCTYPE(*args)(vfuncAddr)
-
-        @staticmethod
-        def getPtexFilterEvelFunc(filter):
-            ptexFilterEvel = PtexSampler.DllFunc.getVFunc(filter, 2, c_void_p, c_void_p, c_void_p, c_int, c_int, c_int,
-                                                          c_float, c_float,
-                                                          c_float, c_float, c_float, c_float)
-            return ptexFilterEvel
-
-        @staticmethod
-        def getPtexTextureReleaseFunc(ptexTexture):
-            ptexTextureRelease = PtexSampler.DllFunc.getVFunc(ptexTexture, 1, c_void_p)
-            return ptexTextureRelease
-
-        class MyVector(ctypes.Structure):
-            _fields_ = [
-                ("_Myfirst", ctypes.POINTER(ctypes.c_float)),  # pointer to beginning of array
-                ("_Mylast", ctypes.POINTER(ctypes.c_float)),  # pointer to current end of sequence
-                ("_Myend", ctypes.POINTER(ctypes.c_float))  # pointer to end of sequence
-            ]
-
-            def __init__(self, size=10):
-                array = (ctypes.c_float * size)()
-                # 为每个指针分配内存
-                self._Myfirst = ctypes.cast(array, ctypes.POINTER(ctypes.c_float))
-                # _Mylast 初始化为数组的开始（指向和 _Myfirst 相同的位置）
-                self._Mylast = self._Myfirst  # 当前结束位置指向数组的开始
-                _myend_address = ctypes.addressof(array) + ctypes.sizeof(array)  # 获取数组末尾（地址）
-                self._Myend = ctypes.cast(_myend_address, ctypes.POINTER(ctypes.c_float))
-
-            def __getitem__(self, index):
-                return self._Myfirst[index]
-
-    def close(self):
-        getPtexTextureRelease = PtexSampler.DllFunc.getPtexTextureReleaseFunc(self.ptexTexture)
-        getPtexTextureRelease(self.ptexTexture)
-
-    def setupFilter(self, path):
-        DllFunc = globals()[PtexSamplerDllFuncName]
-        err = ctypes.c_uint64()
-        ptexTexture = DllFunc.ptex_open(
-            path.encode(),
-            ctypes.byref(err), 0)
-        if ptexTexture is None:
-            raise Exception("no ptexTexture found")
-        self.ptexTexture = ctypes.c_void_p(ptexTexture)
-
-        # 定义Options结构体
-        class Options(ctypes.Structure):
-            _fields_ = [
-                ("__structSize", ctypes.c_int),  # (for internal use only)
-                ("filter", ctypes.c_int),  # Filter type.
-                ("lerp", ctypes.c_bool),  # Interpolate between mipmap levels.
-                ("sharpness", ctypes.c_float),  # Filter sharpness, 0..1 (for general bi-cubic filter only).
-                ("noedgeblend", ctypes.c_bool)  # Disable cross-face filtering.
-            ]
-
-            def __init__(self, filter_=0, lerp_=False, sharpness_=0.0,
-                         noedgeblend_=False):  # Point-sampled (no filtering)
-                self.__structSize = ctypes.sizeof(Options)  # 设置结构体大小
-                self.filter = filter_  # 设置过滤器类型
-                self.lerp = lerp_  # 设置是否插值
-                self.sharpness = sharpness_  # 设置过滤器锐度
-                self.noedgeblend = noedgeblend_  # 设置是否禁用跨面过滤
-
-        options = Options()
-        filter = DllFunc.ptex_getFilter(self.ptexTexture, options)
-        filter = ctypes.cast(filter, ctypes.c_void_p)
-        self.ptexFilterEvalFunc = DllFunc.getPtexFilterEvelFunc(filter)
-        self.vector = DllFunc.temp_vector
-        self.filter = filter
-
-    def __init__(self, path):
-        self.path = path
-        if PtexSamplerDllFuncName in globals():
-            self.setupFilter(path)
-            return
-
-        DllFunc = PtexSampler.DllFunc()
-        globals()[PtexSamplerDllFuncName] = DllFunc
-
-        ptex_dll = ctypes.cdll.LoadLibrary("Ptex.dll")
-        versions = ['2_2', '2_3', '2_4', '2_5', '2_6']
-        version = None
-        for _v in versions:
-            try:
-                Ptex_String_release = ptex_dll["??1String@v{}@Ptex@@QEAA@XZ".format(_v)]
-                version = _v
-                break
-            except:
-                pass
-        if version is None:
-            raise Exception("Could not find correct Ptex version")
-
-        DllFunc.ptex_open = ptex_dll["?open@PtexTexture@v{}@Ptex@@SAPEAV123@PEBDAEAVString@23@_N@Z".format(version)]
-        DllFunc.ptex_open.restype = ctypes.c_void_p
-        DllFunc.ptex_getFilter = ptex_dll[
-            '?getFilter@PtexFilter@v{}@Ptex@@SAPEAV123@PEAVPtexTexture@23@AEBUOptions@123@@Z'.format(version)]
-        DllFunc.ptex_getFilter.restype = ctypes.c_void_p
-        DllFunc.temp_vector = DllFunc.MyVector(10)
-        self.setupFilter(path)
-
-    def sampleData(self, faceU, faceV, faceId):
-        self.ptexFilterEvalFunc(self.filter, self.vector._Myfirst, 0, 3, faceId, faceU, faceV, 0, 0, 0, 0)
-        return self.vector[:3]
-
-
-
-class XGenProxyEveryFrame(CurvesProxy):
-    def __init__(self, curveObj, descFnDepNode, needRootList=False,
-                 animation=False):
-        super(XGenProxyEveryFrame, self).__init__(curveObj, None, needRootList, animation)
-        self.descFnDepNode = descFnDepNode
-        self.order_offset_map = None
-
-    def write_first_frame(self):
-        if print_debug:
-            startTime = time.time()
-
-        spline = ConvertToInteractive(self.descFnDepNode)
-        self.fnDepNode = spline
-        self.firstSpline = spline
-        PrimitiveInfosList, PositionsDataList, WidthsDataList, FaceIdList, FaceUVList = getXgenData(self.fnDepNode,
-                                                                                                    ('PrimitiveInfos',
-                                                                                                     'Positions',
-                                                                                                     'WIDTH_CV',
-                                                                                                     'FaceId',
-                                                                                                     'FaceUV'))
-        if print_debug:
-            print("getXgenData: %.4f" % (time.time() - startTime))
-            startTime = time.time()
-        numCurves = 0
-        numCVs = 0
-        for i, PrimitiveInfos in enumerate(PrimitiveInfosList):
-            numCurves += len(PrimitiveInfos)
-            for PrimitiveInfo in PrimitiveInfos:
-                numCVs += PrimitiveInfo[1]
-        self.numCurves = numCurves
-        self.numCVs = numCVs
-        orders = imath.UnsignedCharArray(numCurves)
-        nVertices = imath.IntArray(numCurves)
-
-        samp = self.firstSamp
-        samp.setBasis(abcGeom.BasisType.kBsplineBasis)
-        samp.setWrap(abcGeom.CurvePeriodicity.kNonPeriodic)
-        samp.setType(abcGeom.CurveType.kCubic)
-
-        degree = 3
-        pointArray = imath.V3fArray(numCVs)
-        widthArray = imath.FloatArray(numCVs)
-        if self.needRootList:
-            self.hairRootList = []
-        knots = []
-
-        curveIndex = 0
-        cvIndex = 0
-        cvOffsets = imath.IntArray(numCurves)
-        for j in range(len(PrimitiveInfosList)):
-            PrimitiveInfos = PrimitiveInfosList[j]
-            posData = PositionsDataList[j]
-            widthData = WidthsDataList[j]
-            for i, PrimitiveInfo in enumerate(PrimitiveInfos):
-                offset = PrimitiveInfo[0]
-                length = int(PrimitiveInfo[1])
-                if length < 2:
-                    continue
-                startAddr = offset * 3
-                cvOffsets[curveIndex] = cvIndex
-                for k in range(length):
-                    pointArray[cvIndex].x = posData[startAddr]
-                    pointArray[cvIndex].y = posData[startAddr + 1]
-                    pointArray[cvIndex].z = posData[startAddr + 2]
-                    if k == 0 and self.needRootList:
-                        self.hairRootList.append(om2.MPoint(pointArray[cvIndex]))
-                    widthArray[cvIndex] = widthData[offset + k]
-                    startAddr += 3
-                    cvIndex += 1
-
-                orders[curveIndex] = degree + 1
-                nVertices[curveIndex] = length
-
-                knotsInsideNum = length - degree + 1
-                knotsList = [0] * degree + list(range(knotsInsideNum)) + [
-                    knotsInsideNum - 1] * degree  # The endpoint repeats one more than Maya
-                # print(knotsList)
-                knots += knotsList
-                curveIndex += 1
-
-        samp.setCurvesNumVertices(nVertices)
-        samp.setPositions(pointArray)
-        samp.setKnots(list2ImathArray(knots, imath.FloatArray))
-        samp.setOrders(orders)
-
-        widths = abcGeom.OFloatGeomParamSample(widthArray, abcGeom.GeometryScope.kVertexScope)
-        samp.setWidths(widths)
-        self.schema.set(samp)
-        if self.animation:
-            index2order = self.get_index2order(FaceIdList, FaceUVList)
-            self.order_offset_map = imath.IntArray(numCurves)
-            for i, offset in zip(index2order, cvOffsets):
-                self.order_offset_map[i] = offset
-        if print_debug:
-            # print(self.order_offset_map)
-            print("write_first_frame: %.4f" % (time.time() - startTime))
-
-    @staticmethod
-    def get_index2order(FaceIdList, FaceUVList):
-        order_list = []
-        for j in range(len(FaceIdList)):
-            FaceUVData = FaceUVList[j]
-            FaceIdData = FaceIdList[j]
-            for i, faceId in enumerate(FaceIdData):
-                u = FaceUVData[i * 2]
-                v = FaceUVData[i * 2 + 1]
-                order_list.append((faceId, u, v))
-        sorted_list = sorted((key, i) for i, key in enumerate(order_list))
-        index_list = imath.IntArray(len(order_list))
-        for order_index, item in enumerate(sorted_list):
-            my_index = item[1]
-            index_list[my_index] = order_index
-        # if print_debug:
-        #     print(sorted_list)
-        return index_list
-
-    def write_frame(self):
-        if print_debug:
-            startTime = time.time()
-        spline = ConvertToInteractive(self.descFnDepNode)
-        self.fnDepNode = spline
-        PrimitiveInfosList, PositionsDataList, FaceIdList, FaceUVList = getXgenData(self.fnDepNode, ('PrimitiveInfos',
-                                                                                                     'Positions',
-                                                                                                     'FaceId',
-                                                                                                     'FaceUV'))
-
-        numCVs = self.numCVs
-
-        samp = abcGeom.OCurvesSchemaSample()
-        samp.setBasis(self.firstSamp.getBasis())
-        samp.setWrap(self.firstSamp.getWrap())
-        samp.setType(self.firstSamp.getType())
-
-        samp.setCurvesNumVertices(self.firstSamp.getCurvesNumVertices())
-        samp.setKnots(self.firstSamp.getKnots())
-        samp.setOrders(self.firstSamp.getOrders())
-        samp.setWidths(self.firstSamp.getWidths())
-
-        if print_debug:
-            s = time.time()
-        index2order = self.get_index2order(FaceIdList, FaceUVList)
-
-        pointArray = imath.V3fArray(numCVs)
-
-        curveIndex = 0
-        for j in range(len(PrimitiveInfosList)):
-            PrimitiveInfos = PrimitiveInfosList[j]
-            posData = PositionsDataList[j]
-            for PrimitiveInfo in PrimitiveInfos:
-                offset = PrimitiveInfo[0]
-                length = int(PrimitiveInfo[1])
-                if length < 2:
-                    continue
-                startAddr = offset * 3
-                cvIndex = self.order_offset_map[index2order[curveIndex]]
-                for k in range(length):
-                    pointArray[cvIndex].x = posData[startAddr]
-                    pointArray[cvIndex].y = posData[startAddr + 1]
-                    pointArray[cvIndex].z = posData[startAddr + 2]
-                    startAddr += 3
-                    cvIndex += 1
-
-                curveIndex += 1
-        if print_debug:
-            print("loop: %.4f" % (time.time() - s))
-        samp.setPositions(pointArray)
-
-        self.schema.set(samp)
-        if print_debug:
-            print("write_frame: %.4f" % (time.time() - startTime))
-
-
-
-
-GroomGuideIdStartIndexName = '_GroomGuideIdStartIndexName'
-
-
-def getGroomGuideIdStartIndex():
-    return globals()[GroomGuideIdStartIndexName]
-
-
-def setGroomGuideIdStartIndex(value=0):
-    globals()[GroomGuideIdStartIndexName] = value
-
-
-
-class GuideProxy(CurvesProxy):
-    def __init__(self, curveObj, fnDepNode, needRootList=False, animation=False):
-        if not fnDepNode.object().hasFn(om2.MFn.kTransform):
-            fnDepNode = om2.MFnDependencyNode(om2.MFnDagNode(fnDepNode.object()).parent(0))
-        super(GuideProxy, self).__init__(curveObj, fnDepNode, needRootList, animation)
-        itDag = om2.MItDag()
-        itDag.reset(self.fnDepNode.object(), om2.MItDag.kBreadthFirst, om2.MFn.kInvalid)
-        guides = []
-        while not itDag.isDone():
-            dn = om2.MFnDependencyNode(itDag.currentItem())
-            if dn.typeName == 'xgmSplineGuide':
-                guides.append(itDag.getPath())
-            itDag.next()
-        self.guides = guides
-        self.xgenProxy = None
-        self.ptexPath = None
-        self.writePtexGuideId = False
-
-    def set_xgen_proxy_and_ptex(self, xgenSpline, ptexPath):
-        self.xgenProxy = xgenSpline
-        self.ptexPath = ptexPath
-
-    def write_guide_id_from_ptex(self):
-        if not self.writePtexGuideId:
-            return
-        ptexPath = self.ptexPath
-        xgenSpline = self.xgenProxy
-        if ptexPath is None or ptexPath == "":
-            return
-        if self.xgenProxy == None:
-            return
-        ptexSampler = PtexSampler(ptexPath)
-        self.regionPtex = ptexPath
-
-        guide_map = dict()
-
-        def color2Int(color):
-            a = int(color[0] * 255) & 0xff
-            b = int(color[1] * 255) & 0xff
-            c = int(color[2] * 255) & 0xff
-            return (a << 16) | (b << 8) | c
-
-        for i, guide in enumerate(self.guides):
-            dn = om2.MFnDependencyNode(guide.node())
-            u = dn.findPlug('uLoc', False).asFloat()
-            v = dn.findPlug('vLoc', False).asFloat()
-            faceId = dn.findPlug('faceId', False).asInt()
-            color = ptexSampler.sampleData(u, v, faceId)
-            hash = color2Int(color)
-            if hash in guide_map:
-                old_guide = om2.MFnDependencyNode(guide_map[hash][0].node())
-                print(
-                    "guide {} and {} are in the same area on texture, only use {}.".format(dn.name(), old_guide.name(),old_guide.name()))
-                continue
-            guide_map[hash] = (guide, i)
-
-        FaceUVList, FaceIdList = getXgenData(xgenSpline.firstSpline, ('FaceUV', 'FaceId'))
-
-        guideIdStartIndex = getGroomGuideIdStartIndex()
-        guideIdNextStartIndex = guideIdStartIndex + len(self.guides)
-        groom_id_data = list2ImathArray(list(range(guideIdStartIndex, guideIdNextStartIndex)), imath.IntArray)
-        self.write_param("groom_id", AbcType.int32, groom_id_data)
-
-        spline_num = len(xgenSpline.hairRootList)
-        weight_data = list2ImathArray([1.0] * spline_num, imath.FloatArray)
-        xgenSpline.write_param("groom_guide_weights", AbcType.float, weight_data)
-
-        guide_id_data = imath.IntArray(spline_num)
-        first_guide_name = om2.MFnDependencyNode(self.guides[0].node()).name()
-        spline_index = 0
-        for j in range(len(FaceIdList)):
-            FaceUVData = FaceUVList[j]
-            FaceIdData = FaceIdList[j]
-            # print(len(FaceIdData),len(FaceUVData))
-            for i, faceId in enumerate(FaceIdData):
-                u = FaceUVData[i * 2]
-                v = FaceUVData[i * 2 + 1]
-                color = ptexSampler.sampleData(u, v, faceId)
-                hash = color2Int(color)
-                guide_id = guideIdStartIndex
-                if hash not in guide_map:
-                    print(
-                        "The spline index ({} ,{}) does not have a valid guide attached to {}.".format(
-                            j, i, first_guide_name))
-                else:
-                    guide_id = guide_map[hash][1]
-
-                if spline_index >= spline_num:
-                    raise Exception("spline_index >= spline_num")
-                guide_id_data[spline_index] = guide_id
-                # guide_map[hash][2].append(spline_index)
-                spline_index += 1
-        # print(guide_map)
-        ptexSampler.close()
-        xgenSpline.write_param("groom_closest_guides", AbcType.int32, guide_id_data)
-
-        setGroomGuideIdStartIndex(guideIdNextStartIndex)
-
-    def write_first_frame(self):
-        numCurves = len(self.guides)
-        orders = imath.IntArray(numCurves)
-        nVertices = imath.IntArray(numCurves)
-        pointslist = []
-        knots = []
-        if self.needRootList:
-            self.hairRootList = []
-
-        samp = self.firstSamp
-        samp.setBasis(abcGeom.BasisType.kBsplineBasis)
-        samp.setWrap(abcGeom.CurvePeriodicity.kNonPeriodic)
-        samp.setType(abcGeom.CurveType.kLinear)
-        degree = 1
-
-        for i in range(numCurves):
-            data = cmds.xgmGuideGeom(guide=self.guides[i], numVertices=True)
-            numCVs = int(data[0])
-            data = cmds.xgmGuideGeom(guide=self.guides[i], controlPoints=True)
-            pointslist += data
-            orders[i] = degree + 1
-            nVertices[i] = numCVs
-            if self.needRootList:
-                self.hairRootList.append(om2.MPoint(data[:3]))
-
-            knotsInsideNum = numCVs - degree + 1
-            knotsList = [0] * degree + list(range(knotsInsideNum)) + [
-                knotsInsideNum - 1] * degree  # The endpoint repeats one more than Maya
-            # print(knotsList)
-            knots += knotsList
-        samp.setCurvesNumVertices(nVertices)
-        samp.setPositions(floatList2V3fArray(pointslist))
-        samp.setOrders(list2ImathArray(orders, imath.UnsignedCharArray))
-        samp.setKnots(list2ImathArray(knots, imath.FloatArray))
-        self.schema.set(samp)
-
-    def write_frame(self):
-        numCurves = len(self.guides)
-        if numCurves == 0:
-            return
-
-        samp = abcGeom.OCurvesSchemaSample()
-        samp.setBasis(self.firstSamp.getBasis())
-        samp.setWrap(self.firstSamp.getWrap())
-        samp.setType(self.firstSamp.getType())
-        samp.setCurvesNumVertices(self.firstSamp.getCurvesNumVertices())
-        samp.setOrders(self.firstSamp.getOrders())
-        samp.setKnots(self.firstSamp.getKnots())
-
-        pointslist = []
-        for i in range(numCurves):
-            data = cmds.xgmGuideGeom(guide=self.guides[i], controlPoints=True)
-            pointslist += data
-
-        samp.setPositions(floatList2V3fArray(pointslist))
-        self.schema.set(samp)
-
-
-
-
-class SaveXGenDesWindow(MayaQWidgetDockableMixin,QtWidgets.QWidget):
-    class MultiSelectCheckBox(QtWidgets.QCheckBox):
-        def __init__(self, column_name, parent=None):
-            super(SaveXGenDesWindow.MultiSelectCheckBox,self).__init__(parent)
-            self.column_name = column_name
-            self.clicked.connect(lambda: self.on_clicked(self.isChecked()))
-
-        def on_clicked(self, checked):
-            window = self.find_window()
-            if not window or not hasattr(window, 'table'):
-                return
-            table = window.table
-            contents = window.contentList
-            selected_rows = self.get_rows_to_changing(table)
-            for row in selected_rows:
-                if 0 <= row < len(contents):
-                    content = contents[row]
-                    checkbox = getattr(content, self.column_name)
-                    if checkbox is not None:
-                        checkbox.blockSignals(True)
-                        checkbox.setChecked(checked)
-                        checkbox.blockSignals(False)
-
-        def find_window(self):
-            parent = self.parent()
-            while parent:
-                if (isinstance(parent, SaveXGenDesWindow) or
-                        parent.__class__.__name__ == 'SaveXGenDesWindow'):
-                    return parent
-                parent = parent.parent()
-            return None
-
-        def get_rows_to_changing(self, table):
-            pos = self.mapTo(table.viewport(), QtCore.QPoint(0, 0))
-            _index = table.indexAt(pos).row()
-            selected_rows = [index.row() for index in table.selectionModel().selectedRows()]
-            return selected_rows if _index in selected_rows else [_index]
-
-    class Content:
-        def __init__(self, fnDepNode, showName, groupName, useGuide, bakeUV, animation, export):
-            self.showName = showName
-            self.fnDepNode = fnDepNode
-            self.groupName = QtWidgets.QLineEdit()
-            self.groupName.setText(groupName)
-            self.useGuide = SaveXGenDesWindow.MultiSelectCheckBox("useGuide")
-            self.useGuide.setChecked(useGuide)
-            self.bakeUV = SaveXGenDesWindow.MultiSelectCheckBox("bakeUV")
-            self.bakeUV.setChecked(bakeUV)
-            self.animation = SaveXGenDesWindow.MultiSelectCheckBox("animation")
-            self.animation.setChecked(animation)
-            self.export = SaveXGenDesWindow.MultiSelectCheckBox("export")
-            self.export.setChecked(export)
-            self.splineAnimation = False
-            self.writePtexGuideId = False
-            self.regionPtex = ""
-
-    def __init__(self, parent=mayaWindow()):
-        super(SaveXGenDesWindow, self).__init__(parent)
-        self.contentList = []
-        self.save_path = '.'
-        self.bakeMesh = None
-        self.setWindowTitle(u"导出xGen description为UE groom")
-        self.setGeometry(400, 400, 1130, 550)
-        self.buildUI()
-
-    # def showAbout(self):
-    #     QtWidgets.QMessageBox.about(self, "Export XGen to UE Groom",
-    #                                 "A small tool to export XGen to UE Groom, by PDE26jjk. Link:  <a href='https://github.com/PDE26jjk/XGenUEGroomExporter'>https://github.com/PDE26jjk/XGenUEGroomExporter</a>")
-
-    def createFrame(self, labelText):
-        try:
-            frame = om1ui.MQtUtil.findControl(
-                cmds.frameLayout(label=labelText, collapsable=True, collapse=True, manage=True))
-            frame = shiboken.wrapInstance(int(frame), QtWidgets.QWidget)
-            frame.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Maximum)
-            frameLayout = frame.children()[2].children()[0]
-        except:
-            frame = QtWidgets.QFrame(self)
-            frame.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Maximum)
-            frameLayout = QtWidgets.QVBoxLayout(frame)
-            frame.children().append(frameLayout)
-        return frame, frameLayout
-
-    def buildUI(self):
-        main_layout = QtWidgets.QVBoxLayout()
-        # menu_bar = QtWidgets.QMenuBar(self)
-        # # menu_bar.addMenu("Help").addAction("About", self.showAbout)
-        # main_layout.setMenuBar(menu_bar)
-
-        label1 = QtWidgets.QLabel(u"选择Xgen Description")
-        label1.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        hBox = QtWidgets.QHBoxLayout()
-        hBox.setContentsMargins(10, 4, 10, 4)
-        hBox.addWidget(label1)
-
-        self.fillWithSelectList_button = QtWidgets.QPushButton(u"刷新选择的项目")
-        self.fillWithSelectList_button.clicked.connect(self.fillWithSelectList)
-        self.fillWithSelectList_button.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        # main_layout.addWidget(self.fillWithSelectList_button)
-        hBox.addStretch(1)
-        hBox.addWidget(self.fillWithSelectList_button)
-        main_layout.addLayout(hBox)
-
-        self.table = QtWidgets.QTableWidget(self)
-        self.table.setColumnCount(7)
-        self.table.setHorizontalHeaderLabels(["", u"名称", u"组名称", u"使用导线", u"烘焙UV", "u动画", ""])
-        self.table.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.Fixed)
-        self.table.setColumnWidth(0, 40)
-        self.table.setColumnWidth(3, 140)
-        self.table.horizontalHeader().setSectionResizeMode(3, QtWidgets.QHeaderView.Fixed)
-        self.table.setColumnWidth(4, 140)
-        self.table.horizontalHeader().setSectionResizeMode(4, QtWidgets.QHeaderView.Fixed)
-        self.table.setColumnWidth(5, 140)
-        self.table.horizontalHeader().setSectionResizeMode(5, QtWidgets.QHeaderView.Fixed)
-        self.table.setColumnWidth(6, 140)
-        self.table.horizontalHeader().setSectionResizeMode(6, QtWidgets.QHeaderView.Fixed)
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)  # Multi Selection
-        self.table.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
-
-        self.table.setStyleSheet("""
-            QTableView::item
-            {
-              border: 0px;
-              padding: 5px;
-              background-color: rgb(68, 68, 68); 
-            }
-            QTableView::item:selected {
-              background-color: rgb(81, 133, 166); 
-            }
-            QTableView::item QCheckBox {  
-                padding-left:60px;
-            }
-        """)
-
-        self.table.clearContents()
-        self.table.setRowCount(0)
-
-        self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-
-        # self.table.cellClicked.connect(self.update_detail)
-        self.table.selectionModel().selectionChanged.connect(self.update_detail)
-        self.splitter.addWidget(self.table)
-
-        # Detail view on the right
-        self.detail_widget = None
-        self.clear_detail()
-        # self.splitter.setSizes([1,0])
-
-        self.Bakeframe, frameLayout = self.createFrame(labelText=u"烘焙UV")
-
-        self.MeshName = QtWidgets.QLabel("Mesh : ---")
-        hBox = QtWidgets.QHBoxLayout()
-        hBox.setContentsMargins(10, 10, 10, 10)
-        hBox.addWidget(self.MeshName)
-        hBox2 = QtWidgets.QHBoxLayout()
-        label = QtWidgets.QLabel("UV Set : ")
-        hBox2.addWidget(label)
-        self.combo = QtWidgets.QComboBox()
-        self.combo.addItem("     ---     ")
-
-        self.uvSetStr = QtWidgets.QLabel("Selected: None")
-
-        self.combo.currentIndexChanged.connect(self.update_uvset_label)
-        hBox2.addWidget(self.combo)
-        hBox.addStretch(2)
-        hBox.addLayout(hBox2)
-        hBox.addStretch(1)
-
-        frameLayout.addLayout(hBox)
-
-        self.button3 = QtWidgets.QPushButton(u"选择其他网格", self)
-        self.button3.clicked.connect(self.pick_mesh)
-        self.button3.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        frameLayout.addWidget(self.button3)
-
-        self.separator = QtWidgets.QFrame(self)
-        self.separator.setFrameShape(QtWidgets.QFrame.HLine)
-        self.separator.setFrameShadow(QtWidgets.QFrame.Sunken)
-
-        self.AnimationFrame, frameLayout = self.createFrame(labelText=u"动画")
-
-        validator = QtGui.QIntValidator()
-        validator.setRange(0, 99999)
-        self.startFrame = QtWidgets.QLineEdit()
-        self.startFrame.setMaximumWidth(60)
-        self.startFrame.setValidator(validator)
-        self.startFrame.setText(str(0))
-        self.endFrame = QtWidgets.QLineEdit()
-        self.endFrame.setMaximumWidth(60)
-        self.endFrame.setValidator(validator)
-        self.endFrame.setText(str(0))
-        self.preroll = QtWidgets.QCheckBox(u"前滚帧")
-
-        frameLayout.setContentsMargins(10, 10, 10, 10)
-        hBox = QtWidgets.QHBoxLayout()
-        hBox.addWidget(QtWidgets.QLabel(u"帧范围 : "))
-        hBox.addWidget(self.startFrame)
-        hBox.addWidget(QtWidgets.QLabel(" ~ "))
-        hBox.addWidget(self.endFrame)
-        hBox.addStretch(1)
-        hBox2 = QtWidgets.QHBoxLayout()
-        hBox2.addWidget(self.preroll)
-        hBox2.addStretch(1)
-
-        frameLayout.addLayout(hBox)
-        frameLayout.addLayout(hBox2)
-
-        self.SettingFrame, frameLayout = self.createFrame(labelText=u"设置")
-
-        frameLayout.setContentsMargins(10, 10, 10, 10)
-        hBox = QtWidgets.QHBoxLayout()
-        self.createGroupId_cb = QtWidgets.QCheckBox(u"创建组ID")
-        self.createGroupId_cb.setChecked(True)
-        hBox.addWidget(self.createGroupId_cb)
-
-        self.createCardId_cb = QtWidgets.QCheckBox("Create card id same as group name")
-        self.createCardId_cb.setChecked(False)
-        hBox.addWidget(self.createCardId_cb)
-
-        frameLayout.addLayout(hBox)
-
-        self.save_button = QtWidgets.QPushButton(u"导出ABC文件", self)
-        self.save_button.clicked.connect(self.save_abc)
-        self.clear_temp_button = QtWidgets.QPushButton("清理临时数据", self)
-        self.clear_temp_button.clicked.connect(self.clear_temp)
-        # self.cancel_button = QtWidgets.QPushButton("关闭", self)
-        # self.cancel_button.clicked.connect(self.close)
-
-        button_layout = QtWidgets.QHBoxLayout()
-        button_layout.addWidget(self.save_button)
-        button_layout.addWidget(self.clear_temp_button)
-        # button_layout.addWidget(self.cancel_button)
-
-        main_layout.addWidget(self.splitter)
-        main_layout.addWidget(self.Bakeframe)
-        main_layout.addWidget(self.AnimationFrame)
-        main_layout.addWidget(self.SettingFrame)
-        main_layout.addWidget(self.separator)
-        main_layout.addLayout(button_layout)
-
-        self.setLayout(main_layout)
-
-    def clear_detail(self):
-        old_sizes = None
-        if self.detail_widget is not None:
-            old_sizes = self.splitter.sizes()
-            self.detail_widget.setParent(None)
-        self.detail_label = QtWidgets.QLabel(u"选择一个项目查看细节")
-        self.detail_label.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
-        self.detail_widget = QtWidgets.QWidget()
-        self.detail_layout = QtWidgets.QVBoxLayout()
-        self.detail_layout.addWidget(self.detail_label)
-        self.detail_widget.setLayout(self.detail_layout)
-        self.splitter.addWidget(self.detail_widget)
-        # self.detail_widget.setMaximumWidth(1000)
-        if old_sizes is None:
-            self.splitter.setStretchFactor(0, 4)
-            self.splitter.setStretchFactor(1, 1)
+        print("插件导出错误")
+    finally:
+        cmds.unloadPlugin(abc_plugin_name)
+        return res
+
+
+
+calbacks = {}
+
+
+def clear_selection_callback():
+    for _editor in cmds.lsUI(editors=True):
+        if not cmds.outlinerEditor(_editor, query=True, exists=True):
+            continue
+        _sel_cmd = cmds.outlinerEditor(_editor, query=True, selectCommand=True)
+        if not _sel_cmd or not _sel_cmd.startswith('<function selCom at '):
+            continue
+        cmds.outlinerEditor(_editor, edit=True, selectCommand='pass')
+
+def add_selection_changed_callback(name,fun):
+
+    remove_callback(name)
+    calbacks[name] = om.MEventMessage.addEventCallback(
+        "SelectionChanged",
+        fun
+    )
+    MGlobal.displayInfo("callback functin {} has been setted".format(name))
+
+def remove_callback(name):
+
+    if name not in calbacks.keys():
+        return
+    handler = calbacks[name]
+    try:
+        om.MDGMessage.removeCallback(handler)
+    except RuntimeError:
+        return
+    MGlobal.displayInfo("callback functin {} has been removed".format(name))
+
+def is_attr_exists(obj,name):
+    attrs = cmds.listAttr(obj,ud=1) or []
+    return name in attrs
+def safe_set_attr(obj,name,value,type):
+    if not is_attr_exists(obj,name):
+        if type == "string":
+            cmds.addAttr(obj,longName=name, dataType=type, keyable=True)
         else:
-            self.splitter.setSizes(old_sizes)
+            cmds.addAttr(obj,longName=name, at=type, keyable=True)
+    if value == None:
+        return
+    if type == "string":   
+        cmds.setAttr("{}.{}".format(obj,name),value,type=type)
+    else:
+        cmds.setAttr("{}.{}".format(obj,name),value)
+def safe_get_attr(obj,name):
+    if not is_attr_exists(obj,name):
+        return False
+    attr = cmds.getAttr("{}.{}".format(obj,name))
+    if attr == "None":
+        return False
+    return attr
+    
+def get_all_descriptions():
+    descriptions = []
+    palettes = xg.palettes()
+    for palette in palettes:
+        descriptions.extend(xg.descriptions(palette))
+    return descriptions
 
-    def create_detail_checkBox(self, prop):
-        selected_rows = [index.row() for index in self.table.selectionModel().selectedRows()]
-        if len(selected_rows) == 0:
-            return None
-        checkBox = QtWidgets.QCheckBox(self)
-        isTrue = getattr(self.contentList[selected_rows[0]],prop)
-        checkBox.setChecked(isTrue)
-        for row in selected_rows:
-            content = self.contentList[row]
-            if getattr(content,prop) != isTrue:
-                checkBox.setCheckState(QtCore.Qt.CheckState.PartiallyChecked)
-                break
 
-        def onStateChange(state):
-            for row in selected_rows:
-                content = self.contentList[row]
-                setattr(content, prop, state == 2)
+def get_all_splines():
+    inters = []
+    shapes = cmds.ls(typ="xgmSplineDescription")
+    for shape in shapes:
+        inters.append(cmds.listRelatives(shape,ap=1,type='transform')[0])
+    return inters
 
-        checkBox.stateChanged.connect(onStateChange)
-        return checkBox
 
-    def update_detail(self, indices):
-        self.clear_detail()
-        selected_rows = [index.row() for index in self.table.selectionModel().selectedRows()]
-        if len(selected_rows) == 0:
+
+class XGenToolsUI(MayaQWidgetDockableMixin,QWidget):
+    def __init__(self,parent = None):
+        super(XGenToolsUI,self).__init__(parent)
+        #窗口基本属性设置
+        self.resize(400,400)
+        self.setWindowTitle(u"XGen工具")
+        
+        #窗口参数初始化
+        self.groups = []
+        self.currentSelectXgen = None
+        self.currentSelectGuide = None
+        self.currentSelectMesh = None
+        self.followBoneTransform = None
+
+        self.savePath = "."
+
+        #定义属性名称
+        self.attrGroupName = 'GroupName'
+        self.attrGuideGroupName = 'GuideGroupName'
+        self.attrMeshUVName = "MeshUVName"
+        self.attrUVSetIndexName = "MeshUVSetIndex"
+        self.attrIsExport = "IsExport"
+        self.attrCharacterName = "CharachterName"
+        self.attrExportGuideAnim = "GuideAnimation"
+        self.attrExportSplineAnim = "SplineAnimaiton"
+
+        self._initUI()
+        self._init_scence_info()
+        self._updateUI()
+        self.tabMain.currentChanged.connect(self._updateUI)
+
+        self.dec_project_from_file_name()
+    #处理创建和更新UI
+    def _initUI(self):
+        lMain = QVBoxLayout(self)
+        self.setLayout(lMain)
+        lMain.setSpacing(0)
+        lMain.setContentsMargins(5,10,5,0)
+        self.tabMain = QTabWidget(self)
+        self.tabMain.setStyleSheet("""
+        QTabWidget::pane {
+            border: none; /* 移除面板边框 */
+        }
+        
+        /* 可选：移除标签栏下方的线条 */
+        QTabBar::tab {
+            background-color: rgb(55, 55, 55);
+        }
+        """)
+        lMain.addWidget(self.tabMain)
+
+
+        wlDesSettings = WidgetGroup(False,self)
+        wlDesSettings.setContentsMargins(0,5,0,0)
+        wlDesSettings.setSpacing(10)
+        self.tabMain.addTab(wlDesSettings,u"xGen描述设置")
+
+        self.lgDesName = LineEditGroup(u"名称:",label_width=50,parent=self)
+        self.lgDesName.lineEdit.setReadOnly(True)
+        wlDesSettings.addWidget(self.lgDesName)
+
+        self.cbDesGroupName = ComboxGroup(u"组名称:",50,self)
+        self.cbDesGroupName.textChanged.connect(self._on_group_changed)
+        wlDesSettings.addWidget(self.cbDesGroupName)
+        
+
+
+
+        wdAddNewGroup = QWidget(self)
+        lyAddNewGroup = QHBoxLayout(wdAddNewGroup)
+        wlDesSettings.addWidget(wdAddNewGroup)
+        lyAddNewGroup.setContentsMargins(0,0,0,0)
+        lyAddNewGroup.setSpacing(10)
+
+
+        self.leNewGroupName = QLineEdit(self)
+        self.leNewGroupName.returnPressed.connect(self._add_new_group)
+        lyAddNewGroup.addWidget(self.leNewGroupName)
+
+        pbAddnewGroup = QPushButton(text=u"添加新组",parent=self)
+        pbAddnewGroup.clicked.connect(self._add_new_group)
+        lyAddNewGroup.addWidget(pbAddnewGroup)
+
+
+        wlDesSettings.addWidget(Line(True,1,self))
+
+        pbConvertToInteractive = QPushButton(text=u"转换为交互式",parent=self)
+        pbConvertToInteractive.clicked.connect(self._convert_to_interactivate)
+
+        wlDesSettings.addWidget(pbConvertToInteractive)
+
+
+
+        wlSplineSetting = WidgetGroup(False,self)
+        wlSplineSetting.setContentsMargins(0,5,0,0)
+        self.tabMain.addTab(wlSplineSetting,u"交互式毛发设置")
+
+        #选择项目
+        wlSplineSetting.addWidget(QLabel(u"项目名称:"))
+        self.cb_project = QComboBox()
+        self.cb_project.addItems(ML.PROJECTINFO.keys())
+        wlSplineSetting.addWidget(self.cb_project)
+
+
+        #基础信息设置
+        self.leSplineName = LineEditGroup(u"名称:",label_width=50,parent=self)
+        self.leSplineName.lineEdit.setReadOnly(True)
+        wlSplineSetting.addWidget(self.leSplineName)
+
+
+
+
+        
+        self.lgSplineGroupName = LineEditGroup(u"组名称:",label_width=50,parent=self)
+        self.lgSplineGroupName.lineEdit.setReadOnly(True)
+        wlSplineSetting.addWidget(self.lgSplineGroupName)
+
+        wlExportState = WidgetGroup(True,wlSplineSetting)
+
+
+        #self.chbIsExport = QCheckBox(text=u"是否导出",parent=self)
+        #self.chbIsExport.stateChanged.connect(self._on_isexport_state_changed)
+
+        self.chbExportGuideAnim = QCheckBox(text=u"导线动画",parent=self)
+        self.chbExportGuideAnim.stateChanged.connect(self._on_export_guide_anim_state_changed)
+
+        self.chbExportSplineAnim = QCheckBox(text=u"曲线动画",parent=self)
+        self.chbExportSplineAnim.stateChanged.connect(self._on_export_spline_anim_state_changed)
+        
+        #wlExportState.addWidget(self.chbIsExport)
+        wlExportState.addWidget(self.chbExportGuideAnim)
+        wlExportState.addWidget(self.chbExportSplineAnim)
+
+
+        wlSplineSetting.addWidget(Line(True,1,self))
+
+        #导线设置
+        self.leSplineGuideName = LineEditGroup(u"导线名称:",label_width=50,parent=self)
+        self.leSplineGuideName.lineEdit.setReadOnly(True)
+        wlSplineSetting.addWidget(self.leSplineGuideName )
+
+
+        wlGuideButtons = WidgetGroup(True,wlSplineSetting)
+        wlGuideButtons.setAlignment(Qt.AlignCenter)
+
+        pbAssignGuide = QPushButton(text=u"指定导线",parent=self)
+        pbAssignGuide.clicked.connect(self._assign_guide_group)
+        wlGuideButtons.addWidget(pbAssignGuide)
+
+        pbClearGuide = QPushButton(text=u"清除导线",parent=self)
+        pbClearGuide.clicked.connect(self._clear_guide)
+        wlGuideButtons.addWidget(pbClearGuide)
+
+        pbSelectGuide = QPushButton(text=u"选择导线",parent=self)
+        pbSelectGuide.clicked.connect(self._select_guide)
+        wlGuideButtons.addWidget(pbSelectGuide)
+
+        wlSplineSetting.addWidget(Line(True,1,self))
+
+        #烘焙Mesh UV设置
+        # wlMeshUV = WidgetGroup(True,wlSplineSetting)
+
+        # self.leMeshUV = LineEditGroup(u"烘焙UV:",label_width=50,parent=self)
+        # self.leMeshUV.lineEdit.setReadOnly(True)
+        # self.cbMeshUVSet = ComboxGroup(u"UV集:",30,self)
+        # self.cbMeshUVSet.setMaximumWidth(100)
+
+        # wlMeshUV.addWidget(self.leMeshUV)
+        # wlMeshUV.addWidget(self.cbMeshUVSet)
+
+        # pbAssignNewMesh = QPushButton(text=u"指定Mesh",parent=self)
+        # pbAssignNewMesh.clicked.connect(self._assign_new_mesh)
+        # wlSplineSetting.addWidget(pbAssignNewMesh)
+
+        # wlSplineSetting.addWidget(Line(True,1,self))
+
+
+        #动画和导出
+        #wlCharacter = WidgetGroup(True,wlSplineSetting)
+
+        #self.cbExportCharacter = ComboxGroup(u"导出的角色:",80,wlCharacter)
+        #pbRefreshCharacterList = QPushButton(text=u"刷新列表",parent=self)
+        #pbRefreshCharacterList.clicked.connect(self._refresh_character_list)
+        #wlCharacter.addWidget(pbRefreshCharacterList)
+
+
+        #wlIndex = WidgetGroup(True,wlSplineSetting)
+        #wlIndex.addWidget(QLabel(text=u"毛发索引:"))
+
+        # self.sbHairIndex = QSpinBox(self)
+        # self.sbHairIndex.setMinimumWidth(100)
+        # self.sbHairIndex.setMaximum(50)
+        # self.sbHairIndex.setValue(1)
+        # self.sbHairIndex.setMinimum(1)
+
+        # wlIndex.addWidget(self.sbHairIndex)
+
+        self.lw_groom_groups = QListWidget(self)
+        self.lw_groom_groups.setSelectionMode(QListWidget.ExtendedSelection)
+        wlSplineSetting.addWidget(self.lw_groom_groups)
+
+
+        widgetExportPath = WidgetGroup(True,wlSplineSetting)
+        self.leExportPath = LineEditGroup(u"导出路径:",label_width=80,parent=self)
+        widgetExportPath.addWidget(self.leExportPath)
+        self.pbSelectPath = QPushButton(text=u"选择",parent = self)
+        self.pbSelectPath.clicked.connect(self.selectExportPath)
+        widgetExportPath.addWidget(self.pbSelectPath)
+
+        pbExportStatic = QPushButton(text=u"导出静态毛发",parent=self)
+        pbExportStatic.clicked.connect(lambda:self._export_as_abc(True))
+        wlSplineSetting.addWidget(pbExportStatic)
+
+        wlSplineSetting.addWidget(Line(True,1,self))
+
+        # wlSelectBone = WidgetGroup(True,wlSplineSetting)
+        # self.leLockBoneName = LineEditGroup(u"要跟随的骨骼:",label_width=80,parent=self)
+        # self.leLockBoneName.lineEdit.setReadOnly(True)
+        # wlSelectBone.addWidget(self.leLockBoneName)
+
+        # pbAssingBone = QPushButton(text=u"指定骨骼",parent=self)
+        # pbAssingBone.clicked.connect(self._pick_bone)
+        # wlSelectBone.addWidget(pbAssingBone)
+
+        wlFrameRange = WidgetGroup(True,wlSplineSetting)
+        wlFrameRange.addWidget(QLabel(text=u"帧范围:",parent=self))
+        self.sbFrameStart = QSpinBox(self)
+        self.sbFrameStart.setButtonSymbols(QSpinBox.NoButtons)
+        self.sbFrameStart.setMinimumWidth(100)
+        self.sbFrameStart.setMaximum(99999)
+        self.sbFrameStart.setMinimum(-9999)
+
+        wlFrameRange.addWidget(self.sbFrameStart)
+        wlFrameRange.addWidget(QLabel(text=u" ~ ",parent=self))
+        self.sbFrameEnd = QSpinBox(self)
+        self.sbFrameEnd.setButtonSymbols(QSpinBox.NoButtons)
+        self.sbFrameEnd.setMinimumWidth(100)
+        self.sbFrameEnd.setMaximum(99999)
+        self.sbFrameEnd.setMinimum(-9999)
+
+        wlFrameRange.addWidget(self.sbFrameEnd)
+
+
+        wlFrameExpend = WidgetGroup(True,wlSplineSetting)
+
+        wlFrameExpend.addWidget(QLabel(text=u"向前扩展:"))
+        
+        self.sbFrameExpendStart = QSpinBox(self)
+        self.sbFrameExpendStart.setButtonSymbols(QDoubleSpinBox.NoButtons)
+        self.sbFrameExpendStart.setMinimumWidth(100)
+        self.sbFrameExpendStart.setMaximum(50)
+        self.sbFrameExpendStart.setValue(0)
+        self.sbFrameExpendStart.setMinimum(0)
+
+        wlFrameExpend.addWidget(self.sbFrameExpendStart)
+
+        wlFrameExpend.addWidget(QLabel(text=u"向后扩展:"))
+
+        self.sbFrameExpendEnd = QSpinBox(self)
+        self.sbFrameExpendEnd.setButtonSymbols(QDoubleSpinBox.NoButtons)
+        self.sbFrameExpendEnd.setMinimumWidth(100)
+        self.sbFrameExpendEnd.setMaximum(50)
+        self.sbFrameExpendEnd.setValue(1)
+        self.sbFrameExpendEnd.setMinimum(0)
+
+        wlFrameExpend.addWidget(self.sbFrameExpendEnd)
+        
+
+        self.refreshPerFrame = QCheckBox(text=u"逐帧刷新毛发")
+        self.refreshPerFrame.setChecked(True)
+        wlSplineSetting.addWidget(self.refreshPerFrame)
+
+
+
+
+
+
+        pbExportGroom = QPushButton(text=u"导出缓存",parent=self)
+        pbExportGroom.clicked.connect(self._export_as_abc)
+        wlSplineSetting.addWidget(pbExportGroom)
+
+
+
+        pbExportGroom = QPushButton(text=u"打开导出目录",parent=self)
+        pbExportGroom.clicked.connect(lambda:os.startfile(self._get_root_path()))
+        wlSplineSetting.addWidget(pbExportGroom)
+    def selectExportPath(self):
+        folder = QFileDialog.getExistingDirectory(self, '选择需要执行的文件夹',self.savePath)
+        if not folder:
             return
-        content = self.contentList[selected_rows[0]]
-        is_multi_selected = len(self.table.selectionModel().selectedRows()) > 1
-        vBox = QtWidgets.QVBoxLayout()
-        self.detail_layout.addLayout(vBox)
-        vBox2 = QtWidgets.QVBoxLayout()
-        self.detail_layout.addLayout(vBox2)
-        vBox2.addStretch(1)
+        self.savePath = folder
+        self.leExportPath.setText(folder)
+    def DeterminNodeIsGuide(self,node):
+        """
+        判断一个给定的字符串代表的maya节点是不是导线节点
+        Args:
+            node:字符串,maya节点的名称
+        
+        Returns:
+            bool:是否是导线节点
+        """
+        dagNode = MGlobal.getSelectionListByName(node).getDependNode(0)
+        itdag = om.MItDag()
+        itdag.reset(dagNode,om.MItDag.kDepthFirst,om.MFn.kCurve)
+        while not itdag.isDone():
+            dn = om.MFnDependencyNode(itdag.currentItem())
+            if dn.typeName == "nurbsCurve":
+                return True
+            itdag.next()
+        return False
+    
+    def dec_project_from_file_name(self):
+        file_name = cmds.file(q=True, sn=True)
+        index = 0
+        for i,key in enumerate(ML.PROJECTINFO.keys()):
+            if key.split("-")[-1].lower() in file_name.lower():
+                index = i
+        self.cb_project.setCurrentIndex(index)
+    def DeterminNodeIsMesh(self,node):
+        """
+        判断一个给定的字符串代表的maya节点是不是网格
+        Args:
+            node:字符串,maya节点的名称
+        
+        Returns:
+            bool:是否是网格
+        """
+        dagNode = MGlobal.getSelectionListByName(node).getDependNode(0)
+        itdag = om.MItDag()
+        itdag.reset(dagNode,om.MItDag.kDepthFirst,om.MFn.kMesh)
+        while not itdag.isDone():
+            dn = om.MFnDependencyNode(itdag.currentItem())
+            if dn.typeName == "mesh":
+                return True
+            itdag.next()
+        return False
+    
 
-        self.detail_label.setText(content.showName if not is_multi_selected else "--")
-        self.detail_label.setStyleSheet('font-weight:bold;margin-bottom:20px')
-        self.detail_label.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignCenter)  # 设置对齐方式
+    def _updateUI(self,*args):
+        MGlobal.displayInfo("update UI")
+        self.currentSelectXgen = []
+        self.currentSelectGuide = None
+        self.currentSelectMesh = None
+        selections = cmds.ls(sl=1)
+        if self.tabMain.currentIndex() == 0:
+            #设置当前组信息
+            self.cbDesGroupName.set_current_index(0)
+            if len(selections) == 0:
+                self.lgDesName.setText(u"请选择Xgen描述节点")
+                return
+            for obj in selections:
+                if obj not in get_all_descriptions():
+                    self.lgDesName.setText(u"请选择Xgen描述节点")
+                    return
+            self.currentSelectXgen = selections
+            self._update_page_des_setting()
+        elif self.tabMain.currentIndex() == 1:
+            self._clear_spline_page()
+            if len(selections) == 0:
+                self.leSplineName.setText(u"请选择交互式毛发")
+                return
+            for sel in selections:
+                if self.DeterminNodeIsGuide(sel):
+                    self.currentSelectGuide = sel
+                elif self.DeterminNodeIsMesh(sel):
+                    self.currentSelectMesh = sel
+                    print("find a mesh")
+                elif sel in get_all_splines():
+                    self.currentSelectXgen.append(sel)
+                else:
+                    pass
+            if len(self.currentSelectXgen) == 0:
+                self.leSplineName.setText(u"请选择交互式毛发")
+                return
+            
+            self._update_page_spline_setting()
+    def _clear_spline_page(self):
+        self.leSplineName.clear()
+        self.lgSplineGroupName.clear()
+        self.leSplineGuideName.clear()
+        #self.leMeshUV.clear()
+        #self.cbMeshUVSet.clear()
+    def _update_page_spline_setting(self):
+        if len(self.currentSelectXgen) == 1:
+            
+            currentXgen = self.currentSelectXgen[0]
 
-        write_spline_animation = self.create_detail_checkBox('splineAnimation')
-        write_spline_animation.setText(u"写入曲线动画")
-        write_spline_animation.setToolTip(
-            "If writes animation, also write spline animation, not just the animation of guides.")
+            self.leSplineName.setText(str(currentXgen))
+            groupName = safe_get_attr(currentXgen,self.attrGroupName)
+            isExport = safe_get_attr(currentXgen,self.attrIsExport)
+            isExportGuideAnim = safe_get_attr(currentXgen,self.attrExportGuideAnim)
+            isExportSplineAnim = safe_get_attr(currentXgen,self.attrExportSplineAnim)
+            self.lgSplineGroupName.setText(groupName)
+            GuideGroupName = cmds.listConnections(currentXgen+"."+self.attrGuideGroupName)[0]
 
-        vBox.addWidget(write_spline_animation)
+            if not GuideGroupName:
+                self.leSplineGuideName.setText("None")
+            else:
+                self.leSplineGuideName.setText(GuideGroupName)
 
-        write_guide_id_cb = self.create_detail_checkBox('writePtexGuideId')
-        write_guide_id_cb.setText(u"从ptex文件中写入导线ID")
-        write_guide_id_cb.setToolTip(
-            "Experimental feature, only supports versions up to UE5.3, writes properties such as groom_closest_guides.")
+            #self.chbIsExport.setChecked(isExport)
+            self.chbExportGuideAnim.setChecked(isExportGuideAnim)
+            self.chbExportSplineAnim.setChecked(isExportSplineAnim)
 
-        # vBox.setContentsMargins(0,0,10,10)
-        vBox.addWidget(write_guide_id_cb)
+        
 
-        if not is_multi_selected:
-            label = QtWidgets.QLabel(u'选择 .ptx 文件:')
-            # label.setStyleSheet('font-size:16px')
-            vBox.addWidget(label)
-            def setPath(text):
-                content.regionPtex = text
+            #meshName = cmds.listConnections(currentXgen+"."+self.attrMeshUVName)[0]
 
-            RegionPtex = FileSelectorWidget(setPath)
-            RegionPtex.set_file_path(content.regionPtex)
-            vBox.addWidget(RegionPtex)
+            #self.leMeshUV.setText(meshName)
+            #meshUVSetIndex = safe_get_attr(currentXgen,self.attrUVSetIndexName) or 0
+            #uvSets = self._get_uv_sets(meshName)
+            # self.cbMeshUVSet.add_items(uvSets)
+            # self.cbMeshUVSet.set_current_index(meshUVSetIndex)
+        else:
+            name = ""
+            isExport = True
+            guideAnim = True
+            SplineAnim = True
+            groupName = ""
+            for currentXgen in self.currentSelectXgen:
+                name = name + ";" + str(currentXgen);
+                if not safe_get_attr(currentXgen,self.attrIsExport):
+                    isExport = False
+                if not safe_get_attr(currentXgen,self.attrExportGuideAnim):
+                    guideAnim = False
+                if not safe_get_attr(currentXgen,self.attrExportSplineAnim):
+                    SplineAnim = False
+                if groupName == "":
+                    groupName = safe_get_attr(currentXgen,self.attrGroupName)
+                elif groupName == False:
+                    pass
+                else:
+                    if groupName != safe_get_attr(currentXgen,self.attrGroupName):
+                        groupName = False
 
-            self.splitter.addWidget(self.detail_widget)
+            self.leSplineName.setText(name)
+            #self.chbIsExport.setChecked(isExport)
+            self.chbExportGuideAnim.setChecked(guideAnim)
+            self.chbExportSplineAnim.setChecked(SplineAnim)
+            if groupName:
+                self.lgSplineGroupName.setText(groupName)
+    def _update_page_des_setting(self):
+        #更新名称和组信息
+        textName = self.currentSelectXgen[0]
+        for xgen in self.currentSelectXgen[1:]:
+            textName = textName + "," + str(xgen) 
+        self.lgDesName.setText(textName)
 
-    def pick_mesh(self):
-        selectionList = om2.MGlobal.getActiveSelectionList()
+        if len(self.currentSelectXgen) == 1:
+            groupName = safe_get_attr(self.currentSelectXgen[0],self.attrGroupName)
+        else:
+            groupName = False
+
+        if not groupName:
+            self.cbDesGroupName.set_current_index(0)
+        else:
+            index = self.groups.index(groupName)
+            self.cbDesGroupName.set_current_index(index+1)
+    def _update_cb_groups(self):
+        #更新用于选择组的combox
+        self.cbDesGroupName.clear()
+        self.cbDesGroupName.add_item(" ")
+        self.cbDesGroupName.add_items(self.groups)
+    #处理按键功能
+    def _refresh_character_list(self):
+        self.cbExportCharacter.clear()
+        #获取场景中所有的角色
+        self.cbExportCharacter.add_items(self._get_all_character_names())
+        pass
+    def _add_new_group(self):
+        newGroupName = self.leNewGroupName.text()
+        if not newGroupName:
+            return
+        if newGroupName not in self.groups:
+            self.groups.append(newGroupName)
+            self._update_cb_groups()
+        self.leNewGroupName.clear()
+    def _on_group_changed(self,text):
+        if not self.currentSelectXgen:
+            return
+        for xgen in self.currentSelectXgen:
+            if text == " ":
+                safe_set_attr(xgen,self.attrGroupName,"","string")
+            else:
+                safe_set_attr(xgen,self.attrGroupName,text,"string")
+    def _select_guide(self):
+        if len(self.currentSelectXgen)>1:
+            MGlobal.displayWarning("More than one object has been selected!")
+            return
+        currentXgen = self.currentSelectXgen[0]
+        guide = cmds.listConnections(currentXgen + "." + self.attrGuideGroupName)[0]
+        if not guide:
+            return
+        cmds.select(cl=1)
+        cmds.select(guide)
+    def _clear_guide(self):
+
+        if len(self.currentSelectXgen)>1:
+            MGlobal.displayWarning("More than one object has been selected!")
+            return
+        currentXgen = self.currentSelectXgen[0]
+
+        currentGuide = cmds.listConnections(currentXgen+"."+self.attrGuideGroupName)[0]
+        if not currentGuide:
+            return
+        cmds.disconnectAttr(currentGuide +".message",currentXgen+"."+self.attrGuideGroupName)
+        self._updateUI()
+    def _assign_guide_group(self):
+        if not self.currentSelectGuide:
+            return##如果当前导线不存在的话就跳过
+        
+        if len(self.currentSelectXgen)>1:
+            MGlobal.displayWarning("More than one object has been selected!")
+            return
+        currentXgen = self.currentSelectXgen[0]
+        currentGuide = cmds.listConnections(currentXgen+"."+self.attrGuideGroupName)[0]
+        if currentGuide:
+            cmds.disconnectAttr(currentGuide +".message",currentXgen+"."+self.attrGuideGroupName)
+        cmds.connectAttr(self.currentSelectGuide +".message",currentXgen+"."+self.attrGuideGroupName)
+        self._updateUI()
+    def _pick_bone(self):
+        selectionList = om.MGlobal.getActiveSelectionList()
         if selectionList.length() > 0:
             dag_path = selectionList.getDagPath(0)
-            fnDepNode = om2.MFnDependencyNode(dag_path.node())
-            itDag = om2.MItDag()
-            # find mesh
-            itDag.reset(fnDepNode.object(), om2.MItDag.kDepthFirst, om2.MFn.kMesh)
-            while not itDag.isDone():
-                meshPath = om2.MDagPath.getAPathTo(itDag.currentItem())
-                mesh = om2.MFnMesh(meshPath)
-                self.setBakeMesh(mesh)
-                break
-
-    def update_uvset_label(self):
-        selected_option = self.combo.currentText()
-        self.uvSetStr.setText(selected_option)
-
-    def clear_temp(self):
-        deleteSaveXGenDesWindowParent()
-
-    def save_abc(self):
-        if len(self.contentList) == 0:
-            print("No content")
+            self.followBoneTransform = om.MFnTransform(dag_path)
+            self.leLockBoneName.setText(self.followBoneTransform.name())
+    def _assign_new_mesh(self):
+        if not self.currentSelectMesh:
             return
-        file_path = cmds.fileDialog2(
-            caption="Save Alembic File",
-            fileMode=0,
-            okCaption="save",
-            startingDirectory=self.save_path,
-            ff='Alembic Files (*.abc);;All Files (*)'
-        )
-        if file_path:
-            self.save_path = file_path[0]
+        
+        if len(self.currentSelectXgen)>1:
+            MGlobal.displayWarning("More than one object has been selected!")
+            return
+        currentXgen = self.currentSelectXgen[0]
+
+        safe_set_attr(currentXgen,self.attrMeshUVName,str(self.currentSelectGuide),"string")
+        safe_set_attr(currentXgen,self.attrUVSetIndexName,0,"short")
+        self._updateUI()
+    def _on_isexport_state_changed(self,state):
+        for currentXgen in self.currentSelectXgen:
+            safe_set_attr(currentXgen,self.attrIsExport,bool(state),"bool")
+    def _on_export_guide_anim_state_changed(self,state):
+        for currentXgen in self.currentSelectXgen:
+            safe_set_attr(currentXgen,self.attrExportGuideAnim,bool(state),"bool")
+    def _on_export_spline_anim_state_changed(self,state):
+        for currentXgen in self.currentSelectXgen:
+            safe_set_attr(currentXgen,self.attrExportSplineAnim,bool(state),"bool")
+    def _convert_to_interactivate(self):
+        descriptions = get_all_descriptions()
+        interactiveGroupName = "interactives"
+        if cmds.objExists(interactiveGroupName):
+            cmds.delete(interactiveGroupName,hi="below")
+        interactiveGroup = cmds.createNode('transform', name=interactiveGroupName)
+
+
+        guideGroupName = "guides"
+        if cmds.objExists(guideGroupName):
+            cmds.delete(guideGroupName,hi="below")
+        guideGroup = cmds.createNode('transform', name=guideGroupName)
+
+        for description in descriptions:
+            palette = xg.palette(description)
+            groupName = safe_get_attr(description,'GroupName') or "HairGroup"
+            meshName = self._get_bound_mesh(description)
+            cmds.select(description,r=1)
+            curve_group_name = description+"_guides"
+            mel.eval('xgmCreateCurvesFromGuidesOption(0, 0, "{}")'.format(curve_group_name))
+            curve_group = cmds.ls(curve_group_name)
+            cmds.parent(curve_group,guideGroup)
+
+            interactive_shape = cmds.xgmGroomConvert(description)
+            interactive_transfrom = cmds.listRelatives(interactive_shape,ap=1,type='transform')[0]
+            cmds.parent(interactive_transfrom,interactiveGroup)
+
+            safe_set_attr(interactive_transfrom,self.attrGroupName,groupName,"string")
+            safe_set_attr(interactive_transfrom,self.attrCharacterName,palette,"string")
+            safe_set_attr(interactive_transfrom,self.attrUVSetIndexName,0,"short")
+            safe_set_attr(interactive_transfrom,self.attrIsExport,True,"bool")
+            
+            safe_set_attr(interactive_transfrom,self.attrExportGuideAnim,True,"bool")
+            safe_set_attr(interactive_transfrom,self.attrExportSplineAnim,False,"bool")
+
+
+
+            safe_set_attr(interactive_transfrom,self.attrGuideGroupName,None,"message")
+            cmds.connectAttr(curve_group_name+".message",interactive_transfrom+"."+self.attrGuideGroupName)
+
+            safe_set_attr(interactive_transfrom,self.attrMeshUVName,None,"message")
+            cmds.connectAttr(meshName+".message",interactive_transfrom+"."+self.attrMeshUVName)
+
+
+            cmds.delete("xgGroom")
+
+        QMessageBox.information(self,u"提示",u"交互式转换完成")
+    def _get_scene_name(self):
+        sceneName =  ML.getScenename_real()
+        if "Ep" in sceneName and "sc" in sceneName:
+            sceneNameParts = sceneName.split("_")
+            sceneName = "{}_{}_{}".format(sceneNameParts[0],sceneNameParts[1],sceneNameParts[2])
         else:
+            sceneName = ""
+        
+        return sceneName
+    
+    def _get_root_path(self):
+        sceneName = self._get_scene_name()
+        try:
+            ep,sc,cam = sceneName.split("_")[0:3]
+        except ValueError:
+            MGlobal.displayError(u"当前文件名不正确,修正后重试")
             return
-        selectionList = om2.MGlobal.getActiveSelectionList()
-        startTime = time.time()
-        oldCurTime = omAnim.MAnimControl.currentTime()
-        archive = abc.OArchive(str(file_path[0]))
+        root_path = list(ML.PROJECTINFO.values())[self.cb_project.currentIndex()].format(ep,"nHair_nCache",sc,"{}_{}_{}".format(ep,sc,cam))
+        #确定根文件夹存在
+        if not os.path.exists(root_path):
+            os.makedirs(root_path)
+        return root_path
+    def _export_as_abc(self,isStatic=False):
+        sceneName = self._get_scene_name()
+        
+        select_groom_groups = [item.text() for item in self.lw_groom_groups.selectedItems()]
 
-        anyAnimation = False
-        for item in self.contentList:
-            if item.export.isChecked():
-                hasAnimation = item.animation.isChecked()
-                if hasAnimation:
-                    anyAnimation = True
-
-        if anyAnimation:
-            frameRange = [int(self.startFrame.text()), int(self.endFrame.text())]
-            if (frameRange[0] > frameRange[1]
-                    or frameRange[0] < omAnim.MAnimControl.minTime().value
-                    or frameRange[1] > omAnim.MAnimControl.maxTime().value):
-                raise ValueError("Frame out of range.")
-            # frameRange[0] = int(max(frameRange[0], omAnim.MAnimControl.minTime().value))
-            # frameRange[1] = int(min(frameRange[1], omAnim.MAnimControl.maxTime().value))
-
-            sec = om2.MTime(1, om2.MTime.kSeconds)
-            spf = 1.0 / sec.asUnits(om2.MTime.uiUnit())
-            timeSampling = abcA.TimeSampling(spf, spf * frameRange[0])
-
-            timeIndex = archive.addTimeSampling(timeSampling)
-        proxyList = []  # All Alembic content should be destroyed at the end of the method, otherwise it will not be written to the file
-        setGroomGuideIdStartIndex(0)
-        for item in self.contentList:
-            if item.export.isChecked():
-                fnDepNode = item.fnDepNode
-                needBakeUV = item.bakeUV.isChecked()
-                hasAnimation = item.animation.isChecked()
-                useGuide = item.useGuide.isChecked()
-                if hasAnimation:
-                    curveObj = abcGeom.OCurves(archive.getTop(), str(fnDepNode.name()), timeIndex)
-                else:
-                    curveObj = abcGeom.OCurves(archive.getTop(), str(fnDepNode.name()))
-                xgenProxy = XGenProxyEveryFrame(curveObj, item.fnDepNode, needBakeUV | useGuide, item.splineAnimation)
-                xgenProxy.needBakeUV = needBakeUV
-                xgenProxy.write_group_name(item.groupName.text())
-                if useGuide:
-                    # guides = GuidesToCurves(item.fnDepNode)
-                    guideName = fnDepNode.name() + "_guide"
-                    if hasAnimation:
-                        curveObj = abcGeom.OCurves(archive.getTop(), str(guideName), timeIndex)
-                    else:
-                        curveObj = abcGeom.OCurves(archive.getTop(), str(guideName))
-                    guideProxy = GuideProxy(curveObj, fnDepNode, False, hasAnimation)
-                    guideProxy.write_group_name(item.groupName.text())
-                    guideProxy.write_is_guide(True)
-                    proxyList.append(guideProxy)
-                    guideProxy.set_xgen_proxy_and_ptex(xgenProxy, item.regionPtex)
-                    guideProxy.writePtexGuideId = item.writePtexGuideId
-                proxyList.append(xgenProxy)  # after guides, for baking
-        # return
-        if len(proxyList) == 0:
-            print("No content")
-            om2.MGlobal.setActiveSelectionList(selectionList)
+        if len(select_groom_groups) == 0:
+            QMessageBox.warning(self, u"警告", u"未选择任何毛发组")
             return
 
-        if self.createGroupId_cb.isChecked():
-            groupIds = dict()
-            currentId = 0
-            for proxy in proxyList:
-                if proxy.groupName not in groupIds:
-                    groupIds[proxy.groupName] = currentId
-                    currentId += 1
-                proxy.write_group_id(groupIds[proxy.groupName])
-
-        if anyAnimation:
-            if self.preroll.isChecked():
-                for frame in range(int(omAnim.MAnimControl.minTime().value), frameRange[0]):
-                    om1.MGlobal.viewFrame(frame)
-            for frame in range(frameRange[0], frameRange[1] + 1):
-                om1.MGlobal.viewFrame(frame)
-                for item in proxyList:
-                    if frame == frameRange[0]:
-                        item.write_first_frame()
-                    elif item.animation:
-                        item.write_frame()
-            omAnim.MAnimControl.setCurrentTime(oldCurTime)
+        #获取基础信息
+        refreshHair = self.refreshPerFrame.isChecked()
+        if isStatic:
+            frameStart = 0
+            frameEnd = 1
+            frameExpendForward = 0
+            frameExpendBackward = 0
+            root_path = self.leExportPath.text
+            if not root_path:
+                QMessageBox.warning(self,u"警告",u"未设置导出目录")
+                return
         else:
-            for item in proxyList:
-                item.write_first_frame()
-        for item in proxyList:
-            item.bake_uv(self.bakeMesh, self.uvSetStr.text())
-            if isinstance(item, GuideProxy):
-                item.write_guide_id_from_ptex()
-        print("Data has been saved in %s, it took %.2f seconds." % (file_path[0], time.time() - startTime))
-        om2.MGlobal.setActiveSelectionList(selectionList)
-        return file_path[0]
+            frameStart = self.sbFrameStart.value()
+            frameEnd = self.sbFrameEnd.value()
+            frameExpendForward = self.sbFrameExpendStart.value()
+            frameExpendBackward = self.sbFrameExpendEnd.value()
+            root_path = self._get_root_path()
 
-    def fillWithSelectList(self):
-        self.clear_detail()
-        self.contentList = []
-        selectionList = om2.MGlobal.getActiveSelectionList()
-        contentList = []
-        for i in range(selectionList.length()):
-            dag_path = selectionList.getDagPath(i)
-            fnDepNode = om2.MFnDependencyNode(dag_path.node())
-            if fnDepNode.typeName == 'xgmPalette':
+
+        jobs = []
+        file_paths = []
+        export_nodes = []
+        #遍历毛发组
+        for groom_group in select_groom_groups:
+            xgen_nodes = cmds.listRelatives(groom_group,type="transform")
+            if not xgen_nodes:
+                MGlobal.displayWarning("There is no xgen node in group :{}".format(groom_group))
                 continue
-            itDag = om2.MItDag()
-            # find xgen description
-            itDag.reset(fnDepNode.object(), om2.MItDag.kDepthFirst, om2.MFn.kNamedObject)
-            xgDes = None
-            while not itDag.isDone():
-                dn = om2.MFnDependencyNode(itDag.currentItem())
-                if dn.typeName == 'xgmDescription':
-                    xgDes = dn
-                    break
-                itDag.next()
-            if xgDes is not None:
-                content = SaveXGenDesWindow.Content(xgDes, fnDepNode.name(), fnDepNode.name(), True,
-                                                    False, False, True)
-                content.regionPtex = getClumpingPtexPath(fnDepNode)
-                contentList.append(content)
-                boundMesh = self.findBoundMesh(xgDes)
-                if boundMesh is not None:
-                    self.setBakeMesh(boundMesh)
+            export_nodes.extend(xgen_nodes)
+            #去除命名空间
+            groom_group = groom_group.split(":")[-1]
+            character_name,index = groom_group.split("_Hair")
+            index = index.replace("_BD","")
 
-        self.table.setRowCount(len(contentList))
-        for row in range(len(contentList)):
-            self.table.setCellWidget(row, 0, contentList[row].export)
-            contentList[row].export.setStyleSheet("padding-left:8px")
-            item = QtWidgets.QTableWidgetItem(contentList[row].showName)
-            item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable)
-            self.table.setItem(row, 1, item)
 
-            self.table.setCellWidget(row, 2, contentList[row].groupName)
-            self.table.setCellWidget(row, 3, contentList[row].useGuide)
-            self.table.setCellWidget(row, 4, contentList[row].bakeUV)
-            self.table.setCellWidget(row, 5, contentList[row].animation)
+            if isStatic:
+                fileName = "{}_Hair{}_BD.abc".format(character_name,index)
+            else:
+                fileName = "{}_{}_Hair{}_{}-{}_hCache.abc".format(sceneName,character_name,index,1,frameEnd + frameExpendForward + frameExpendBackward)
 
-        self.contentList = contentList
+            MGlobal.displayInfo("\nExport Group:{}\nCharacter Name:{}\nindex:{}\nRootPath:{}\nFileName:{}".format(groom_group,character_name,index,root_path,fileName))
 
-    def findBoundMesh(self, xgDes):
-        itDg = om2.MItDag()
-        itDg.reset(om2.MFnDagNode(xgDes.object()).parent(0), om2.MItDag.kDepthFirst, om2.MFn.kPluginShape)
+            file_path = os.path.normpath(os.path.join(root_path,fileName))
+            file_paths.append(file_path)
+
+            job = ""
+            for node in xgen_nodes:
+                job = job + node + ","
+            jobs.append(job)
+        
+        while True:
+            tempPath = os.path.join(tempfile.gettempdir(),str(time.time()).split(".")[0]+".abc")
+            if not os.path.exists(tempPath):
+                break
+            time.sleep(1)
+
+        result = ExportAbc(jobs, frameStart, frameEnd, 1, frameExpendForward, frameExpendBackward,
+                    file_paths, refreshHair)
+
+        QMessageBox.information(self, u"提示", u"ABC导出完成")
+
+    def _get_uv_sets(self,meshpath):
+        sl = MGlobal.getSelectionListByName(meshpath).getDagPath(0)
+        mesh = om.MFnMesh(sl)
+        return mesh.getUVSetNames()
+    
+    def _init_groom_group(self):
+        transforms = cmds.ls(type="transform")
+        groom_root_group = [tran for tran in transforms if "interactives" in tran]
+        groom_groups = []
+        for root in groom_root_group:
+            groom_groups.extend(cmds.listRelatives(root,type="transform"))
+        self.lw_groom_groups.clear()
+        self.lw_groom_groups.addItems(groom_groups)
+    
+    def _init_scence_info(self):
+        #获取当前场景中所有的组名称
+        self.groups = []
+        for des in get_all_descriptions():
+            name = safe_get_attr(des,self.attrGroupName)
+            if name and name not in self.groups:
+                self.groups.append(name)
+        self._init_groom_group()
+
+        #设置帧范围
+        start = cmds.playbackOptions(q=1,min=1)
+        end = cmds.playbackOptions(q=1,max=1)
+        self.sbFrameStart.setValue(start)
+        self.sbFrameEnd.setValue(end)
+
+        self._update_cb_groups()
+        #self._refresh_character_list()
+    def _get_bound_mesh(self,obj):
+        sl = MGlobal.getSelectionListByName(obj).getDependNode(0)
+        itDg = om.MItDag()
+        itDg.reset(sl,om.MItDag.kDepthFirst,om.MFn.kPluginShape)
         boundMesh = None
         while not itDg.isDone():
-            dn = om2.MFnDependencyNode(itDg.currentItem())
-            if dn.typeName == 'xgmSubdPatch':
-                boundMeshPlug = dn.findPlug('geometry', False)
-                boundMesh = om2.MFnMesh(
-                    om2.MDagPath.getAPathTo(boundMeshPlug.source().node()))
+            dn = om.MFnDependencyNode(itDg.currentItem())
+            if dn.typeName == "xgmSubdPatch":
+                boundMeshPlug = dn.findPlug('geometry',False)
+                boundMesh = om.MFnMesh(
+                    om.MDagPath.getAPathTo(boundMeshPlug.source().node()))
                 break
             itDg.next()
-        return boundMesh
+        return str(boundMesh.dagPath())
+    def _get_all_character_names(self):
+        splines = get_all_splines()
+        characterNames = []
+        for spline in splines:
+            characterName = safe_get_attr(spline,self.attrCharacterName)
+            if characterName not in characterNames:
+                characterNames.append(characterName)
+        return characterNames
+    #事件重写
+    def showEvent(self,e):
+        add_selection_changed_callback("selectionChanged",self._updateUI)
+    def hideEvent(self,e):
+        remove_callback("selectionChanged")
+        mel.eval('outlinerEditor -edit -selectCommand "" "outlinerPanel1";')
 
-    def setBakeMesh(self, mesh):
-        if mesh is not None:
-            self.bakeMesh = mesh
-            self.MeshName.setText(u"网格: {}".format(mesh.name()))
-            self.combo.clear()
-            self.combo.addItems(mesh.getUVSetNames())
 
 
 def showUI():
-    SaveXGenDesWindowInstanceName = '_SaveXGenDesWindowInstance'
-    if SaveXGenDesWindowInstanceName not in globals():
-        globals()[SaveXGenDesWindowInstanceName] = SaveXGenDesWindow()
-    globals()[SaveXGenDesWindowInstanceName].show(dockable=True)
+    window = XGenToolsUI()
+    window.show(dockable=True)
 
 
-if __name__ == '__main__':
-    from mayaTools import reloadModule
-    reloadModule()
-    global win
-    win = SaveXGenDesWindow()
-    win.show(dockable=True)
+
+if __name__ == "__main__":
+    # from mayaTools import reloadModule
+    # reloadModule()
+    showUI()
+
+
 
 
 

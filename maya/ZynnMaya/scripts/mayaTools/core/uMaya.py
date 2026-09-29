@@ -12,7 +12,6 @@ import json
 import os
 from collections import OrderedDict
 
-from maya.api.OpenMaya import MImage
 from PIL import Image
 
 class materialTemplate(object):

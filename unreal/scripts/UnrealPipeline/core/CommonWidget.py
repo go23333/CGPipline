@@ -9,7 +9,7 @@
 
 from Qt import QtWidgets,QtCore
 
-from Qt.QtGui import QPixmap,QPainter,QColor
+from Qt.QtGui import QPixmap,QPainter,QColor,QPalette,QBrush
 from Qt.QtCore import QRect
 
 from dayu_widgets.label import MLabel
@@ -22,11 +22,13 @@ from dayu_widgets import dayu_theme
 from dayu_widgets.message import MMessage
 from dayu_widgets.loading import MLoadingWrapper
 import os
+from importlib import reload
 from dayu_widgets.menu import MMenu
 import functools
 
 
 import UnrealPipeline.core.utilis as UU
+reload(UU)
 from Qt.QtWidgets import QMainWindow,QApplication,QWidget
 
 
@@ -35,8 +37,9 @@ class FetchCameraDataWorker(QtCore.QThread):
         super().__init__(parent)
         self.OnFinished = None
         self.ScanPath = None
+        self.NameFilter = [".fbx"]
     def run(self):
-        cameraDatas = UU.getFilesDataFrompath(self.ScanPath,"fbx")
+        cameraDatas = UU.getFilesDataFrompath(self.ScanPath,self.NameFilter)
         if self.OnFinished:
             self.OnFinished(cameraDatas)
 
@@ -133,7 +136,7 @@ class DateTableView(QtWidgets.QWidget):
         # layMain.addWidget(leSearch)
         layMain.addWidget(self.ViewWrapper)
         self.setLayout(layMain)
-    def fetchCamera(self,path):
+    def fetchCamera(self,path="",NameFilters=[".fbx"]):
         path = os.path.normpath(path)
         # 判断该路径是否合法
         if not (UU.isPathValid(path)):
@@ -143,6 +146,7 @@ class DateTableView(QtWidgets.QWidget):
         fetchCameraDataWorker = FetchCameraDataWorker(self)
         fetchCameraDataWorker.OnFinished = self.onFinished
         fetchCameraDataWorker.ScanPath = path
+        fetchCameraDataWorker.NameFilter = NameFilters
         fetchCameraDataWorker.started.connect(functools.partial(self.ViewWrapper.set_dayu_loading,True))
         fetchCameraDataWorker.finished.connect(functools.partial(self.ViewWrapper.set_dayu_loading,False))
         fetchCameraDataWorker.start()
@@ -173,6 +177,7 @@ class CommonMainWindow(QMainWindow):
         super().__init__(parent)
         self.__initMenu()
     def MoveToCenter(self):
+        return
         desktop_width = QApplication.desktop().width()/4
         desktop_height = QApplication.desktop().height()/2
         self.move(int(desktop_width-self.width()/2.0),int(desktop_height-self.height()/2.0))

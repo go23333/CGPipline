@@ -4,7 +4,6 @@ from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 import maya.cmds as cmds
 from Qt.QtWidgets import *
 from Qt.QtCore import Qt
-import mayaTools.core.widgets as widgets
 from dayu_widgets.line_edit import MClickBrowserFolderToolButton,MLineEdit
 from dayu_widgets.push_button import MPushButton
 from dayu_widgets.message import MMessage
@@ -67,7 +66,7 @@ if __name__ == '__main__':
     from mayaTools import reloadModule
     reloadModule()
     showUI()
-    pass
+
 
 
 

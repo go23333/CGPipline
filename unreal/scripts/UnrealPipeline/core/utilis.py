@@ -13,6 +13,7 @@ import string
 import UnrealPipeline.core.UnrealHelper as UH
 import random
 import shutil
+from Qt import QtCore
 
 
 from .backend import Backend
@@ -45,6 +46,7 @@ def GetSubCategorys(parentIndex:int):
 CameraPathMacros = [
     "$ep",
     "$sc",
+    "$SC",
     "$number",
     "$frameStart",
     "$frameEnd",
@@ -402,9 +404,12 @@ def ConvertSizeToStr(size):
 def getfilesFromPath(path,extension=None):
     filePaths = []
     for root,folder,files in os.walk(path):
+        # if extension !=  None:
+        #     extension = extension.lower()
+        #     files = [file for file in files if file.casefold().endswith(extension)]
         if extension !=  None:
-            extension = extension.lower()
-            files = [file for file in files if file.casefold().endswith(extension)]
+            extension = [ext.lower() for ext in extension]
+            files = [file for file in files if all(ext in file.lower() for ext in extension)]   #同时满足所有过滤条件才会被保留
         for file in files:
             filePaths.append(os.path.join(root,file))
     return filePaths
@@ -428,6 +433,7 @@ def getFilesDataFrompath(path,extension=None):
         dicData["path"] = path
         dicData["MD5"] = md5
         dicData["imported"] = False
+        dicData["mark"] = 0
         Datas.append(dicData)
     return Datas
 def parseCameraName(name):
@@ -441,6 +447,9 @@ def parseCameraName(name):
     parseResult["frameStart"] = name.split("_")[3]
     parseResult["frameEnd"] = name.split("_")[4]
     parseResult["fullName"] = name.split(".")[0]
+
+    parseResult["SC"] = name.split("_")[1].upper()
+
     return parseResult
 def isPathValid(path):
     if not os.path.isdir(path):

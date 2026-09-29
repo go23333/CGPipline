@@ -61,11 +61,6 @@ class reducefaceUI:
             else:
                 pm.rename(obj,str(obj)+"_Origin")
             self.newNodes = ML2.import_fbx(resFilePath,1)
-    # def rollback(self,*arg):
-    #     import pymel.core as pm
-    #     for newNode in self.newNodes:
-    #         pm.delete(newNode)
-    #     self.importfile = ML.importobjfile(tempFilePath)
 def showUI():
     UI = reducefaceUI()
     UI.show()

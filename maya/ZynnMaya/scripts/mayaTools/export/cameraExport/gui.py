@@ -139,7 +139,16 @@ class CameraExporertUI:
                 ML.scaleFrameValue(slnode+'.translateX',10)
                 ML.scaleFrameValue(slnode+'.translateY',10)
                 ML.scaleFrameValue(slnode+'.translateZ',10)
-            fbxExportPath = cmds.textField(self.camera_fbx_export_path,q=1,text=1) + str(slnode) + '.fbx'
+            fbx_name_split=str(slnode).split('/')[-1].split('_')
+            if len(fbx_name_split)>3:
+
+                fbx_name = fbx_name_split[0] + '_' + fbx_name_split[1] +'_' + fbx_name_split[2]+ '_cam'
+
+            
+            else:
+                fbx_name = str(slnode)
+
+            fbxExportPath = cmds.textField(self.camera_fbx_export_path,q=1,text=1) + fbx_name + '.fbx'
             #当导出时没有对应文件夹时创建新文件夹
             base_path=cmds.textField(self.camera_fbx_export_path,q=1,text=1)
             if not os.path.exists(base_path.rsplit('/',1)[0]):
@@ -147,6 +156,8 @@ class CameraExporertUI:
                     os.makedirs(base_path)
                 else:
                     os.makedirs(base_path.rsplit('/',1)[0])
+            cmds.playbackOptions(min = int(fbx_name_split[3]))
+            cmds.playbackOptions(max = int(fbx_name_split[4]))
             ML.export_fbx_without_dialog(slnode,fbxExportPath)
             # NOTE 还原缩放
             if cmds.checkBox(self.cb_ScaleTenTimes,q=1,v=1):
@@ -216,7 +227,17 @@ class CameraExporertUI:
                 ML.scaleFrameValue(slnode+'.translateY',10)
                 ML.scaleFrameValue(slnode+'.translateZ',10)
 
-            fbxExportPath = cmds.textField(self.camera_fbx_export_path,q=1,text=1) + str(slnode) + '.fbx'
+            fbx_name_split=str(slnode).split('/')[-1].split('_')
+            if len(fbx_name_split)>3:
+
+                fbx_name = fbx_name_split[0] + '_' + fbx_name_split[1] +'_' + fbx_name_split[2]+ '_cam'
+
+            
+            else:
+                fbx_name = str(slnode)
+
+            fbxExportPath = cmds.textField(self.camera_fbx_export_path,q=1,text=1) + fbx_name + '.fbx'
+
             #当导出时没有对应文件夹时创建新文件夹
             base_path=cmds.textField(self.camera_fbx_export_path,q=1,text=1)
             if not os.path.exists(base_path.rsplit('/',1)[0]):
@@ -224,6 +245,10 @@ class CameraExporertUI:
                     os.makedirs(base_path)
                 else:
                     os.makedirs(base_path.rsplit('/',1)[0])
+            
+            #设置起始结束帧
+            cmds.playbackOptions(min = int(fbx_name_split[1]))
+            cmds.playbackOptions(max = int(fbx_name_split[2]))
             ML.export_fbx_without_dialog(slnode,fbxExportPath)
             # NOTE 还原缩放
             if cmds.checkBox(self.cb_ScaleTenTimes,q=1,v=1):

@@ -1,8 +1,6 @@
 import unreal
 import openpyxl as op
 
-
-from Qt import QtCore
 from Qt import QtWidgets
 
 import UnrealPipeline.core.Config as UC
@@ -11,11 +9,10 @@ import UnrealPipeline.core.Config as UC
 from dayu_widgets.field_mixin import MFieldMixin
 from dayu_widgets.push_button import MPushButton
 from dayu_widgets.line_edit import MLineEdit
+from dayu_widgets.switch import MSwitch
+from dayu_widgets.label import MLabel
 from dayu_widgets import dayu_theme
 from dayu_widgets.qt import application
-
-print('ChuShiHua')
-
 
 class mw(QtWidgets.QWidget, MFieldMixin):
 
@@ -35,6 +32,9 @@ class mw(QtWidgets.QWidget, MFieldMixin):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        self.aai_shot_path='/Game/Shots/'
+        self.asset_shot_path='/Game/Assets/Shots/'
         
         self.uii()
 
@@ -52,10 +52,16 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         self.flie_import.setPlaceholderText(self.tr("选择需要导入信息的Excel文件"))
         create_folder=MPushButton(text="创建shots文件夹")
         create_folder.clicked.connect(self.createDirectory)
+        
+        self.switch = MSwitch()
+        self.switch.setChecked(False)
+        switch_lay = QtWidgets.QFormLayout()
+        switch_lay.addRow(MLabel("是否创建半流程文件夹"), self.switch)    #关卡创建开关
 
         folder_lay.addWidget(create_base_folder)
         folder_lay.addWidget(self.flie_import)
         folder_lay.addWidget(create_folder)
+        folder_lay.addLayout(switch_lay)
 
         import_lay=QtWidgets.QVBoxLayout()
         
@@ -111,23 +117,29 @@ class mw(QtWidgets.QWidget, MFieldMixin):
 
 
     def createDirectory(self):
+        if self.switch.isChecked():
+            shot_path=self.asset_shot_path
+        else:
+            shot_path=self.aai_shot_path
 
         # print(self.sc)
         # print(len(self.sc))
 
         ep=self.directory_list()
+        shot_ep_path=shot_path+self.directory_list()
         sc_list=[]
 
         #简化sc数据内容
         for ii in self.sc:
-            if ii in sc_list:
+            if ii.lower() in sc_list:
                 pass
             else:
-                sc_list.append(ii)
+                sc_list.append(ii.lower())
         # print(sc_list)
 
         #对镜头信息分组
         cam_dict={}
+
 
         for sc_list_i in sc_list:
             cam_list=[]
@@ -144,14 +156,14 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         an_ls_list=[]
         groom_seq_list=[]
         # 创建文件夹和所需的文件
-        unreal.EditorAssetLibrary.make_directory('/Game/Shots/%s/Preview'%(ep))
+        unreal.EditorAssetLibrary.make_directory('%s/Preview'%(shot_ep_path))
         for sc_name in sc_list:
 
-            if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Shots/%s/Preview/%s_%s_Pv_Map'%(ep,ep,sc_name)):
-                unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_%s_Pv_Map'%(ep,sc_name),package_path='/Game/Shots/%s/Preview'%(ep),asset_class=unreal.World,factory=unreal.WorldFactory())
+            if not unreal.EditorAssetSubsystem().does_asset_exist('%s/Preview/%s_%s_Pv_Map'%(shot_ep_path,ep,sc_name)):
+                unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_%s_Pv_Map'%(ep,sc_name),package_path='%s/Preview'%(shot_ep_path),asset_class=unreal.World,factory=unreal.WorldFactory())
 
-            if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Shots/%s/Preview/%s_%s_Preview'%(ep,ep,sc_name)):
-                preview_sequence=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_%s_Preview'%(ep,sc_name),package_path='/Game/Shots/%s/Preview'%(ep),asset_class=unreal.LevelSequence,factory=unreal.LevelSequenceFactoryNew())
+            if not unreal.EditorAssetSubsystem().does_asset_exist('%s/Preview/%s_%s_Preview'%(shot_ep_path,ep,sc_name)):
+                preview_sequence=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_%s_Preview'%(ep,sc_name),package_path='%s/Preview'%(shot_ep_path),asset_class=unreal.LevelSequence,factory=unreal.LevelSequenceFactoryNew())
                 preview_sequence:unreal.LevelSequence
                 preview_sequence.set_display_rate((25,1))
                 preview_track=preview_sequence.add_track(unreal.MovieSceneSubTrack)
@@ -161,18 +173,18 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             start_key = 0
             end_key = 0
                 
-            unreal.EditorAssetLibrary.save_directory('/Game/Shots/%s/Preview'%(ep))
-            unreal.LevelEditorSubsystem().load_level('/Game/Shots/%s/Preview/%s_%s_Pv_Map'%(ep,ep,sc_name))
+            unreal.EditorAssetLibrary.save_directory('%s/Preview'%(shot_ep_path))
+            unreal.LevelEditorSubsystem().load_level('%s/Preview/%s_%s_Pv_Map'%(shot_ep_path,ep,sc_name))
 
             for cam_name in cam_dict[sc_name]:
                 flie_name=cam_name[0]
                 for file_class_name in self.flie_class:
                     if file_class_name=='Lighting':
                         # flie_name='%s_lt'%(cam_name[0])
-                        if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Shots/%s/%s/%s/%s/%s_lt'%(ep,sc_name,flie_name,file_class_name,cam_name[0])):
-                            unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_lt'%(cam_name[0]),package_path='/Game/Shots/%s/%s/%s/%s'%(ep,sc_name,flie_name,file_class_name),asset_class=unreal.World,factory=unreal.WorldFactory())
-                        if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Shots/%s/%s/%s/%s_Render'%(ep,sc_name,flie_name,flie_name)):
-                            lt_ls=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_Render'%(flie_name),package_path='/Game/Shots/%s/%s/%s'%(ep,sc_name,flie_name),asset_class=unreal.LevelSequence,factory=unreal.LevelSequenceFactoryNew())
+                        if not unreal.EditorAssetSubsystem().does_asset_exist('%s/%s/%s/%s/%s_lt'%(shot_ep_path,sc_name,flie_name,file_class_name,cam_name[0])):
+                            unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_lt'%(cam_name[0]),package_path='%s/%s/%s/%s'%(shot_ep_path,sc_name,flie_name,file_class_name),asset_class=unreal.World,factory=unreal.WorldFactory())
+                        if not unreal.EditorAssetSubsystem().does_asset_exist('%s/%s/%s/%s_Render'%(shot_ep_path,sc_name,flie_name,flie_name)):
+                            lt_ls=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_Render'%(flie_name),package_path='%s/%s/%s'%(shot_ep_path,sc_name,flie_name),asset_class=unreal.LevelSequence,factory=unreal.LevelSequenceFactoryNew())
                             lt_ls:unreal.LevelSequence
                             lt_ls.set_display_rate((25,1))
                             if cam_name[1]:
@@ -180,8 +192,8 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                             if cam_name[2]:
                                 lt_ls.set_playback_end(int(cam_name[2])+self.end_offset+self.start_offset)  #设置结束帧
                             lt_ls_list.append(lt_ls)
-                        unreal.EditorAssetLibrary.save_directory('/Game/Shots/%s/%s/%s/%s'%(ep,sc_name,flie_name,file_class_name))
-                        unreal.LevelEditorSubsystem().load_level('/Game/Shots/%s/%s/%s/%s/%s_lt'%(ep,sc_name,flie_name,file_class_name,cam_name[0]))
+                        unreal.EditorAssetLibrary.save_directory('%s/%s/%s/%s'%(shot_ep_path,sc_name,flie_name,file_class_name))
+                        unreal.LevelEditorSubsystem().load_level('%s/%s/%s/%s/%s_lt'%(shot_ep_path,sc_name,flie_name,file_class_name,cam_name[0]))
 
                         #将灯光序列放入总序列
                         end_key += lt_ls.get_playback_end()
@@ -200,8 +212,8 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                     
                     if file_class_name=='Animation':
                         # flie_name='%s_an'%(cam_name[0])
-                        if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Shots/%s/%s/%s/%s/%s'%(ep,sc_name,flie_name,file_class_name,flie_name)):
-                            an_ls=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_an'%(flie_name),package_path='/Game/Shots/%s/%s/%s/%s'%(ep,sc_name,flie_name,file_class_name),asset_class=unreal.LevelSequence,factory=unreal.LevelSequenceFactoryNew())
+                        if not unreal.EditorAssetSubsystem().does_asset_exist('%s/%s/%s/%s/%s'%(shot_ep_path,sc_name,flie_name,file_class_name,flie_name)):
+                            an_ls=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_an'%(flie_name),package_path='%s/%s/%s/%s'%(shot_ep_path,sc_name,flie_name,file_class_name),asset_class=unreal.LevelSequence,factory=unreal.LevelSequenceFactoryNew())
                             an_ls.set_display_rate((25,1))
                             if cam_name[1]:
                                 an_ls.set_playback_start(int(cam_name[1])-1)
@@ -210,25 +222,25 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                             an_ls_list.append(an_ls)
                     if file_class_name=='Cache':
                         # 创建groom关卡序列
-                        if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Shots/%s/%s/%s/%s/%s'%(ep,sc_name,flie_name,file_class_name,flie_name)):
-                            groom_seq=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_hcache'%(flie_name),package_path='/Game/Shots/%s/%s/%s/%s'%(ep,sc_name,flie_name,file_class_name),asset_class=unreal.LevelSequence,factory=unreal.LevelSequenceFactoryNew())
+                        if not unreal.EditorAssetSubsystem().does_asset_exist('%s/%s/%s/%s/%s'%(shot_ep_path,sc_name,flie_name,file_class_name,flie_name)):
+                            groom_seq=unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_hcache'%(flie_name),package_path='%s/%s/%s/%s'%(shot_ep_path,sc_name,flie_name,file_class_name),asset_class=unreal.LevelSequence,factory=unreal.LevelSequenceFactoryNew())
                             groom_seq.set_display_rate((25,1))
                             if cam_name[1]:
                                 groom_seq.set_playback_start(int(cam_name[1])-1)
                             if cam_name[2]:
                                 groom_seq.set_playback_end(int(cam_name[2])+self.end_offset+self.start_offset)
                             groom_seq_list.append(groom_seq)
-                        unreal.EditorAssetLibrary.make_directory('/Game/Shots/%s/%s/%s/%s'%(ep,sc_name,flie_name,file_class_name))
+                        unreal.EditorAssetLibrary.make_directory('%s/%s/%s/%s'%(shot_ep_path,sc_name,flie_name,file_class_name))
                     if file_class_name=='VFX':
                         # flie_name='%s_vfx'%(cam_name[0])
-                        unreal.EditorAssetLibrary.make_directory('/Game/Shots/%s/%s/%s/%s/VFX_DT'%(ep,sc_name,flie_name,file_class_name,))
+                        unreal.EditorAssetLibrary.make_directory('%s/%s/%s/%s/VFX_DT'%(shot_ep_path,sc_name,flie_name,file_class_name,))
                     if file_class_name=='Modify':
                         # flie_name='%s_modify'%(cam_name[0])
-                        unreal.EditorAssetLibrary.make_directory('/Game/Shots/%s/%s/%s/%s'%(ep,sc_name,flie_name,file_class_name))
+                        unreal.EditorAssetLibrary.make_directory('%s/%s/%s/%s'%(shot_ep_path,sc_name,flie_name,file_class_name))
 
                 #创建总关卡
-                if not unreal.EditorAssetSubsystem().does_asset_exist('/Game/Shots/%s/%s/%s/%s_Map'%(ep,sc_name,flie_name,flie_name)):
-                    unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_Map'%(flie_name),package_path='/Game/Shots/%s/%s/%s'%(ep,sc_name,flie_name),asset_class=unreal.World,factory=unreal.WorldFactory())
+                if not unreal.EditorAssetSubsystem().does_asset_exist('%s/%s/%s/%s_Map'%(shot_ep_path,sc_name,flie_name,flie_name)):
+                    unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name='%s_Map'%(flie_name),package_path='%s/%s/%s'%(shot_ep_path,sc_name,flie_name),asset_class=unreal.World,factory=unreal.WorldFactory())
 
             
                     # lt_ls.set_display_rate((25,1))
@@ -263,7 +275,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
                     lt_section.set_range(groom_cache.get_playback_start(),groom_cache.get_playback_end())
                     break
         #保存全部创建的文件
-        unreal.EditorAssetLibrary.save_directory('/Game/Shots')
+        unreal.EditorAssetLibrary.save_directory('/Game')
 
     def baseDirectory(self):
         #AAI文件夹

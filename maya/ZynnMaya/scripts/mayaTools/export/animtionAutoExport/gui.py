@@ -4,7 +4,7 @@ from maya import cmds,mel
 import openpyxl as op
 import time
 import os
-
+import pymel.core as pm
 
 def ExportFbx(file_path):
     if not cmds.pluginInfo('fbxmaya', q=True, loaded=True):

@@ -6,7 +6,9 @@ import os
 import json
 import sys
 
+import UnrealPipeline.core.Config as UC
 from importlib import reload
+from openpyxl import Workbook
 import UnrealPipeline.core.uSTools as uSTools
 reload(uSTools)
 
@@ -15,6 +17,7 @@ from Qt import QtWidgets
 from Qt import QtGui
 
 from dayu_widgets.label import MLabel
+from dayu_widgets.switch import MSwitch
 from dayu_widgets.field_mixin import MFieldMixin
 from dayu_widgets.push_button import MPushButton
 from dayu_widgets.line_edit import MLineEdit
@@ -24,7 +27,7 @@ from dayu_widgets.qt import application
 
 
 
-print('AnimImport')
+print('AnimImport 1.1')
 
 
 
@@ -38,10 +41,88 @@ def assetReplace(asset_path1,asset_path2):
     unreal.EditorAssetLibrary.delete_asset(asset_path2)
     
 
+def excelCreate(error_list):
+
+    data_dict = {}
+    for line in error_list:
+        if '_ly' in line:
+            sc = line.split('_ly')[0]
+        elif '_an' in line:
+            sc = line.split('_an')[0]
+        if '_CH' in line:
+            basename = line.split('_',4)[-1].rsplit('_CH',1)[0]+'_CH'
+            try:
+                if basename not in [k for d in data_dict[sc] for k in d]:
+                    data_dict[sc].append({basename: 1})
+                else:
+                    for d in data_dict[sc]:
+                        if basename == list(d.keys())[0]:
+                            d[basename] += 1
+            except:
+                data_dict[sc] = []
+                data_dict[sc].append({basename: 1})
+        if '_BG' in line:
+            basename = line.split('_',4)[-1].rsplit('_BG',1)[0]+'_BG'
+            try:
+                if basename not in [k for d in data_dict[sc] for k in d]:
+                    data_dict[sc].append({basename: 1})
+                else:
+                    for d in data_dict[sc]:
+                        if basename == list(d.keys())[0]:
+                            d[basename] += 1
+            except:
+                data_dict[sc] = []
+                data_dict[sc].append({basename: 1})
+        if '_Pro' in line:
+            basename = line.split('_',4)[-1].rsplit('_Pro',1)[0]+'_Pro'
+            try:
+                if basename not in [k for d in data_dict[sc] for k in d]:
+                    data_dict[sc].append({basename: 1})
+                else:
+                    for d in data_dict[sc]:
+                        if basename == list(d.keys())[0]:
+                            d[basename] += 1
+            except:
+                data_dict[sc] = []
+                data_dict[sc].append({basename: 1})
+
+
+    # 创建工作簿和工作表
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 30
+    ws.column_dimensions['C'].width = 15
+
+    # 当前行号
+    row_num = 1
+
+    for seq, contents in data_dict.items():
+        index = 0
+        for content in contents:
+            for basename, count in content.items():
+                if index == 0:               # 第一个内容：写序号和内容
+                    ws.cell(row=row_num, column=1, value=seq)
+                    ws.cell(row=row_num, column=2, value=basename)
+                    ws.cell(row=row_num, column=3, value=count)
+                    index = 1
+                else:                      # 后续内容：只写内容，A列留空
+                    ws.cell(row=row_num, column=2, value=basename)
+                    ws.cell(row=row_num, column=3, value=count)
+                row_num += 1
+
+    # 保存文件
+    try:
+        save_path = r"d:\Desktop\an_import_error.xlsx"
+        wb.save(save_path)
+    except :
+        save_path = os.path.join(os.path.expanduser('~'), 'Desktop/an_import_error.xlsx')
+        wb.save(save_path)
 
 
 
-class mw(QtWidgets.QWidget, MFieldMixin):
+class AnImportWin(QtWidgets.QWidget, MFieldMixin):
 
 
     def __init__(self, parent=None):
@@ -55,126 +136,70 @@ class mw(QtWidgets.QWidget, MFieldMixin):
         self.setWindowTitle('动画FBX导入')
         self.resize(320,120)
         lay=QtWidgets.QVBoxLayout()
-
         folder_lay=QtWidgets.QVBoxLayout()
+
+        fbx_check=MPushButton(text="FBX完整性检测工具")
+        fbx_check.clicked.connect(self.fbxCheck)
 
         self.flie_import=MLineEdit().folder().medium()
         self.flie_import.setPlaceholderText(self.tr("选择FBX路径"))
         create_folder=MPushButton(text="导入FBX动画文件")
         create_folder.clicked.connect(self.importAsset)
         
+        self.version_switch = MSwitch()
+        self.version_switch.setChecked(False)
+        version_switch_lay = QtWidgets.QFormLayout()
+        version_switch_lay.addRow(MLabel("是否使用踏星流程"), self.version_switch)    #关卡创建开关
+
         self.error_lable=MLabel('')
         self.error_lable.setStyleSheet("color: red")
 
+        folder_lay.addWidget(fbx_check)
         folder_lay.addWidget(self.flie_import)
         folder_lay.addWidget(create_folder)
+        folder_lay.addLayout(version_switch_lay)
         folder_lay.addWidget(self.error_lable)
-
         
         lay.addLayout(folder_lay)
         self.setLayout(lay)
 
+    
+    def fbxCheck(self):
+        import UnrealPipeline.pipeline.FbxDetection.FbxDetection as fbxDetection
+        fbxDetection.start()
+
 
     def importAsset(self):
+        #判断是否存在inter change插件,存在则停止执行
+        plugin_examine = uSTools.interChangeExamine(self)
+        if not plugin_examine:
+            return False
+        
         
         #保存所有文件
         unreal.EditorAssetLibrary.save_directory('/Game')
         #获取FBX路径
         anim_path=self.flie_import.text()
+
+        import_sk_error_list = uSTools.anFbxImport(anim_path,self.version_switch.isChecked())
         
-        fbx_base_path='/Game/Shots/'
+        #显示报错
+        import_error_text = ''
+        if import_sk_error_list:
+            import_error_text += '以下动画未找到正确骨骼:\n'
+            for error_data in import_sk_error_list:
+                import_error_text += f'{error_data}\n'
 
-        type_name=''
-        
-        #遍历文件夹内文件
-        for dirpath, dirnames, filenames in os.walk(anim_path):
-            for filename in filenames:
-                #判断后缀名是否为fbx
-                if '.fbx' in filename.lower():
-                    #判断动画类型
-                    if '_an_' in filename:
-                        type_name='_an_'
-                    elif '_ly_' in filename:
-                        type_name='_ly_'
-                    #初始化命名
-                    ep=''
-                    sc=''
-                    mesh_name=''
-                    sc_all_name=''
-                    
-                    anim_fbx_name=filename.split('.')[0]
-                    anim_fbx=dirpath+'/'+filename               #合并文件路径和文件名称
-                    ep=filename.split('_')[0]                   #获取ep名称
-                    sc=filename.split('_')[1]                   #获取sc主名称
-                    sc_all_name=filename.rsplit(type_name)[0]      #获取sc全名称
+        #创建导入失败excel表格
+        excelCreate(import_sk_error_list)
 
-
-                    if not sc_all_name:
-                        break
-                    #判断后缀名
-                    if 'Pro' in filename:
-                        mesh_name=filename.rsplit(type_name)[-1].split('_Pro',1)[0]
-                    if 'CH' in filename:
-                        mesh_name=filename.rsplit(type_name)[-1].split('_CH',1)[0]
-
-
-                    fbx_create_path=f'{fbx_base_path}{ep}/{sc}/'     #创建基础文件夹路径
-
-                    # sc_section_names=sc_all_name.split('_')
-
-                    # #添加分段文件夹路径
-                    # if len(sc_section_names)>2:
-                    #     sc_sub_name=ep+'_'+sc
-                    #     for sc_section_name in sc_section_names[2:]:
-                    #         sc_sub_name+='_'+sc_section_name
-                    #         fbx_create_sub_path='/'+sc_sub_name+'_an'
-
-                    fbx_create_path+=sc_all_name+'/Animation'
-
-                    #获取骨骼网格体路径
-                    skeleton_base_path='/Game/AAI/Reference/'
-                    mesh_type=None
-                    if '_Pro' in filename:
-                        mesh_type='Pro'
-                        skeleton_base_path+='Pro'
-                    if '_CH' in filename:
-                        mesh_type='CH'
-                        skeleton_base_path+='Character'
-                    #遍历路径寻找骨骼网格体
-                    skeleton_meshs=self.skeletonMeshGet(skeleton_base_path)
-                    # print(mesh_name)
-
-                    for skeleton_mesh in skeleton_meshs:
-                        skeleton_mesh:unreal.SkeletalMesh
-                        skeleton_base_name=None
-                        if mesh_type=='Pro':
-                            skeleton_base_name=skeleton_mesh.get_name().split('UE_')[-1].split('_Skeleton')[0]
-                        if mesh_type=='CH':
-                            skeleton_base_name=skeleton_mesh.get_name().split('UE_')[-1].split('_Skeleton')[0]
-                        # print(mesh_name,skeleton_base_name)
-                        if mesh_name == skeleton_base_name:
-                            # print(mesh_name,skeleton_mesh.get_name())
-
-                            #导入动画序列
-                            uSTools.fbxImport.animSequenceImport(anim_fbx,fbx_create_path,skeleton_mesh)
-
-                            #如果存在ly文件,则使用an文件替换
-                            if type_name=='_an_':
-                                ly_path=fbx_create_path+'/'+anim_fbx_name.replace('_an_','_ly_')
-                                an_path=fbx_create_path+'/'+anim_fbx_name
-                                # print(ly_path)
-                                if unreal.EditorAssetLibrary.does_asset_exist(ly_path):
-                                    assetReplace(an_path,ly_path)
-                                    print(ly_path)
-                            
-
-                            #保存全部创建的文件
-                            unreal.EditorAssetLibrary.save_directory('/Game/Shots')
-
+        if import_error_text:
+            error_dialog = uSTools.ErrorDialog(self,initialText = import_error_text)
+            error_dialog.exec_()
 
         #保存全部创建的文件
         # unreal.EditorAssetLibrary.save_directory('/Game/Shots')
-                            
+        
 
         
         
@@ -189,15 +214,18 @@ class mw(QtWidgets.QWidget, MFieldMixin):
             self.skeleton_base_path=skeleton_path
             self.skeleton_asset=[]
             #列举路径内所有资产
-            skeleton_path_assets=unreal.EditorAssetLibrary.list_assets(self.skeleton_base_path)
+            skeleton_path_assets=uSTools.assetFilter('Skeleton',self.skeleton_base_path)
+            #skeleton_path_assets=unreal.EditorAssetLibrary.list_assets(self.skeleton_base_path)
             for skeleton_path_asset in skeleton_path_assets:
                 
-                asset=unreal.EditorAssetLibrary.find_asset_data(skeleton_path_asset).get_asset()
-                if unreal.EditorAssetLibrary.find_asset_data(skeleton_path_asset).get_class():
-                    asset_class=unreal.EditorAssetLibrary.find_asset_data(skeleton_path_asset).get_class().get_name()
+                asset=skeleton_path_asset.get_asset()
+                self.skeleton_asset.append(asset)
+                #if unreal.EditorAssetLibrary.find_asset_data(skeleton_path_asset).get_class():
+                    #asset_class=unreal.EditorAssetLibrary.find_asset_data(skeleton_path_asset).get_class().get_name()
                     #判断资产类型
-                    if asset_class == 'Skeleton':
-                        self.skeleton_asset.append(asset)
+                    #if asset_class == 'Skeleton':
+                        #self.skeleton_asset.append(asset)
+                
             return self.skeleton_asset
             
     def executeImportTasks(self,task):
@@ -213,7 +241,7 @@ class mw(QtWidgets.QWidget, MFieldMixin):
 def start():
     with application() as app:
         global test
-        test = mw()
+        test = AnImportWin()
         dayu_theme.apply(test)
         test.show()
         unreal.parent_external_window_to_slate(int(test.winId()))

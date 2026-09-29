@@ -5,9 +5,10 @@
 # Email  : 978654313@qq.com
 # version: 3.9.7
 ##################################################################
-from Qt.QtWidgets import QMainWindow,QApplication,QWidget
+from Qt.QtWidgets import QMainWindow,QApplication,QWidget,QFileDialog
 from Qt import QtWidgets
 from Qt.QtCore import Qt
+
 
 
 from dayu_widgets.qt import application
@@ -31,13 +32,45 @@ class LevelInfo(cw.CommonMainWindow):
         self.resize(800,600)
         self.MoveToCenter()
 
-
         self.__initDatas()
- 
+        self.__initUI()
     def __initDatas(self):
         self._objectCountSum = 0
         self._verticesNumberSum = 0
         self.datas = []
+    def export_level_info(self):
+        file = QFileDialog.getSaveFileName(self,"保存为Json",".","Json文件 (*.json)" )[0]
+        if not file:
+            return
+        actors:list[unreal.Actor] = unreal.EditorLevelLibrary.get_all_level_actors()
+        actorDatas = []
+        for actor in actors:
+            name = actor.get_actor_label()
+            location = dict(
+                x = actor.get_actor_location().x,
+                y = actor.get_actor_location().y,
+                z = actor.get_actor_location().z
+            )
+            rotation = dict(
+                x = actor.get_actor_rotation().to_vector().x,
+                y = actor.get_actor_rotation().to_vector().y,
+                z = actor.get_actor_rotation().to_vector().z
+            )
+            scale = dict(
+                x = actor.get_actor_scale3d().x,
+                y = actor.get_actor_scale3d().y,
+                z = actor.get_actor_scale3d().z
+            )
+            actorData = dict(
+                name = name,
+                location = location,
+                rotation = rotation,
+                scale = scale
+            )
+            actorDatas.append(actorData)
+        import json
+        with open(file,"w+",encoding="utf-8") as f:
+            f.write(json.dumps(actorDatas,indent=2, ensure_ascii=False))
     def __initUI(self):
         # UI
         Widget_main = QWidget()
@@ -49,11 +82,15 @@ class LevelInfo(cw.CommonMainWindow):
         button_refresh = MPushButton("    刷新    ")
         button_refresh.clicked.connect(self.__refresh)
 
+        button_export_json = MPushButton("导出关卡信息")
+        button_export_json.clicked.connect(self.export_level_info)
+
         self.checkbox_only_in_camera = MCheckBox("仅显示镜头中的物体")
 
 
         layout_header.addWidget(button_refresh,alignment=Qt.AlignLeft)
         layout_header.addWidget(self.checkbox_only_in_camera,alignment=Qt.AlignRight)
+        layout_header.addWidget(button_export_json,alignment=Qt.AlignRight)
 
         self.tvMain = MTableView(size=dayu_theme.medium, show_row_count=True)
         self.dataModle = MTableModel()
@@ -102,7 +139,6 @@ class LevelInfo(cw.CommonMainWindow):
         staticMeshs = []
         for actor in actors:
             actor:unreal.Actor
-            print(actor.was_recently_rendered(0.001))
             #判断actor是否在屏幕上
             if self.checkbox_only_in_camera.isChecked() and not actor.was_recently_rendered(0.001):
                 continue
@@ -138,8 +174,6 @@ class LevelInfo(cw.CommonMainWindow):
         pass
 
         
-
-
 
 
 

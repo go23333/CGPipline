@@ -6,6 +6,8 @@
 # version: 3.9.7
 ##################################################################
 import unreal
+import os
+import json
 class globalConfig():
     _instance = None
     def __init__(self) -> None:
@@ -17,12 +19,14 @@ class globalConfig():
         self.CameraImportPathPatten = "/Game/Shots/Sequence/$ep/$sc/$ep_$sc_$number"
         self.CameraimportUniformScale = 1
         self.CameraimportAspectRatio = 1.777778
+        self.CameraimportNearClip = 0.05
         self.cameraImportPreRollFrame = 10
         self.cameraImportPostRollFrame = 10
-        self.cameraPlaybackStartOffset = 0
-        self.cameraPlaybackEndOffset = 0
+        self.cameraPlaybackStartOffset = 10
+        self.cameraPlaybackEndOffset = 5
         # paramater Mesh Import
         self.StaticMeshImportPathPatten = "/Game/Assets/Scenes/$scenename/"
+        self.StaticMeshImportPathPatten57 = "/Game/Scenes/Environment/Customized/3D_Assets/"
         self.StaticmeshImportScale = 1
         # paramater Texture Import
         self.TextureEnableVT = 1 #0:关闭,1:启用,2:自动
@@ -33,12 +37,17 @@ class globalConfig():
         self.DefaultFoliageMaterial = "/ZYNNPlugins/Assets/Material/M_Foliage.M_Foliage"
         # Pro Mesh Import
         self.ProMeshImportPathPatten = "/Game/Assets/Pro/$ep/$proname/"
+        # Asset Path
+        self.AssetPath = '/Game/Assets/'
+        # Reference Path
+        self.ReferencePath = '/Game/AAI/Reference/'
+        # Reference Path
+        self.ShotPath = '/Game/Shots/'
         # MyBridge Settings
         self.connectHost = "127.0.0.1"
         self.connectPort = 54321
-        self.MyBridgeTargetPath = "/Game/Assets/MyBridge/"
-        self.MyBridgeTargetPathBuildin = "/Game/Assets/MyBridge/"
-        self.backendAddress = "http://192.168.3.133:5050"
+        self.MyBridgeTargetPath = "/Game/Scenes/Environment/MyBridge"
+        self.MyBridgeTargetPathBuildin = "/Game/Scenes/Environment/MyBridge"
         #frame offset
         self.start_offset = 10
         self.end_offset = 5
@@ -47,20 +56,15 @@ class globalConfig():
         self.loadConfig()
         self.createFolders()
     def createFolders(self):
-        import os 
         if not os.path.exists(self.tempFolder):
             os.makedirs(self.tempFolder)
     def saveConfig(self):
-        import json
-        import os 
         dir,_ = os.path.split(self.configFilePath)
         if not os.path.exists(dir):
             os.makedirs(dir)
         with open(self.configFilePath,"w+",encoding="utf-8") as f:
             f.write(json.dumps(self.__asDict()))
     def loadConfig(self):
-        import json
-        import os 
         if not os.path.exists(self.configFilePath):
             return False
         with open(self.configFilePath,"r",encoding="utf-8") as file:

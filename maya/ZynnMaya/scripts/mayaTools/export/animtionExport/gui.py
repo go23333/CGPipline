@@ -3,6 +3,19 @@ from maya import cmds,mel
 import time
 import os
 
+def getCameraFrame():
+    cameraAll=cmds.ls(type='camera')
+    start_frame=None
+    end_frame=None
+    for cam in cameraAll:
+        if len(cam.split('_'))>4:
+            start_frame = int(cam.split('_')[3])
+            end_frame = int(cam.split('_')[4])
+            break
+    return start_frame,end_frame
+
+
+
 class win():
     def __init__(self):
         self.winName=u"创建动画FBX文件"
@@ -13,8 +26,11 @@ class win():
         
         
     def UI1(self):
-        self.start=1
-        self.end=5
+        self.start,self.end=getCameraFrame()
+        if self.start is None:
+            self.start=1
+        if self.end is None:
+            self.end=5
         self.column1=cmds.columnLayout( adjustableColumn=True )
         cmds.text( label=u'选择需要烘焙的组',align='left') 
         #起始结束帧
@@ -46,6 +62,9 @@ class win():
         
         cmds.button(label=u'导出FBX到指定位置',command=self.exportFBX)
         cmds.setParent(self.column1)
+
+        cmds.checkBox("switch1", label=u"是否导出模型", value=False)
+        cmds.setParent(self.column1)
         
 
 
@@ -53,17 +72,20 @@ class win():
         obj_select=cmds.ls(sl=1)
         space_name = obj_select[0].split(':',1)[0]    #获取名称空间
         obj = []
+        #当开启导出模型后加选模型组
+        switch = cmds.checkBox("switch1", q=True, value=True)
         
-        if cmds.objExists(space_name+':Root_M'):
-            
-            cmds.select(space_name+':Root_M')            
-            #cmds.select(space_name+':Geometry',add=1)
+        if cmds.objExists(space_name+':DeformationSystem'):
+            cmds.select(space_name+':DeformationSystem')
+            if switch:
+                cmds.select(space_name+':Geometry',add=1)
 
 
             
         elif cmds.objExists(space_name+':*_GuGe_G'):
-            cmds.select(space_name+':*_GuGe_G')            
-            cmds.select(space_name+':*_Pro_Mo',add=1)        
+            cmds.select(space_name+':*_GuGe_G')   
+            if switch:         
+                cmds.select(space_name+':*_Pro_Mo',add=1)        
         
         obj=cmds.ls(sl=1)
                 
@@ -106,6 +128,9 @@ class win():
         #cmds.select( '*lower*ipBC*','*upper*ipBC*','*lower*ipBC*_*' )
         #cmds.delete()
 
+        #设置帧范围
+        cmds.playbackOptions( minTime=self.start, maxTime=self.end+end_offset+start_offset )
+
         #选择所有烘焙的对象
         cmds.select(self.obj_new,hi=1)
         #将所有对象放入列表
@@ -139,8 +164,11 @@ class win():
         #设置fbx格式
         cmds.FBXResetExport()
         mel.eval('FBXExportFileVersion -v FBX201300')
-        mel.eval('FBXExportInputConnections -v true')
         mel.eval('FBXExportSmoothingGroups -v true')
+        mel.eval('FBXExportConstraints  -v false')
+        mel.eval('FBXExportSkeletonDefinitions   -v false')
+        mel.eval('FBXExportInputConnections -v false')
+        mel.eval('FBXExportUpAxis y')
         mel.eval('FBXExportSmoothMesh -v true')
         
         #导出fbx
@@ -156,10 +184,22 @@ class win():
         mel.eval('FBXExport -f "%s" -s'%(export_path))
 
         
+        # #创建收纳组
+        # collect_g='%s_g'%self.obj_namespace.split(':',1)[0]
+        # cmds.group(em=True,n=collect_g)
+        # cmds.parent(self.obj_new,collect_g)
+
         #创建收纳组
-        collect_g='%s_g'%self.obj_namespace.split(':',1)[0]
-        cmds.group(em=True,n=collect_g)
-        cmds.parent(self.obj_new,collect_g)
+        try:
+            cmds.select(self.obj_new)
+            cmds.pickWalk( direction='up' )
+            cmds.pickWalk( direction='up' )
+            cmds.pickWalk( direction='up' )
+            cmds.pickWalk( direction='up' )
+            cmds.pickWalk( direction='up' )
+            cmds.rename('Group_'+self.obj_namespace.split(':',1)[0])
+        except:
+            pass  
 
     def openFile(self,*args):
         file_name_new=str(cmds.fileDialog2(fileFilter="*.fbx",startingDirectory =str(cmds.file(q=1,sn=1)).rsplit('/',1)[0],rf=1)[0])

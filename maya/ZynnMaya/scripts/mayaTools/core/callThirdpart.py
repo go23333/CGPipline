@@ -3,8 +3,10 @@ import subprocess
 import mayaTools.core.pathLibrary as pt
 import os
 import pymel.core as pm
+import logging
 
-
+logger = logging.getLogger("Call Third Part")
+logger.setLevel(logging.DEBUG)
 
 def WriteLoader(ObjectDir,LoaderDir):
     folder = os.path.dirname(LoaderDir)
@@ -22,14 +24,18 @@ def call_unfold_export(ObjectDir,LoaderDir):
 
 
 def callPolygonCruncher(pnormal,puv,path,percentage):
-    cmd_str = "PolygonCruncher.exe -input-files \"{0}\" -level1 {1}".format(path,percentage)
+    cmd_str = "PolygonCruncher.exe -input-files \"{0}\" -noui -level1 {1}".format(path,percentage)
     if pnormal:
         cmd_str += ' -normal-protect'
     if puv:
         cmd_str += ' -uv-protect'
-    cmd_str += "-output-files \"test.fbx\" "
     dirname = pt.getRootPath().split("\\scripts\\")[0] + "\\thirdpart\\Polygon Cruncher\\"
-    print(subprocess.call(cmd_str, cwd=dirname, shell=True))
+    
+    logger.info(u"\n准备执行减面命令:\n命令:{0}\n执行目录:{1}".format(cmd_str,dirname))
+
+    code = subprocess.call(cmd_str, cwd=dirname, shell=True)
+
+    logger.info(u"减面命令执行完成:返回值为{}".format(code))
 
 
 def callUnWrap(infilepath,outfilepath,cmddictnormal):

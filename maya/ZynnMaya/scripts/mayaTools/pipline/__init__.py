@@ -13,6 +13,9 @@ def install(menu_id):
     pm.menuItem(label=u'布料解算BS烘焙工具',command=blendShapeBake)
     pm.menuItem(label=u'BS连接骨骼工具',command=bsToJoin)
     pm.menuItem(label=u'模型常用工具',command=modelTools)
+    pm.menuItem(label=u'abc帧偏移工具',command=abcOffset)
+    pm.menuItem(label=u'动画Fbx完整性检查工具',command=anFbxCheck)
+    pm.menuItem(label=u'毛发模型uv点映射工具',command=meshUvTransmit)
 
 
 TextureArrange = """
@@ -49,5 +52,20 @@ gui.showUI()
 
 modelTools = """
 from mayaTools.pipline.modelTools import gui
+gui.showUI()
+"""
+
+abcOffset = """
+from mayaTools.pipline.abcOffset import gui
+gui.showUI()
+"""
+
+anFbxCheck = """
+from mayaTools.pipline.anFbxCheck import gui
+gui.showUI()
+"""
+
+meshUvTransmit = """
+from mayaTools.pipline.meshUvTransmit import gui
 gui.showUI()
 """

@@ -528,32 +528,32 @@ class NP():
 		return FinalVert
 
 	def RadiusSelect(self,radius):
-	    # Set the Radius Selection
-	    cmds.softSelect(sse=1,ssd = radius * 100)
-	    
-	    #Grab the selection
-	    selection = om.MSelectionList()
-	    softSelection = om.MRichSelection()
-	    om.MGlobal.getRichSelection(softSelection)
-	    softSelection.getSelection(selection)
-	    dagPath = om.MDagPath()
-	    component = om.MObject()
-	    
-	    iter = om.MItSelectionList( selection,om.MFn.kMeshVertComponent )
-	    vertsList = []
-	    while not iter.isDone(): 
-	        iter.getDagPath( dagPath, component )
-	        dagPath.pop()
-	        node = dagPath.fullPathName()
-	        fnComp = om.MFnSingleIndexedComponent(component)   
-	     
-	        for i in range(fnComp.elementCount()):
-	            vertsList.append('%s.vtx[%i]' % (node, fnComp.element(i)))
-	        iter.next()
-	        
-	    #Resetting the softselection        
-	    cmds.softSelect(sse=0)
-	    return vertsList
+		# Set the Radius Selection
+		cmds.softSelect(sse=1,ssd = radius * 100)
+
+		#Grab the selection
+		selection = om.MSelectionList()
+		softSelection = om.MRichSelection()
+		om.MGlobal.getRichSelection(softSelection)
+		softSelection.getSelection(selection)
+		dagPath = om.MDagPath()
+		component = om.MObject()
+
+		iter = om.MItSelectionList( selection,om.MFn.kMeshVertComponent )
+		vertsList = []
+		while not iter.isDone():
+			iter.getDagPath( dagPath, component )
+			dagPath.pop()
+			node = dagPath.fullPathName()
+			fnComp = om.MFnSingleIndexedComponent(component)
+
+			for i in range(fnComp.elementCount()):
+				vertsList.append('%s.vtx[%i]' % (node, fnComp.element(i)))
+			iter.next()
+
+		#Resetting the softselection
+		cmds.softSelect(sse=0)
+		return vertsList
     
 	def getClosestVert(self,threshold):
 		sel = self.getAllSel()

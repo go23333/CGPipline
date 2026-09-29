@@ -8,11 +8,40 @@ def InstallMenu(rootMenu:unreal.ToolMenu):
     from UnrealPipeline.pipeline.AnimToSeq import InstallMenu
     InstallMenu(submenu)
 
+    from UnrealPipeline.pipeline.AAI_import import InstallMenu
+    InstallMenu(submenu)
+
+    from UnrealPipeline.pipeline.ChuShiHua import InstallMenu
+    InstallMenu(submenu)
+    from UnrealPipeline.pipeline.ChuShiHua57 import InstallMenu
+    InstallMenu(submenu)
+
+    from UnrealPipeline.pipeline.GroomToBP import InstallMenu
+    InstallMenu(submenu)
+
+    from UnrealPipeline.pipeline.AAI_Automation import InstallMenu
+    InstallMenu(submenu)
+
+    from UnrealPipeline.pipeline.FbxDetection import InstallMenu
+    InstallMenu(submenu)
+
+    from UnrealPipeline.pipeline.ChShaderChange import InstallMenu
+    InstallMenu(submenu)
+
+    from UnrealPipeline.pipeline.AutoAssembly import InstallMenu
+    InstallMenu(submenu)
+
+    from UnrealPipeline.pipeline.AssetUpData import InstallMenu
+    InstallMenu(submenu)
+
+    from UnrealPipeline.pipeline.PreviewCreate import InstallMenu
+    InstallMenu(submenu)
+
+    from UnrealPipeline.pipeline.SeqBindToSpawnable import InstallMenu
+    InstallMenu(submenu)
 
 
-    entry = MakeEntry("AAI","整合关卡(AAI)",toolTip="",command="from UnrealPipeline.songshunjie import AAI_import;AAI_import.start()")
-    submenu.add_menu_entry("",entry)
 
-    entry = MakeEntry("initProject","项目初始化工具",toolTip="",command="from UnrealPipeline.songshunjie import ChuShiHua;ChuShiHua.start()")
-    submenu.add_menu_entry("",entry)
+
+
 

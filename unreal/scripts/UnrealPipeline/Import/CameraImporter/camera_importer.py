@@ -9,9 +9,12 @@
 from Qt import QtWidgets,QtCore
 import functools
 import unreal
+import importlib
 
 
 from dayu_widgets.push_button import MPushButton
+from dayu_widgets.switch import MSwitch
+from dayu_widgets.label import MLabel
 from dayu_widgets.combo_box import MComboBox
 from dayu_widgets.qt import application
 from dayu_widgets import dayu_theme
@@ -19,7 +22,9 @@ from dayu_widgets import dayu_theme
 
 from UnrealPipeline.core.CommonWidget import CommonMenuBar,folderSelectGroup,DateTableView
 import UnrealPipeline.core.utilis as UU
+import UnrealPipeline.core.Config as UC
 import UnrealPipeline.core.UnrealHelper as UH
+importlib.reload(UH)
 
 
 
@@ -28,6 +33,8 @@ import UnrealPipeline.core.UnrealHelper as UH
 class CameraImporter(QtWidgets.QWidget):
     def __init__(self,parent=None):
         super().__init__(parent)
+        self.start_offset=0
+        self.end_offset=1
         self.setWindowTitle(u"相机导入")
         self.resize(600,400)
         self.move(800,400)
@@ -50,11 +57,18 @@ class CameraImporter(QtWidgets.QWidget):
             )
         self.folderSelectGroup.setOnTextChanged(self.wCamera.fetchCamera)        # 文字框改变时刷新
 
+        self.offset_switch = MSwitch()
+        self.offset_switch.setChecked(False)
+        self.offset_switch.toggled.connect(self.offsetChange)
+        offset_switch_lay = QtWidgets.QFormLayout()
+        offset_switch_lay.addRow(MLabel("是否使用偏移帧"), self.offset_switch)
+
         layImport = QtWidgets.QHBoxLayout()  #用于防止导入按钮的布局
         btnImport = MPushButton(u"导入相机")
         btnImport.clicked.connect(
             functools.partial(self.importCameras,False)
             )
+        layImport.addLayout(offset_switch_lay)
         layImport.addWidget(btnImport,alignment=QtCore.Qt.AlignRight)
 
 
@@ -67,6 +81,14 @@ class CameraImporter(QtWidgets.QWidget):
         return super().closeEvent(event)
     def showEvent(self, event):
         return super().showEvent(event)
+    def offsetChange(self):
+        if self.offset_switch.isChecked():
+            self.start_offset=UC.globalConfig.get().start_offset
+            self.end_offset=UC.globalConfig.get().end_offset
+        else:
+            self.start_offset=0
+            self.end_offset=1
+        print(self.start_offset,self.end_offset)
     def importCameras(self,selected):
         waitImportedQueue = []
         if selected:
@@ -78,7 +100,7 @@ class CameraImporter(QtWidgets.QWidget):
             for data in self.wCamera.datas:
                 if not data["imported"]:
                     waitImportedQueue.append(data)
-        UH.importCameras(waitImportedQueue)
+        UH.importCameras(waitImportedQueue, self.start_offset, self.end_offset)
 
 
 def Start():

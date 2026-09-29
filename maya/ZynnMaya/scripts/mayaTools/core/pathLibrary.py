@@ -113,7 +113,7 @@ def getRootPath():
 
 
 def openWeb(webPath,*args):
-	webbrowser.open(webPath, new=0, autoraise=True)
+    webbrowser.open(webPath, new=0, autoraise=True)
 
 
 def CopyFileToDir(filePath,dir):

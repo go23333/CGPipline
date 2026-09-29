@@ -9,7 +9,7 @@
 import unreal
 
 
-from Qt.QtWidgets import QMainWindow,QApplication,QWidget,QComboBox
+from Qt.QtWidgets import QMainWindow,QApplication,QWidget,QComboBox,QMessageBox
 from Qt import QtWidgets
 from Qt.QtCore import Qt,Signal
 
@@ -107,7 +107,6 @@ class TagButton(MPushButton):
 
 
 class TagArea(QWidget):
-    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.tags = []
@@ -171,8 +170,8 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
         self.lbe_tags.SetLabelFixedWidth(80)
 
 
-        self.cb_type = ComboxLineEdit(label="类型  ")
-        self.cb_type.addItems(["3D Assets"])
+        # self.cb_type = ComboxLineEdit(label="类型  ")
+        # self.cb_type.addItems(["3D Assets"])
 
 
 
@@ -188,7 +187,7 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
         layout_info.addWidget(self.lbe_name)   
         layout_info.addWidget(self.tags_area)   
         layout_info.addWidget(self.lbe_tags)
-        layout_info.addWidget(self.cb_type)   
+
         layout_info.addWidget(self.cb_category)
         layout_info.addWidget(self.cb_subcategory)
         layout_info.setAlignment(Qt.AlignTop)
@@ -223,96 +222,98 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
         self.pb_export.clicked.connect(self.ExportToLibrary)
     def __setSubCategory(self,text:str):
         self.cb_subcategory.clear()
-        self.cb_subcategory.addItems(ut.category[text])
+        self.cb_subcategory.addItems([item for item in ut.category[text].keys()])
     def ExportToLibrary(self):
         name = self.lbe_name.text()
         tags = [tag.rstrip() for tag in self.tags_area.tags]
-        tags.append("虚幻引擎")
         previewImagePath = self.thumbnail_path
         category = self.cb_category.CurrentText()
         subcategory = self.cb_subcategory.CurrentText()
         AssetID = ut.generate_unique_string(7)
+
         if type(self.asset) == unreal.StaticMesh:
             tempPath = globalConfig.get().MyBridgeTargetPathBuildin + "3D_Assets/" + AssetID + "/"
-            #复制网格体和依赖项到新目录
-            self.asset = uh.MoveStaticMeshAndDependenceToFolder(self.asset,tempPath)
-            #设置枢轴位置
-            unreal.PythonExtensionBPLibrary.bake_mesh_pivot(self.asset,unreal.PivotPreset.BOUNDING_BOX_CENTER_BOTTOM)
-            # 复制并保存预览图片
-            rootpath = Backend.Get().getAssetRootPath() +f"/{AssetID}"
-            _,ext = os.path.splitext(previewImagePath)
-
-            system_path = uh.convert_unreal_path_to_system_path(tempPath)
-            des_path = rootpath + f"/{AssetID}"
-            # 复制资产到对应资产库目录
-            ut.copy_folder(system_path,des_path)
-
-            # 复制预览图到对应目录
-            previewImagePath = ut.CopyFileToFolder(previewImagePath,rootpath,f"{AssetID}_preview_1{ext}",False)
+            assetType = "3D Assets"
+        elif type(self.asset) == unreal.NiagaraSystem:
+            tempPath = globalConfig.get().MyBridgeTargetPathBuildin + "VFX/" + AssetID + "/"
+            assetType = "VFX"
 
 
-            asset = dict(
-                name           = name,
-                ZbrushFile     = "",
-                AssetID        = AssetID,
-                rootFolder     = AssetID,
-                JsonUri        = f"{AssetID}.json",
+        #复制资产和依赖到新的目录
+        unreal.PythonExtensionBPLibrary.copy_asset_and_dependency_to_folder(self.asset,tempPath)
+        # 复制并保存预览图片
+        rootpath = Backend.Get().getAssetRootPath() +f"/{AssetID}"
+        _,ext = os.path.splitext(previewImagePath)
+        system_path = uh.convert_unreal_path_to_system_path(tempPath)
+        des_path = rootpath + f"/{AssetID}"
+        # 复制资产到对应资产库目录
+        ut.copy_folder(system_path,des_path)
+        # 复制预览图到对应目录
+        previewImagePath = ut.CopyFileToFolder(previewImagePath,rootpath,f"{AssetID}_preview_1{ext}",False)
 
-                tags           = tags,
-                previewFile    = [previewImagePath],
-                Lods           = [],
-                assetMaterials = [],
-                MeshVars       = [],
+        asset = dict(
+            name           = name,
+            ZbrushFile     = "",
+            AssetID        = AssetID,
+            rootFolder     = AssetID,
+            JsonUri        = f"{AssetID}.json",
 
-                type           = "3D Assets",
-                category       = category,
-                subcategory    = subcategory,
-                surfaceSize    = "1 Meter",
-                assetFormat    = "Unreal Engine",
+            tags           = tags,
+            previewFile    = [previewImagePath],
+            Lods           = [],
+            assetMaterials = [],
+            MeshVars       = [],
 
-                OriginMesh     = dict(
-                    uri = "",
-                    name = "",
-                    extension = ""
-                ),
+            type           = assetType,
+            category       = category,
+            subcategory    = subcategory,
+            surfaceSize    = "1 Meter",
+            assetFormat    = "Unreal Engine",
 
-                TilesV         = "false",
-                TilesH         = "false",
+            OriginMesh     = dict(
+                uri = "",
+                name = "",
+                extension = ""
+            ),
 
-                AssetIndex     = Backend.Get().getAssetsCount(),
-                OldJson        = ""
+            TilesV         = "false",
+            TilesH         = "false",
+
+            AssetIndex     = Backend.Get().getAssetsCount(),
+            OldJson        = "",
+        )
+        engine_version = unreal.SystemLibrary.get_engine_version().split("-")[-1]
+        # 提取放在数据库中的数据
+        assetToLibraryData = dict(
+            name        = asset["name"],
+            AssetID     = asset["AssetID"],
+            jsonUri     = asset["JsonUri"],
+            TilesH      = asset["TilesH"],
+            Tilesv      = asset["TilesV"],
+            asset       = asset["assetFormat"],
+            category    = asset["category"],
+            subcategory = asset["subcategory"],
+            surfaceSize = asset["surfaceSize"],
+            tags        = asset['tags'],
+            type        = asset['type'],
+            previewFile = asset["previewFile"][0],
+            rootFolder  = asset["rootFolder"],
+            lods        = [],
+            SearchWords = f"{asset['name']} {asset['AssetID']} {asset['category']} {asset['subcategory']}" + " ".join(asset['tags']),
+            Format         = "UnrealEngine",
+            SoftwareVersion = engine_version
             )
-           
-            # 提取放在数据库中的数据
-            assetToLibraryData = dict(
-                name        = asset["name"],
-                AssetID     = asset["AssetID"],
-                jsonUri     = asset["JsonUri"],
-                TilesH      = asset["TilesH"],
-                Tilesv      = asset["TilesV"],
-                asset       = asset["assetFormat"],
-                category    = asset["category"],
-                subcategory = asset["subcategory"],
-                surfaceSize = asset["surfaceSize"],
-                tags        = asset['tags'],
-                type        = asset['type'],
-                previewFile = asset["previewFile"][0],
-                rootFolder  = asset["rootFolder"],
-                lods        = [],
-                SearchWords = f"{asset['name']} {asset['AssetID']} {asset['category']} {asset['subcategory']}" + " ".join(asset['tags'])
-                )
-            # 保存json文件
-            with open(os.path.join(rootpath,asset["JsonUri"]),"w+",encoding='utf-8') as file:
-                file.write(json.dumps(asset))
-        
-            Backend.Get().addAssetToDB(assetToLibraryData)
-            #清理文件
-            unreal.EditorAssetLibrary.delete_directory(tempPath)
-            self.close()
-            self.tags_area.clear_all_tags()
-            self.deleteLater()
-        else:
-            pass
+        # 保存json文件
+        with open(os.path.join(rootpath,asset["JsonUri"]),"w+",encoding='utf-8') as file:
+            file.write(json.dumps(asset))
+    
+        Backend.Get().addAssetToDB(assetToLibraryData)
+        #清理文件
+        unreal.EditorAssetLibrary.delete_directory(tempPath)
+        self.close()
+        self.tags_area.clear_all_tags()
+        self.deleteLater()
+
     def RefreshThumbnail(self):
         if self.asset_path:
             unreal.PythonExtensionBPLibrary.save_thumbnail_to_file(self.asset_path ,self.thumbnail_path)
@@ -323,19 +324,29 @@ class ExportToAssetLibrary(cw.CommonMainWindow):
         unreal.PythonExtensionBPLibrary.save_thumbnail_to_file(self.asset_path,self.thumbnail_path)
         self.lbe_name.SetLineEditText(asset.get_name())
         self.assetImage.setPixmap(cw.scaleMap(256,256,self.thumbnail_path))
+    
 
 
 def Start():
+    if not Backend.Get().isBackendAvailable():
+        QMessageBox.warning(None,"错误","当前后台服务器不可用,无法添加资产到库中")
+        return
+    current_asset = unreal.EditorUtilityLibrary.get_selected_assets()[0]
+    if(type(current_asset) not in [unreal.NiagaraSystem,unreal.StaticMesh]):
+        QMessageBox.warning(None,"错误","当前仅支持Niagara系统和静态网格入库")
+        return
+    
     with application() as app:
         global w
         w = ExportToAssetLibrary()
         dayu_theme.apply(w)
         w.show()
         unreal.parent_external_window_to_slate(int(w.winId()))
-        w.LoadAssetData(unreal.EditorUtilityLibrary.get_selected_assets()[0])
+        w.LoadAssetData(current_asset)
         
 
 if __name__ == "__main__":
     from UnrealPipeline import reloadModule
     reloadModule()
     Start()
+
