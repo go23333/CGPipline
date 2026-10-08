@@ -1,0 +1,10 @@
+#ignore extension
+*.pyc
+*.log
+#ignore folders
+\.idea
+\.run
+\dist
+#ignore files
+resource_rc.py
+/bin

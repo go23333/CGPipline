@@ -1,0 +1,5 @@
+FrameLessFloatingWindow > QLabel{
+    color: rgb(255, 0, 0);
+    font: 30px 'Segoe UI', 'PingFang SC';
+    font-weight: bold;
+}

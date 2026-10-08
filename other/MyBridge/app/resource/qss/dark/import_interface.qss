@@ -1,0 +1,58 @@
+ComboxGroup > QLabel{
+    color: rgb(255, 255, 255);
+    font: 15px 'Segoe UI', 'Microsoft YaHei', 'PingFang SC';
+}
+
+LineEidtGroup > QLabel{
+    color: rgb(255, 255, 255);
+    font: 15px 'Segoe UI', 'Microsoft YaHei', 'PingFang SC';
+}
+
+DirectiorySelectGroup > QLabel{
+    color: rgb(255, 255, 255);
+    font: 15px 'Segoe UI', 'Microsoft YaHei', 'PingFang SC';
+}
+TabBarButton > QLabel{
+    color: rgb(150, 150, 150);
+    font: 18px 'Segoe UI', 'Microsoft YaHei', 'PingFang SC';
+
+}
+
+TabBarButton > QLabel:hover{
+    color: rgb(255, 255, 255);
+}
+
+TabBarButton[isSelected=true]> QLabel
+{
+    color: rgb(255, 255, 255);
+}
+
+#addNewAssetWidget >QLabel{
+    color: rgb(150, 150, 150);
+    font: 18px 'Segoe UI', 'Microsoft YaHei', 'PingFang SC';
+    font-weight: bold;
+}
+
+
+#ImportItemButtonWidget{
+    background-color: rgb(30, 30, 30);
+}
+
+SmoothScrollArea
+{
+    border: 0px solid rgb(0, 0, 0);
+}
+
+#ScrollWidget{
+    background-color: rgb(39, 39, 39);
+}
+
+TabBar{
+    height: 0px;
+}
+TabWidget{
+    border: 0px solid rgb(0, 0, 0);
+}
+#widget_import_button{
+    background-color: rgb(45, 45, 45);
+}

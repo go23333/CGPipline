@@ -1,0 +1,41 @@
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    # filevers and prodvers should be always a tuple with four items: (1, 2, 3, 4)
+    # Set not needed items to zero
+    filevers=(vsinfo),#文件的版本号，是一个四元组，通常表示为 (主版本, 次版本, 修订号, 构建号)
+    prodvers=(vsinfo),#产品的版本号，格式同 filevers
+    # Contains a bitmask that specifies the valid bits 'flags'r
+    mask=0x3f,#一个位掩码，指定哪些版本信息位是有效的
+    # Contains a bitmask that specifies the Boolean attributes of the file.
+    flags=0x0,#文件标志，表示文件的属性。
+    # The operating system for which this file was designed.
+    OS=0x40004,# 操作系统，指定该文件是为哪个操作系统设计的。
+    # The type of the file.
+    fileType=0x1,# 文件的类型，例如应用程序或驱动程序。
+    # The function of the file.
+    subtype=0x0,#文件的子类型。
+    # Creation date and time stamp.
+    date=(0, 0)# 文件的创建日期和时间戳。
+    ),
+  kids=[
+    StringFileInfo(
+      [
+      StringTable(
+        '040904b0',
+        [
+        StringStruct('CompanyName', 'ZYNN'),
+        StringStruct('FileDescription', 'MyBridge'),
+        StringStruct('FileVersion', 'vsinfo'),
+        StringStruct('InternalName', 'MyBridge'),
+        StringStruct('LegalCopyright', 'Copyright (C) ZYNN'),
+        StringStruct('OriginalFilename', 'MyBridge.exe'),
+        StringStruct('ProductName', 'MyBridge'),
+        StringStruct('ProductVersion', 'vsinfo')
+        ])
+      ]),
+    VarFileInfo(
+      [
+      VarStruct('Translation', [0x0409, 0x04b0])
+      ])
+  ]
+)

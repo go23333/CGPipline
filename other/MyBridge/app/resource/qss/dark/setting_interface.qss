@@ -1,0 +1,4 @@
+SettingInterface{
+    background-color: rgb(30, 30, 30);
+    border-radius: 8px;
+}

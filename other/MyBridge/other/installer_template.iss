@@ -1,0 +1,50 @@
+#define MyAppName "MyBridge"
+#define MyAppPublisher "zynn"
+#define MyAppExeName "MyBridge.exe"
+
+[Setup]
+; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
+; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
+AppId={{085D35C4-DBA2-4126-8CF9-B0165479D22D}
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+;AppVerName={#MyAppName} {#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+DefaultDirName={autopf}\MyBridge
+UninstallDisplayIcon={app}\{#MyAppExeName}
+; "ArchitecturesAllowed=x64compatible" specifies that Setup cannot run
+; on anything but x64 and Windows 11 on Arm.
+ArchitecturesAllowed=x64compatible
+; "ArchitecturesInstallIn64BitMode=x64compatible" requests that the
+; install be done in "64-bit mode" on x64 or Windows 11 on Arm,
+; meaning it should use the native 64-bit Program Files directory and
+; the 64-bit view of the registry.
+ArchitecturesInstallIn64BitMode=x64compatible
+DisableProgramGroupPage=yes
+; Uncomment the following line to run in non administrative install mode (install for current user only).
+;PrivilegesRequired=lowest
+OutputDir=d:\Documents\ZCXCode\MyBridge\dist
+OutputBaseFilename=MyBridge
+SolidCompression=yes
+WizardStyle=modern
+
+[Languages]
+Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+
+[Tasks]
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+
+[Files]
+Source: "D:\Documents\ZCXCode\MyBridge\dist\MyBridge\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "d:\Documents\ZCXCode\MyBridge\dist\MyBridge\_internal\*"; DestDir: "{app}\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "d:\Documents\ZCXCode\MyBridge\dist\MyBridge\scripts\*"; DestDir: "{app}\scripts"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+; NOTE: Don't use "Flags: ignoreversion" on any shared system files
+
+[Icons]
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+
+[Run]
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+

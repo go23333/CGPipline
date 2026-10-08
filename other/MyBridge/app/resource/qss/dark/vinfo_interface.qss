@@ -1,0 +1,27 @@
+QTableWidget{
+    background-color: rgb(39, 39, 39);
+    color:rgb(255, 255, 255);
+    font: 12px 'Segoe UI', 'PingFang SC';
+    font-weight: bold;
+}
+QMessageBox
+{
+    background-color: rgb(39, 39, 39);
+    color:rgb(255, 255, 255);
+    font: 12px 'Segoe UI', 'PingFang SC';
+    font-weight: bold;
+}
+QLabel{
+    color: rgb(255, 255, 255);
+    font: 15px 'Segoe UI', 'PingFang SC';
+    font-weight: bold;
+}
+QTableWidget::item:selected:active
+{
+    background-color: transparent;
+    border: 2px solid #0078d7;  /* 只显示边框 */
+}
+QTableWidget::item:selected {
+    background-color: transparent;
+    border: 2px solid #0078d7;  /* 只显示边框 */
+}

@@ -1,0 +1,26 @@
+<RCC>
+    <qresource prefix="/MyBridge">
+        <file>image/icon.png</file>
+        <file>image/logo_large.png</file>
+        <file>icons/heart_filled.png</file>
+        <file>icons/Unreal_flag.png</file>
+        <file>icons/SP_flag.png</file>
+        <file>icons/heart.png</file>
+        <file>icons/fbx_flag.png</file>
+        <file>icons/maya_flag.png</file>
+        <file>qss/dark/home_interface.qss</file>
+        <file>qss/dark/import_interface.qss</file>
+        <file>qss/dark/setting_interface.qss</file>
+        <file>qss/dark/assets_import_interface.qss</file>
+        <file>qss/light/home_interface.qss</file>
+        <file>qss/light/import_interface.qss</file>
+        <file>qss/light/setting_interface.qss</file>
+        <file>qss/light/assets_import_interface.qss</file>
+        <file>qss/light/f2v_interface.qss</file>
+        <file>qss/dark/f2v_interface.qss</file>
+        <file>qss/dark/vinfo_interface.qss</file>
+        <file>qss/light/vinfo_interface.qss</file>
+        <file>qss/dark/batch_render_interface.qss</file>
+        <file>qss/light/batch_render_interface.qss</file>
+    </qresource>
+</RCC>

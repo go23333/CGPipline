@@ -1,0 +1,88 @@
+#flowwidget,#ItemView{
+    background-color: rgb(39, 39, 39);
+}
+
+
+#ItemCardViewScrollArea{
+    border: 0px solid rgb(39, 39, 39);
+}
+
+ItemHeader{
+    background-color: rgb(55, 55, 55);
+}
+
+
+#InfoPanelTitleWidget{
+    background-color: rgb(55, 55, 55);
+}
+#TagWidget
+{
+    background-color: rgb(35, 35, 35);
+}
+#titleLabel{
+    color: rgb(255, 255, 255);
+    font: 30px 'Segoe UI', 'PingFang SC';
+    font-weight: bold;
+}
+#typeLabel{
+    color: rgb(128, 128, 128);
+    font: 15px 'Segoe UI', 'PingFang SC';
+    font-weight: bold;
+}
+#categoryLabel{
+    color: rgb(128, 128, 128);
+    font: 15px 'Segoe UI', 'PingFang SC';
+    font-weight: bold;
+}
+
+#format{
+    color: rgb(128, 128, 128);
+    font: 13px 'Segoe UI', 'PingFang SC';
+    font-weight: bold;
+}
+
+
+#subCategoryLabel{
+    color: rgb(128, 128, 128);
+    font: 15px 'Segoe UI', 'PingFang SC';
+    font-weight: bold;
+}
+
+SmoothScrollArea{
+    border: 0px solid rgb(39, 39, 39);
+    background-color: transparent;
+}
+
+ItemCardContextMenu
+{
+    color: rgb(255, 255, 255);
+    background-color: rgb(35, 35, 35);
+    border: 1px solid rgb(0, 0, 0);
+}
+
+ItemCardContextMenu:hover
+{
+    background-color: rgb(0, 174, 255);
+}
+
+
+AssetCardView{
+    background-color: rgb(28, 28, 28);
+    color: rgb(255, 255, 255);
+    font: 18px 'Segoe UI', 'PingFang SC';
+    border: 0px;
+}
+
+
+QScrollBar:vertical {
+    width: 8px;
+    background: transparent;
+}
+QScrollBar::handle:vertical {
+    background: rgba(150, 150, 150, 120);
+    min-height: 30px;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical:hover {
+    background: rgba(120, 120, 120, 150);
+}
